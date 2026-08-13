@@ -29,7 +29,7 @@
 
 {% block extra_scripts %}
 <script>
-document.addEventListener("DOMContentLoaded", function () {
+function initLeaveRequestsGrid() {
   const canEdit = {{ 'true' if current_user.has_perm('HR', 'can_edit') else 'false' }};
   const canDelete = {{ 'true' if current_user.has_perm('HR', 'can_delete') else 'false' }};
   const canAdd = {{ 'true' if current_user.has_perm('HR', 'can_add') else 'false' }};
@@ -57,6 +57,12 @@ document.addEventListener("DOMContentLoaded", function () {
     numericFields: ["day_count"],
     height: "calc(100vh - 340px)",
   });
-});
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initLeaveRequestsGrid);
+  } else {
+    initLeaveRequestsGrid();
+}
 </script>
 {% endblock %}

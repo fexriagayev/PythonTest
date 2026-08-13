@@ -41,7 +41,7 @@
 
 {% block extra_scripts %}
 <script>
-document.addEventListener("DOMContentLoaded", function () {
+function initNotificationGrid() {
   const canEdit = {{ 'true' if current_user.has_perm('HR', 'can_edit') else 'false' }};
   const canDelete = {{ 'true' if current_user.has_perm('HR', 'can_delete') else 'false' }};
   const canAdd = {{ 'true' if current_user.has_perm('HR', 'can_add') else 'false' }};
@@ -77,6 +77,12 @@ document.addEventListener("DOMContentLoaded", function () {
     numericFields: ["salary"],
     height: "calc(100vh - 460px)",
   });
-});
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initNotificationGrid);
+  } else {
+    initNotificationGrid();
+}
 </script>
 {% endblock %}

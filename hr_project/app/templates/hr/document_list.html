@@ -26,7 +26,7 @@
 
 {% block extra_scripts %}
 <script>
-document.addEventListener("DOMContentLoaded", function () {
+function initDocumentGrid() {
   const canDelete = {{ 'true' if current_user.has_perm('HR', 'can_delete') else 'false' }};
   const canAdd = {{ 'true' if current_user.has_perm('HR', 'can_add') else 'false' }};
   const empId = {{ employee.id }};
@@ -55,6 +55,12 @@ document.addEventListener("DOMContentLoaded", function () {
       ];
     },
   });
-});
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initDocumentGrid);
+  } else {
+    initDocumentGrid();
+}
 </script>
 {% endblock %}

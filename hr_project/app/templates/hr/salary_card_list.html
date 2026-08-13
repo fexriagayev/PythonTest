@@ -26,7 +26,7 @@
 
 {% block extra_scripts %}
 <script>
-document.addEventListener("DOMContentLoaded", function () {
+function initSalaryCardGrid() {
   const canEdit = {{ 'true' if current_user.has_perm('HR', 'can_edit') else 'false' }};
   const canDelete = {{ 'true' if current_user.has_perm('HR', 'can_delete') else 'false' }};
   const canAdd = {{ 'true' if current_user.has_perm('HR', 'can_add') else 'false' }};
@@ -61,6 +61,12 @@ document.addEventListener("DOMContentLoaded", function () {
     deleteUrlTemplate: canDelete ? "/hr/" + empId + "/salary-cards/delete/{id}" : null,
     height: "calc(100vh - 340px)",
   });
-});
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initSalaryCardGrid);
+  } else {
+    initSalaryCardGrid();
+}
 </script>
 {% endblock %}
