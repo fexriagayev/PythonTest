@@ -488,7 +488,6 @@ function openFormModal(url, onSavedCallback) {
 
       executeInjectedScripts(body);
       wireModalForm(onSavedCallback);
-      //wireEmployeeModalTabs();
     })
     .catch(function (err) {
       hideModal();
@@ -602,15 +601,11 @@ function loadEmployeeModalTab(link) {
 
 function wireEmployeeModalTabs() {
   const body = getModalBody();
-  if (!body) return;
-
-  if (body.__employeeTabsWired) {
+  if (!body || body.__employeeTabsHandler) {
     return;
   }
 
-  body.__employeeTabsWired = true;
-
-  body.addEventListener("click", function (event) {
+  const handler = function (event) {
     const link = event.target.closest("[data-employee-tab]");
 
     if (!link) {
@@ -638,5 +633,8 @@ function wireEmployeeModalTabs() {
     }
 
     loadEmployeeModalTab(link);
-  });
+  };
+
+  body.addEventListener("click", handler);
+  body.__employeeTabsHandler = handler;
 }
