@@ -442,7 +442,17 @@ table.simple-table th { background: var(--bs-tertiary-bg, #f1f4f9); }
 /* --- Dictionary-backed dropdown + "quick add" button, used everywhere --- */
 .dict-select-row { display: flex; gap: 6px; align-items: center; }
 .dict-select-row select { flex: 1; }
-.dict-select-row .btn { flex-shrink: 0; padding: 6px 12px; }
+.dict-select-row .btn {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85em;
+  line-height: 1;
+}
 
 
 
