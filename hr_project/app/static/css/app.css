@@ -1313,3 +1313,21 @@ body.app-theme-sandstone .app-topbar {
 #employeeModalSubpage .tabulator {
   width: 100%;
 }
+
+.employee-modal-subpage {
+  width: 100%;
+  min-height: 240px;
+}
+
+.employee-modal-subpage .employee-section {
+  width: 100%;
+}
+
+.employee-modal-subpage .card {
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.employee-modal-subpage .toolbar {
+  margin-bottom: 10px;
+}

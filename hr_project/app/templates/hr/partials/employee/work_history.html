@@ -1,0 +1,101 @@
+<div class="employee-section">
+
+  <div class="card" style="margin-bottom:16px;">
+    <div style="display:flex;flex-wrap:wrap;gap:24px;font-size:0.9em;">
+      <div><b>Cari struktur:</b> {{ employee.department or '—' }}</div>
+      <div><b>Cari vəzifə:</b> {{ employee.position or '—' }}</div>
+      <div><b>İşə qəbul tarixi:</b> {{ employee.hire_date or '—' }}</div>
+      <div><b>Status:</b> {{ 'Aktiv' if employee.is_active else 'İşdən çıxıb' }}</div>
+      <div><b>Ümumi staj:</b> {{ employee.total_experience or '—' }}</div>
+      <div><b>Şirkətdə staj:</b> {{ employee.company_experience or '—' }}</div>
+      <div><b>Digər staj:</b> {{ employee.other_experience or '—' }}</div>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    {% if current_user.has_perm('HR', 'can_add') %}
+    <button
+      type="button"
+      class="btn"
+      onclick="openFormModal(
+        '{{ url_for('hr.add_work_history', emp_id=employee.id) }}',
+        function () {
+          if (window.currentGridTable) {
+            window.currentGridTable.setData();
+          }
+        }
+      )">
+      + Yeni qeyd
+    </button>
+    {% endif %}
+  </div>
+
+  <p style="color:#888;font-size:0.82em;margin-top:-6px;">
+    💡 Sütun başlığına sağ-klik: sıralama / footer.
+    Sətirə sağ-klik: yeni / dəyiş / sil.
+  </p>
+
+  <div id="employeeWorkHistoryGrid"></div>
+
+</div>
+
+<script>
+(function () {
+const canEdit =
+    {{ 'true' if current_user.has_perm('HR', 'can_edit') else 'false' }};
+
+const canDelete =
+    {{ 'true' if current_user.has_perm('HR', 'can_delete') else 'false' }};
+
+const canAdd =
+    {{ 'true' if current_user.has_perm('HR', 'can_add') else 'false' }};
+
+const empId = {{ employee.id }};
+
+if (typeof createAdvancedGrid !== "function") {
+    console.error("createAdvancedGrid tapılmadı.");
+    return;
+}
+
+const table = createAdvancedGrid(
+    "employeeWorkHistoryGrid",
+    "hr_work_history",
+    {
+    ajaxURL: "/hr/" + empId + "/work-history/api/records",
+    layout: "fitColumns",
+    pagination: true,
+    paginationSize: 15,
+    placeholder: "Hələ iş yeri qeydi yoxdur",
+
+    columns: [
+        { title: "ID", field: "id", width: 60, sorter: "number" },
+        { title: "Tip", field: "ticket", headerFilter: "input" },
+        { title: "Hərəkət növü", field: "movement_type", headerFilter: "input" },
+        { title: "İş yeri / Şirkət", field: "workplace", headerFilter: "input" },
+        { title: "Vəzifə", field: "position", headerFilter: "input" },
+        { title: "Əmr", field: "order", headerFilter: "input" },
+        { title: "Başlama tarixi", field: "date_from", sorter: "date" },
+        { title: "Bitmə tarixi", field: "date_to", sorter: "date" },
+        { title: "Qeyd", field: "note", headerFilter: "input" }
+    ]
+    },
+    {
+    idField: "id",
+
+    addUrl: canAdd
+        ? "/hr/" + empId + "/work-history/add"
+        : null,
+
+    editUrlTemplate: canEdit
+        ? "/hr/" + empId + "/work-history/edit/{id}"
+        : null,
+
+    deleteUrlTemplate: canDelete
+        ? "/hr/" + empId + "/work-history/delete/{id}"
+        : null,
+
+    height: "calc(100vh - 420px)"
+    }
+);
+})();
+</script>

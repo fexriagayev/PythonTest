@@ -302,8 +302,17 @@ def _work_history_form_choices():
 @permission_required(MODULE, "can_view")
 def work_history(emp_id):
     employee = Employee.query.get_or_404(emp_id)
-    return render_template("hr/work_history_list.html", employee=employee,
-    layout=_employee_page_layout(),)
+
+    if request.args.get("embedded") == "1":
+        return render_template(
+            "hr/partials/employee/work_history.html",
+            employee=employee,
+        )
+
+    return render_template(
+        "hr/work_history_list.html",
+        employee=employee,
+    )
 
 
 @hr_bp.route("/<int:emp_id>/work-history/api/records")
