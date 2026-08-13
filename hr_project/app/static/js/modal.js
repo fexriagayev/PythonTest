@@ -332,6 +332,7 @@ function wireModalForm(onSavedCallback) {
   if (!form) return;
 
   upgradeModalForm(form);
+  wireEmployeeModalTabs();
 
   /* The form's own actions are hidden inside the popup; the popup footer
      provides Save/Cancel buttons. */
@@ -378,8 +379,37 @@ function wireModalForm(onSavedCallback) {
       })
       .then(function (data) {
         if (data.success) {
+
+          if (data.keep_open && data.reload_url) {
+            return fetch(data.reload_url, {
+              headers: { "X-Requested-With": "XMLHttpRequest" }
+            })
+              .then(function (r) {
+                if (!r.ok) {
+                  throw new Error(
+                    "Server " + r.status + " qaytardı (" + data.reload_url + ")"
+                  );
+                }
+                return r.text();
+              })
+              .then(function (html) {
+                body.innerHTML = html;
+
+                const title = getModalTitleFromHtml(html);
+                popup.option("title", title || "Forma");
+
+                executeInjectedScripts(body);
+                wireModalForm(onSavedCallback);
+                wireEmployeeModalTabs();
+
+                return data;
+              });
+          }
+
           hideModal();
+
           if (onSavedCallback) onSavedCallback();
+
         } else {
           body.innerHTML = data.html;
           executeInjectedScripts(body);
@@ -466,4 +496,131 @@ function openFormModal(url, onSavedCallback) {
         err.stack || ""
       );
     });
+
+  wireEmployeeModalTabs();
+}
+
+function setEmployeeModalView(tabId) {
+  const body = getModalBody();
+  if (!body) return;
+
+  const mainForm = body.querySelector("#modalFormContent");
+  const subpage = body.querySelector("#employeeModalSubpage");
+
+  if (!mainForm || !subpage) return;
+
+  const popup = getModalPopup();
+  const toolbarItems = popup.option("toolbarItems");
+
+  const saveItem = toolbarItems.find(function (item) {
+    return item.options && item.options.text === "Yadda saxla";
+  });
+
+  if (tabId === "main") {
+    mainForm.style.display = "";
+    subpage.style.display = "none";
+    subpage.innerHTML = "";
+
+    if (saveItem) {
+      saveItem.options.disabled = false;
+    }
+
+    popup.option("toolbarItems", toolbarItems);
+    return;
+  }
+
+  mainForm.style.display = "none";
+  subpage.style.display = "block";
+
+  if (saveItem) {
+    saveItem.options.disabled = true;
+  }
+
+  popup.option("toolbarItems", toolbarItems);
+}
+
+
+function loadEmployeeModalTab(link) {
+  const body = getModalBody();
+  const subpage = body.querySelector("#employeeModalSubpage");
+
+  if (!subpage) return;
+
+  const url = link.getAttribute("data-tab-url");
+  if (!url) return;
+
+  setEmployeeModalView(link.getAttribute("data-employee-tab"));
+
+  subpage.innerHTML = `
+    <div style="
+      padding:32px;
+      text-align:center;
+      color:var(--bs-secondary-color,#777);
+    ">
+      Yüklənir...
+    </div>
+  `;
+
+  const separator = url.includes("?") ? "&" : "?";
+
+  fetch(url + separator + "embedded=1", {
+    headers: { "X-Requested-With": "XMLHttpRequest" }
+  })
+    .then(function (r) {
+      if (!r.ok) {
+        throw new Error("Server " + r.status + " qaytardı");
+      }
+      return r.text();
+    })
+    .then(function (html) {
+      subpage.innerHTML = html;
+
+      executeInjectedScripts(subpage);
+
+      if (typeof wireModalForm === "function") {
+        wireModalForm();
+      }
+    })
+    .catch(function (err) {
+      subpage.innerHTML = `
+        <div class="flash flash-danger">
+          Bölmə yüklənmədi: ${err.message}
+        </div>
+      `;
+    });
+}
+
+
+function wireEmployeeModalTabs() {
+  const body = getModalBody();
+  if (!body) return;
+
+  body.querySelectorAll("[data-employee-tab]").forEach(function (link) {
+    if (link.__employeeTabWired) return;
+
+    link.__employeeTabWired = true;
+
+    link.addEventListener("click", function (event) {
+      event.preventDefault();
+
+      if (link.classList.contains("disabled")) {
+        return;
+      }
+
+      body.querySelectorAll("[data-employee-tab]").forEach(function (item) {
+        item.classList.remove("active");
+      });
+
+      link.classList.add("active");
+
+      const tabId = link.getAttribute("data-employee-tab");
+
+      if (tabId === "main") {
+        setEmployeeModalView("main");
+        return;
+      }
+
+      loadEmployeeModalTab(link);
+    });
+  });
 }

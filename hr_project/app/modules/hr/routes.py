@@ -18,11 +18,18 @@ from app.services.leave_service import (
 )
 from app.utils.date_overlap import find_overlapping
 from app.utils.parsing import _parse_date, _parse_int, _parse_decimal
-from app.utils.modal import render_form, modal_redirect, is_modal_request
+from app.utils.modal import (
+    render_form,
+    modal_redirect,
+    modal_employee_saved,
+    is_modal_request,
+)
 
 hr_bp = Blueprint("hr", __name__)
 MODULE = "HR"
 
+def _employee_page_layout():
+    return "modal_layout.html" if request.args.get("embedded") == "1" else "base.html"
 
 def _dict_options(category):
     return (DictionaryItem.query
@@ -125,8 +132,8 @@ def add_employee():
         db.session.flush()
         recompute_employee_from_history(employee)
         db.session.commit()
-        flash("Əməkdaş əlavə olundu. İndi 'İş yerləri' bölməsindən işə qəbul qeydini əlavə edin.", "success")
-        return modal_redirect("hr.list_employees")
+        flash("Əməkdaş əlavə olundu. İndi digər məlumat bölmələrini doldura bilərsiniz.", "success")
+        return modal_employee_saved(employee.id)
     return render_form("hr/form.html", employee=None, **_form_choices())
 
 
@@ -141,7 +148,16 @@ def edit_employee(emp_id):
         recompute_employee_from_history(employee)
         db.session.commit()
         flash("Əməkdaşın məlumatları yeniləndi.", "success")
-        return modal_redirect("hr.list_employees")
+
+        if is_modal_request():
+            return jsonify({
+                "success": True,
+                "keep_open": True,
+                "reload_url": url_for("hr.edit_employee", emp_id=employee.id),
+                "employee_id": employee.id,
+            })
+
+        return redirect(url_for("hr.list_employees"))
     return render_form("hr/form.html", employee=employee, **_form_choices())
 
 
@@ -286,7 +302,8 @@ def _work_history_form_choices():
 @permission_required(MODULE, "can_view")
 def work_history(emp_id):
     employee = Employee.query.get_or_404(emp_id)
-    return render_template("hr/work_history_list.html", employee=employee)
+    return render_template("hr/work_history_list.html", employee=employee,
+    layout=_employee_page_layout(),)
 
 
 @hr_bp.route("/<int:emp_id>/work-history/api/records")
@@ -540,7 +557,9 @@ def _notifications_form_choices():
 @permission_required(MODULE, "can_view")
 def notifications(emp_id):
     employee = Employee.query.get_or_404(emp_id)
-    return render_template("hr/notifications_list.html", employee=employee)
+    return render_template("hr/notifications_list.html",
+    employee=employee,
+    layout=_employee_page_layout(),)
 
 
 @hr_bp.route("/<int:emp_id>/notifications/api/records")
@@ -826,7 +845,8 @@ def delete_holiday(holiday_id):
 @permission_required(MODULE, "can_view")
 def vacation_periods(emp_id):
     employee = Employee.query.get_or_404(emp_id)
-    return render_template("hr/vacation_periods.html", employee=employee)
+    return render_template("hr/vacation_periods.html", employee=employee,
+    layout=_employee_page_layout(),)
 
 
 @hr_bp.route("/<int:emp_id>/vacation-periods/api/periods")
@@ -887,7 +907,8 @@ def set_compensation(emp_id):
 @permission_required(MODULE, "can_view")
 def leave_requests(emp_id):
     employee = Employee.query.get_or_404(emp_id)
-    return render_template("hr/leave_requests_list.html", employee=employee)
+    return render_template("hr/leave_requests_list.html", employee=employee,
+    layout=_employee_page_layout(),)
 
 
 @hr_bp.route("/<int:emp_id>/leave-requests/api/records")
@@ -1110,7 +1131,8 @@ def _insurance_form_choices():
 @permission_required(MODULE, "can_view")
 def insurance_list(emp_id):
     employee = Employee.query.get_or_404(emp_id)
-    return render_template("hr/insurance_list.html", employee=employee)
+    return render_template("hr/insurance_list.html", employee=employee,
+    layout=_employee_page_layout(),)
 
 
 @hr_bp.route("/<int:emp_id>/insurance/api/records")
@@ -1230,7 +1252,8 @@ def delete_insurance(emp_id, record_id):
 @permission_required(MODULE, "can_view")
 def salary_card_list(emp_id):
     employee = Employee.query.get_or_404(emp_id)
-    return render_template("hr/salary_card_list.html", employee=employee)
+    return render_template("hr/salary_card_list.html", employee=employee,
+    layout=_employee_page_layout(),)
 
 
 @hr_bp.route("/<int:emp_id>/salary-cards/api/records")
@@ -1328,7 +1351,8 @@ DOCUMENT_SUBDIR = "employee_documents"
 @permission_required(MODULE, "can_view")
 def document_list(emp_id):
     employee = Employee.query.get_or_404(emp_id)
-    return render_template("hr/document_list.html", employee=employee)
+    return render_template("hr/document_list.html", employee=employee,
+    layout=_employee_page_layout(),)
 
 
 @hr_bp.route("/<int:emp_id>/documents/api/records")

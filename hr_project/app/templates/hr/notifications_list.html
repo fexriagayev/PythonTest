@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends layout|default("base.html") %}
 {% block title %}Bildirişlər{% endblock %}
 {% block page_title %}Bildirişlər — {{ employee.full_name() }}{% endblock %}
 {% block content %}

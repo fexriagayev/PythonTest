@@ -52,3 +52,15 @@ def modal_redirect(endpoint, **values):
     if is_modal_request():
         return jsonify({"success": True})
     return redirect(url_for(endpoint, **values))
+
+def modal_employee_saved(employee_id):
+    """Keep the employee master modal open after the first save."""
+    if is_modal_request():
+        return jsonify({
+            "success": True,
+            "keep_open": True,
+            "reload_url": url_for("hr.edit_employee", emp_id=employee_id),
+            "employee_id": employee_id,
+        })
+
+    return redirect(url_for("hr.edit_employee", emp_id=employee_id))

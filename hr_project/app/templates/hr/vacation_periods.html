@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends layout|default("base.html") %}
 {% block title %}Məzuniyyət günləri{% endblock %}
 {% block page_title %}Məzuniyyət günləri — {{ employee.full_name() }}{% endblock %}
 {% block content %}

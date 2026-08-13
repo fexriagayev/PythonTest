@@ -31,6 +31,7 @@
 {% block before_form %}{% endblock %}
 
 {% if not form_no_wrapper_card %}<div class="card" style="max-width:{{ form_max_width|default('600px') }};">{% endif %}
+<div id="modalFormContent">
 <form method="post" class="simple-form dx-modal-form"
       {% if form_enctype %}enctype="{{ form_enctype }}"{% endif %}
       action="{{ form_action }}">
@@ -48,6 +49,7 @@
   {% endblock %}
 
 </form>
+</div>
 {% if not form_no_wrapper_card %}</div>{% endif %}
 
 {% block after_form %}{% endblock %}

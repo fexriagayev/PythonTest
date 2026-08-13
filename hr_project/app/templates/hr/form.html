@@ -5,22 +5,39 @@
 {% set form_no_wrapper_card = true %}
 
 {% block before_form %}
-<div class="record-tabs">
-  <a href="#" class="active">Əsas məlumatlar</a>
-  {% if employee %}
-  <a href="{{ url_for('hr.work_history', emp_id=employee.id) }}">İş yerləri</a>
-  <a href="{{ url_for('hr.notifications', emp_id=employee.id) }}">Bildirişlər</a>
-  <a href="{{ url_for('hr.insurance_list', emp_id=employee.id) }}">Sığorta məlumatları</a>
-  <a href="{{ url_for('hr.salary_card_list', emp_id=employee.id) }}">Maaş kartları</a>
-  <a href="{{ url_for('hr.vacation_periods', emp_id=employee.id) }}">Məzuniyyət günləri</a>
-  <a href="{{ url_for('hr.leave_requests', emp_id=employee.id) }}">İş buraxmaları</a>
-  <a href="{{ url_for('hr.document_list', emp_id=employee.id) }}">Sənədlər</a>
-  {% else %}
-  {% for label in ['İş yerləri', 'Bildirişlər', 'Sığorta məlumatları', 'Maaş kartları', 'Məzuniyyət günləri', 'İş buraxmaları', 'Sənədlər'] %}
-  <a href="#" class="disabled" title="Əvvəlcə əməkdaşı yadda saxlayın">{{ label }}</a>
+<div class="record-tabs employee-modal-tabs"
+     data-employee-id="{{ employee.id if employee else '' }}">
+
+  <a href="#"
+     class="active"
+     data-employee-tab="main">
+    Əsas məlumatlar
+  </a>
+
+  {% set employee_tabs = [
+    ('work-history', 'İş yerləri', url_for('hr.work_history', emp_id=employee.id) if employee else ''),
+    ('notifications', 'Bildirişlər', url_for('hr.notifications', emp_id=employee.id) if employee else ''),
+    ('insurance', 'Sığorta məlumatları', url_for('hr.insurance_list', emp_id=employee.id) if employee else ''),
+    ('salary-cards', 'Maaş kartları', url_for('hr.salary_card_list', emp_id=employee.id) if employee else ''),
+    ('vacation-periods', 'Məzuniyyət günləri', url_for('hr.vacation_periods', emp_id=employee.id) if employee else ''),
+    ('leave-requests', 'İş buraxmaları', url_for('hr.leave_requests', emp_id=employee.id) if employee else ''),
+    ('documents', 'Sənədlər', url_for('hr.document_list', emp_id=employee.id) if employee else '')
+  ] %}
+
+  {% for tab_id, label, tab_url in employee_tabs %}
+    <a href="#"
+       data-employee-tab="{{ tab_id }}"
+       data-tab-url="{{ tab_url }}"
+       class="{{ 'disabled' if not employee else '' }}"
+       title="{{ 'Əvvəlcə əməkdaşı yadda saxlayın' if not employee else '' }}">
+      {{ label }}
+    </a>
   {% endfor %}
-  {% endif %}
 </div>
+
+<div id="employeeModalSubpage"
+     class="employee-modal-subpage"
+     style="display:none;"></div>
 
 {% if employee %}
 <div class="card" style="max-width:220px;">
