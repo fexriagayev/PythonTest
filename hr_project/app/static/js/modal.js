@@ -488,6 +488,7 @@ function openFormModal(url, onSavedCallback) {
 
       executeInjectedScripts(body);
       wireModalForm(onSavedCallback);
+      wireEmployeeModalTabs();
     })
     .catch(function (err) {
       hideModal();
@@ -496,8 +497,6 @@ function openFormModal(url, onSavedCallback) {
         err.stack || ""
       );
     });
-
-  wireEmployeeModalTabs();
 }
 
 function setEmployeeModalView(tabId) {
@@ -542,14 +541,17 @@ function setEmployeeModalView(tabId) {
 
 function loadEmployeeModalTab(link) {
   const body = getModalBody();
-  const subpage = body.querySelector("#employeeModalSubpage");
+  if (!body) return;
 
+  const subpage = body.querySelector("#employeeModalSubpage");
   if (!subpage) return;
 
   const url = link.getAttribute("data-tab-url");
   if (!url) return;
 
-  setEmployeeModalView(link.getAttribute("data-employee-tab"));
+  const tabId = link.getAttribute("data-employee-tab");
+
+  setEmployeeModalView(tabId);
 
   subpage.innerHTML = `
     <div style="
@@ -562,29 +564,56 @@ function loadEmployeeModalTab(link) {
   `;
 
   const separator = url.includes("?") ? "&" : "?";
+  const embeddedUrl = url + separator + "embedded=1";
 
-  fetch(url + separator + "embedded=1", {
-    headers: { "X-Requested-With": "XMLHttpRequest" }
+  fetch(embeddedUrl, {
+    method: "GET",
+    headers: {
+      "X-Requested-With": "XMLHttpRequest",
+      "Accept": "text/html"
+    }
   })
-    .then(function (r) {
-      if (!r.ok) {
-        throw new Error("Server " + r.status + " qaytardı");
+    .then(function (response) {
+      if (!response.ok) {
+        throw new Error(
+          "Server " + response.status + " qaytardı: " + embeddedUrl
+        );
       }
-      return r.text();
+
+      return response.text();
     })
     .then(function (html) {
       subpage.innerHTML = html;
 
+      /*
+       * Child səhifədəki script-ləri ayrıca icra et.
+       * DOM artıq subpage-ə yerləşdirildikdən SONRA işləyir.
+       */
       executeInjectedScripts(subpage);
 
-      if (typeof wireModalForm === "function") {
-        wireModalForm();
+      /*
+       * Child səhifədə form varsa, modal form sistemini də işə sal.
+       */
+      const childForm = subpage.querySelector("form");
+
+      if (childForm) {
+        upgradeModalForm(childForm);
+      }
+
+      /*
+       * Grid-lərin init funksiyaları artıq DOM-a yerləşdirildikdən
+       * sonra script vasitəsilə işləyir.
+       */
+      if (typeof window.refreshCurrentGrid === "function") {
+        window.refreshCurrentGrid();
       }
     })
-    .catch(function (err) {
+    .catch(function (error) {
       subpage.innerHTML = `
         <div class="flash flash-danger">
-          Bölmə yüklənmədi: ${err.message}
+          Bölmə yüklənmədi.
+          <br>
+          <small>${error.message}</small>
         </div>
       `;
     });
@@ -595,13 +624,21 @@ function wireEmployeeModalTabs() {
   const body = getModalBody();
   if (!body) return;
 
-  body.querySelectorAll("[data-employee-tab]").forEach(function (link) {
-    if (link.__employeeTabWired) return;
+  const tabs = body.querySelectorAll("[data-employee-tab]");
 
-    link.__employeeTabWired = true;
+  tabs.forEach(function (link) {
+    /*
+     * Eyni tab-a ikinci dəfə event bağlamamaq üçün.
+     */
+    if (link.dataset.employeeTabWired === "1") {
+      return;
+    }
+
+    link.dataset.employeeTabWired = "1";
 
     link.addEventListener("click", function (event) {
       event.preventDefault();
+      event.stopPropagation();
 
       if (link.classList.contains("disabled")) {
         return;
@@ -615,11 +652,17 @@ function wireEmployeeModalTabs() {
 
       const tabId = link.getAttribute("data-employee-tab");
 
+      /*
+       * Əsas məlumatlar.
+       */
       if (tabId === "main") {
         setEmployeeModalView("main");
         return;
       }
 
+      /*
+       * Digər əməkdaş bölmələri.
+       */
       loadEmployeeModalTab(link);
     });
   });
