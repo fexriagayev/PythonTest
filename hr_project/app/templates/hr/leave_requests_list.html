@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}İş buraxmaları{% endblock %}
+{% block page_title %}İş buraxmaları — {{ employee.full_name() }}{% endblock %}
+{% block content %}
+
+<div class="record-tabs">
+  <a href="{{ url_for('hr.edit_employee', emp_id=employee.id) }}">Əsas məlumatlar</a>
+  <a href="{{ url_for('hr.work_history', emp_id=employee.id) }}">İş yerləri</a>
+  <a href="{{ url_for('hr.notifications', emp_id=employee.id) }}">Bildirişlər</a>
+  <a href="{{ url_for('hr.insurance_list', emp_id=employee.id) }}">Sığorta məlumatları</a>
+  <a href="{{ url_for('hr.salary_card_list', emp_id=employee.id) }}">Maaş kartları</a>
+  <a href="{{ url_for('hr.vacation_periods', emp_id=employee.id) }}">Məzuniyyət günləri</a>
+  <a href="#" class="active">İş buraxmaları</a>
+  <a href="{{ url_for('hr.document_list', emp_id=employee.id) }}">Sənədlər</a>
+</div>
+
+<div class="toolbar">
+  {% if current_user.has_perm('HR', 'can_add') %}
+  <button type="button" class="btn" onclick="openFormModal('{{ url_for('hr.add_leave_request', emp_id=employee.id) }}', function(){ window.currentGridTable.setData(); })">+ Yeni qeyd</button>
+  {% endif %}
+</div>
+<p style="color:#888;font-size:0.82em;margin-top:-6px;">
+  💡 Tarixlər kəsişə bilməz. Növbəti məzuniyyət seçəndə mövcud balans yoxlanılır.
+</p>
+
+<div id="leaveGrid"></div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const canEdit = {{ 'true' if current_user.has_perm('HR', 'can_edit') else 'false' }};
+  const canDelete = {{ 'true' if current_user.has_perm('HR', 'can_delete') else 'false' }};
+  const canAdd = {{ 'true' if current_user.has_perm('HR', 'can_add') else 'false' }};
+  const empId = {{ employee.id }};
+
+  const table = createAdvancedGrid("leaveGrid", "hr_leave_requests", {
+    ajaxURL: "/hr/" + empId + "/leave-requests/api/records",
+    pagination: true,
+    paginationSize: 15,
+    placeholder: "Hələ iş buraxması qeydi yoxdur",
+    columns: [
+      { title: "ID", field: "id", width: 60, sorter: "number" },
+      { title: "Səbəb", field: "reason", headerFilter: "input" },
+      { title: "Başlama tarixi", field: "start_date", sorter: "date" },
+      { title: "Gün sayı", field: "day_count", sorter: "number" },
+      { title: "Bitmə tarixi", field: "end_date", sorter: "date" },
+      { title: "Əmr", field: "order", headerFilter: "input" },
+      { title: "Qeyd", field: "note", headerFilter: "input" }
+    ]
+  }, {
+    idField: "id",
+    addUrl: canAdd ? "/hr/" + empId + "/leave-requests/add" : null,
+    editUrlTemplate: canEdit ? "/hr/" + empId + "/leave-requests/edit/{id}" : null,
+    deleteUrlTemplate: canDelete ? "/hr/" + empId + "/leave-requests/delete/{id}" : null,
+    numericFields: ["day_count"],
+    height: "calc(100vh - 340px)",
+  });
+});
+</script>
+{% endblock %}

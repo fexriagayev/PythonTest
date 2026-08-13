@@ -1,0 +1,18 @@
+{% extends "modal_form_base.html" %}
+{% set form_title = ('Kitabça qeydini dəyiş' if item else 'Yeni kitabça qeydi') ~ ' — ' ~ module_code %}
+{% set form_action = url_for('dictionaries.edit_item', module_code=module_code, item_id=item.id) if item else url_for('dictionaries.add_item', module_code=module_code) %}
+{% set cancel_url = url_for('dictionaries.list_items', module_code=module_code) %}
+
+{% block form_fields %}
+  <label>Kateqoriya</label>
+  <input type="text" name="category" placeholder="məs: department, position, status"
+         value="{{ item.category if item else '' }}" required>
+  <label>Ad</label>
+  <input type="text" name="name" value="{{ item.name if item else '' }}" required>
+  <label>Dəyər (əlavə kod və s.)</label>
+  <input type="text" name="value" value="{{ item.value if item else '' }}">
+  <div class="checkbox-row">
+    <input type="checkbox" name="is_active" id="is_active" {{ 'checked' if (item and item.is_active) or not item }}>
+    <label for="is_active" style="margin:0;">Aktiv</label>
+  </div>
+{% endblock %}

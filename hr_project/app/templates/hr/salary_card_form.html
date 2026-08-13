@@ -1,0 +1,30 @@
+{% extends "modal_form_base.html" %}
+{% set form_title = ('Kartı dəyiş' if record else 'Yeni kart') ~ ' — ' ~ employee.full_name() %}
+{% set form_action = url_for('hr.edit_salary_card', emp_id=employee.id, record_id=record.id) if record else url_for('hr.add_salary_card', emp_id=employee.id) %}
+{% set cancel_url = url_for('hr.salary_card_list', emp_id=employee.id) %}
+{% set form_max_width = '500px' %}
+
+{% block form_fields %}
+  <label>Bank</label>
+  <div class="dict-select-row">
+    <select name="bank_id" id="bankSelect">
+      <option value="">— seçin —</option>
+      {% for b in banks %}
+      <option value="{{ b.id }}" {{ 'selected' if record and record.bank_id==b.id }}>{{ b.name }}</option>
+      {% endfor %}
+    </select>
+    <button type="button" class="btn btn-secondary" onclick="quickAddDictionaryItem('HR', 'bank', 'bankSelect', 'bank')">+</button>
+  </div>
+
+  <label>Hesab nömrəsi</label>
+  <input type="text" name="account_number" value="{{ record.account_number if record else '' }}">
+
+  <label>Etibarlılıq tarixi</label>
+  <input type="date" name="valid_until" value="{{ record.valid_until if record else '' }}">
+
+  <label>Kart sahibinin adı</label>
+  <input type="text" name="card_holder_name" value="{{ record.card_holder_name if record else employee.full_name() }}">
+
+  <label>Qeyd</label>
+  <textarea name="note" rows="3" style="width:100%;max-width:100%;">{{ record.note if record else '' }}</textarea>
+{% endblock %}

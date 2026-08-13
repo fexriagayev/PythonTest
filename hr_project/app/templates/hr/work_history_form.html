@@ -1,0 +1,126 @@
+{% extends "modal_form_base.html" %}
+{% set form_title = ('İş yeri qeydini dəyiş' if record else 'Yeni iş yeri qeydi') ~ ' — ' ~ employee.full_name() %}
+{% set form_action = url_for('hr.edit_work_history', emp_id=employee.id, record_id=record.id) if record else url_for('hr.add_work_history', emp_id=employee.id) %}
+{% set cancel_url = url_for('hr.work_history', emp_id=employee.id) %}
+{% set form_max_width = '700px' %}
+
+{% block form_fields %}
+  <input type="hidden" id="workHistoryFormMarker" value="1">
+
+  <label>Qeydin növü</label>
+  <div class="ticket-toggle">
+    <label id="tabCurrent">
+      <input type="radio" name="is_current_company" value="1"
+             {{ 'checked' if (not record) or (record and record.is_current_company) }}>
+      <span>Cari şirkət</span>
+    </label>
+    <label id="tabExternal">
+      <input type="radio" name="is_current_company" value="0"
+             {{ 'checked' if record and not record.is_current_company }}>
+      <span>Kənar iş yeri (əvvəlki)</span>
+    </label>
+  </div>
+
+  <!-- ============== CARİ ŞİRKƏT bölməsi ============== -->
+  <div id="currentSection">
+    <label>Hərəkət növü</label>
+    <select name="movement_type">
+      {% for code, label in movement_labels.items() %}
+      <option value="{{ code }}" {{ 'selected' if record and record.movement_type==code }}>{{ label }}</option>
+      {% endfor %}
+    </select>
+
+    <label>Struktur (şöbə)</label>
+    <div class="dict-select-row">
+      <select name="department_id" id="departmentSelect">
+        <option value="">— seçin —</option>
+        {% for d in departments %}
+        <option value="{{ d.id }}" {{ 'selected' if record and record.department_id==d.id }}>{{ d.name }}</option>
+        {% endfor %}
+      </select>
+      <button type="button" class="btn btn-secondary" onclick="quickAddDictionaryItem('HR', 'department', 'departmentSelect', 'struktur')">+</button>
+    </div>
+
+    <label>Vəzifə</label>
+    <div class="dict-select-row">
+      <select name="position_id" id="positionSelect">
+        <option value="">— seçin —</option>
+        {% for p in positions %}
+        <option value="{{ p.id }}" {{ 'selected' if record and record.position_id==p.id }}>{{ p.name }}</option>
+        {% endfor %}
+      </select>
+      <button type="button" class="btn btn-secondary" onclick="quickAddDictionaryItem('HR', 'position', 'positionSelect', 'vəzifə')">+</button>
+    </div>
+
+    <label>Əmr</label>
+    <div class="dict-select-row">
+      <select name="order_id" id="orderSelect">
+        <option value="">— seçin —</option>
+        {% for o in orders %}
+        <option value="{{ o.id }}" {{ 'selected' if record and record.order_id==o.id }}>{{ o.label() }}</option>
+        {% endfor %}
+      </select>
+      <button type="button" class="btn btn-secondary" title="Yeni pəncərədə əmr əlavə et"
+              onclick="window.open('{{ url_for('hr.add_order') }}', '_blank')">+</button>
+    </div>
+  </div>
+
+  <!-- ============== KƏNAR İŞ YERİ bölməsi ============== -->
+  <div id="externalSection">
+    <label>Şirkətin adı</label>
+    <input type="text" name="external_company_name" value="{{ record.external_company_name if record else '' }}">
+
+    <label>Struktur (şöbə)</label>
+    <input type="text" name="external_department" value="{{ record.external_department if record else '' }}">
+
+    <label>Vəzifə</label>
+    <input type="text" name="external_position" value="{{ record.external_position if record else '' }}">
+  </div>
+
+  <!-- ============== Ümumi sahələr ============== -->
+  <label id="dateFromLabel">Başlama tarixi</label>
+  <input type="date" name="date_from" value="{{ record.date_from if record else '' }}" required>
+
+  <label id="dateToLabel">Bitmə tarixi <span id="dateToOptionalHint" style="font-weight:400;color:#888;">(boş = davam edir)</span></label>
+  <input type="date" name="date_to" value="{{ record.date_to if record else '' }}">
+
+  <label>Qeyd</label>
+  <textarea name="note" rows="3" style="width:100%;max-width:100%;">{{ record.note if record else '' }}</textarea>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  const marker = document.getElementById("workHistoryFormMarker");
+  if (!marker) return;
+  const form = marker.closest("form");
+  const currentSection = document.getElementById("currentSection");
+  const externalSection = document.getElementById("externalSection");
+  const dateToOptionalHint = document.getElementById("dateToOptionalHint");
+  const radios = form.querySelectorAll('input[name="is_current_company"]');
+
+  function refresh() {
+    const isCurrent = form.querySelector('input[name="is_current_company"]:checked').value === "1";
+
+    currentSection.style.display = isCurrent ? "" : "none";
+    externalSection.style.display = isCurrent ? "none" : "";
+
+    document.getElementById("tabCurrent").classList.toggle("selected-ticket", isCurrent);
+    document.getElementById("tabExternal").classList.toggle("selected-ticket", !isCurrent);
+
+    currentSection.querySelectorAll("select").forEach(function (el) { el.disabled = !isCurrent; });
+    externalSection.querySelectorAll("input").forEach(function (el) { el.disabled = isCurrent; });
+
+    const dateTo = form.querySelector('input[name="date_to"]');
+    dateTo.required = !isCurrent;
+    dateToOptionalHint.style.display = isCurrent ? "inline" : "none";
+  }
+
+  radios.forEach(function (r) { r.addEventListener("change", refresh); });
+  refresh();
+})();
+</script>
+<style>
+  .ticket-toggle label.selected-ticket { border-color: #2f6fed; background: #eef4ff; }
+</style>
+{% endblock %}

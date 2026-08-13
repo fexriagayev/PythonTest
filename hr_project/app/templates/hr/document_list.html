@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Sənədlər{% endblock %}
+{% block page_title %}Sənədlər — {{ employee.full_name() }}{% endblock %}
+{% block content %}
+
+<div class="record-tabs">
+  <a href="{{ url_for('hr.edit_employee', emp_id=employee.id) }}">Əsas məlumatlar</a>
+  <a href="{{ url_for('hr.work_history', emp_id=employee.id) }}">İş yerləri</a>
+  <a href="{{ url_for('hr.notifications', emp_id=employee.id) }}">Bildirişlər</a>
+  <a href="{{ url_for('hr.insurance_list', emp_id=employee.id) }}">Sığorta məlumatları</a>
+  <a href="{{ url_for('hr.salary_card_list', emp_id=employee.id) }}">Maaş kartları</a>
+  <a href="{{ url_for('hr.vacation_periods', emp_id=employee.id) }}">Məzuniyyət günləri</a>
+  <a href="{{ url_for('hr.leave_requests', emp_id=employee.id) }}">İş buraxmaları</a>
+  <a href="#" class="active">Sənədlər</a>
+</div>
+
+<div class="toolbar">
+  {% if current_user.has_perm('HR', 'can_add') %}
+  <button type="button" class="btn" onclick="openFormModal('{{ url_for('hr.add_document', emp_id=employee.id) }}', function(){ window.currentGridTable.setData(); })">+ Sənəd yüklə</button>
+  {% endif %}
+</div>
+
+<div id="documentGrid"></div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const canDelete = {{ 'true' if current_user.has_perm('HR', 'can_delete') else 'false' }};
+  const canAdd = {{ 'true' if current_user.has_perm('HR', 'can_add') else 'false' }};
+  const empId = {{ employee.id }};
+
+  const table = createAdvancedGrid("documentGrid", "hr_documents", {
+    ajaxURL: "/hr/" + empId + "/documents/api/records",
+    pagination: true,
+    paginationSize: 15,
+    placeholder: "Hələ sənəd yoxdur",
+    columns: [
+      { title: "ID", field: "id", width: 60, sorter: "number" },
+      { title: "Fayl adı", field: "original_filename", headerFilter: "input" },
+      { title: "Sənəd növü", field: "document_type", headerFilter: "input" },
+      { title: "Qeyd", field: "note", headerFilter: "input" },
+      { title: "Yükləmə tarixi", field: "uploaded_at", sorter: "string" }
+    ]
+  }, {
+    idField: "id",
+    addUrl: canAdd ? "/hr/" + empId + "/documents/add" : null,
+    deleteUrlTemplate: canDelete ? "/hr/" + empId + "/documents/delete/{id}" : null,
+    height: "calc(100vh - 340px)",
+    extraRowActions: function (data) {
+      return [
+        { label: "👁 Bax", action: function () { window.open("/hr/" + empId + "/documents/" + data.id + "/view", "_blank"); } },
+        { label: "⬇ Yüklə", action: function () { window.location.href = "/hr/" + empId + "/documents/" + data.id + "/download"; } },
+      ];
+    },
+  });
+});
+</script>
+{% endblock %}

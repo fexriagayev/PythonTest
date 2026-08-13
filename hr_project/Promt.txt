@@ -1,0 +1,16 @@
+növbəti tapşırıq:
+-Güzəştlər - dictionary olmalıdır və 1 variant seçilməlidir
+-Əməkdaş pəncərəsində scrool olmamalıdır. Komponentləri elə grouplaşdır ki ekrana tam yerəşsin
+-İş yerləri, bildirişlər, sənədlər, məzuniyyət günləri və s əməkdaşın əlavə edilməsi modal pəncərəsində olsun.
+-əməkdaş siyahısında İş yerləri və s olmamalıdır. Bunlar  əməkdaşın əlavə edilməsi modal pəncərə daxilində olmalıdır
+-bütün cədvəllərdən əməliyyatlar sütunu ləğv olunsun. sağ düymədə var
+-gridlərdə filter sətri çox eybəcərdir
+-hide/show, sorting, footer və digər grid customizinglər yadda qalmır. Səhifəyə yenidən daxil olanda default vəziyyətə qayıdır
+-bütün səhifələrdən əməkdaşa qayıt keçidi ləğv olunsun
+-iş yerləri, bildirişlər, sığorta və digər məlumatlarda əgər başlama və bitmə tarixləri varsa, bu zaman tarixlərin kəsişməsinə qadağa olsun və ekrana səhv çıxsın (məsələn işçi həm 01.01.2026-da anbardan kimi işə başlayıbsa və end_daet boşdursa, yeni sətir daxil edəndə başlama tarixi 01.02.2026 ve bitmə tarixi boş seçərkən səhv göstərilsin. mən bir kəsişmə variantı göstərdim, digər bütün variantları a özün nəzərə al
+-əgər mümkünsə bütün komponentlərin hündürlüyünü azalt bir az ( məsələt textedit, dateedit, dropdoün və s.memo və grid xaric.)
+-bütün modal pəncərələrdə administrator üçün imkan yarat ki, pəncərənin dizaynını dəyişə bilsin (yei access). məsələn hansısa caption edit olunsun, komponentlərin formada yerləşməsini dəyişə bilsin, gruplaşdıra bilsin və s. (devexpressdəki layout prinsipi kimi). Sonda bu dəyişiklik database səviyyədə yadda saxlansın və butun istifadəçilərdə yeni interfeys gorunsun. 
+-programin stilini dəyişdikdə butun shifələrə tətbiq olunmalıdır bu. amma işləmir
+-Sənədlər hissəsində Yüklə ilə yanaşı, baxış (yükləmədən baxmaq) imkanı olsun
+-Bütün gridlərdə column width avtomatik fit to width olsun. Bu halda gridde wfiqi scroll itəcək
+-İş buraxmalarda növbəti məzuniyyət seçildikdə, məzuniyyət günlərinin sayını "Məzuniyyət günləri" siyahısından köhnədən təzəyə doğru seçmək imkanı olsun. Növbəti məzuniyyət seçildikdən sonra "Məzuniyyət günləri" siyahısında müvafiq sətirlərdə istifadə olunmuş günlər və qalan məzuniyyət günləri xanası yenilənsin. Kompensasiya yalnız əsas günə görə verilir. Ona görə də əməkdaş növbəti məzuniyyət seçəndə əvvəlcə əlavə günlərin istifadəsinə üstünlük verilməlidir.

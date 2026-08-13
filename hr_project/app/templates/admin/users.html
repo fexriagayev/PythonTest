@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}İstifadəçilər{% endblock %}
+{% block page_title %}{{ t('admin_panel') }} — {{ t('users') }}{% endblock %}
+{% block content %}
+
+<div class="toolbar">
+  <a href="{{ url_for('admin.create_user') }}" class="btn">+ Yeni istifadəçi</a>
+</div>
+
+<table class="simple-table">
+  <thead>
+    <tr>
+      <th>ID</th><th>İstifadəçi adı</th><th>Ad Soyad</th><th>Admin</th>
+      <th>Bloklu</th><th>Log flag</th><th>Əməliyyatlar</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for u in users %}
+    <tr>
+      <td>{{ u.id }}</td>
+      <td>{{ u.username }}</td>
+      <td>{{ u.full_name }}</td>
+      <td>{{ 'Bəli' if u.is_admin else '—' }}</td>
+      <td>{{ 'Bəli' if u.is_blocked else 'Xeyr' }}</td>
+      <td>{{ 'Aktiv' if u.log_flag else 'Söndürülüb' }}</td>
+      <td style="white-space:nowrap;">
+        <a class="btn btn-sm" href="{{ url_for('admin.permissions', user_id=u.id) }}">Accesslər</a>
+
+        <form action="{{ url_for('admin.reset_password', user_id=u.id) }}" method="post" style="display:inline;">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-sm btn-secondary" onclick="return confirm('Parol \'test\' olsun?')">Parolu sıfırla</button>
+        </form>
+
+        <form action="{{ url_for('admin.toggle_block', user_id=u.id) }}" method="post" style="display:inline;">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-sm {{ 'btn-danger' if not u.is_blocked else 'btn-secondary' }}">
+            {{ 'Blok et' if not u.is_blocked else 'Blokdan çıxar' }}
+          </button>
+        </form>
+
+        <form action="{{ url_for('admin.toggle_log_flag', user_id=u.id) }}" method="post" style="display:inline;">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <button class="btn btn-sm btn-secondary">
+            {{ 'Loglamanı söndür' if u.log_flag else 'Loglamanı aç' }}
+          </button>
+        </form>
+
+        <a class="btn btn-sm btn-secondary" href="{{ url_for('admin.view_logs', user_id=u.id) }}">Loglar</a>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% endblock %}

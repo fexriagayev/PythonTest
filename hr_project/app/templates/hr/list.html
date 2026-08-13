@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block title %}Əməkdaşlar{% endblock %}
+{% block page_title %}{{ t('employees') }}{% endblock %}
+{% block content %}
+
+<div class="toolbar">
+  {% if current_user.has_perm('HR', 'can_add') %}
+  <button type="button" class="btn" onclick="openFormModal('{{ url_for('hr.add_employee') }}', function(){ window.currentGridTable.setData(); })">+ {{ t('add') }}</button>
+  {% endif %}
+  <input type="text" id="searchBox" class="form-control" style="max-width:280px;" placeholder="Axtar (bütün sahələr üzrə)...">
+</div>
+<p style="color:#888;font-size:0.82em;margin-top:-6px;">
+  💡 Sütun başlığına sağ-klik: sıralama / footer / qruplaşdırma. Sətirə sağ-klik: yeni / dəyiş / sil.
+  İlk sütundakı ☰ işarəsi — sütunları göstər/gizlət.
+</p>
+
+<div id="employeeGrid"></div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const canEdit = {{ 'true' if current_user.has_perm('HR', 'can_edit') else 'false' }};
+  const canDelete = {{ 'true' if current_user.has_perm('HR', 'can_delete') else 'false' }};
+  const canAdd = {{ 'true' if current_user.has_perm('HR', 'can_add') else 'false' }};
+
+  const table = createAdvancedGrid("employeeGrid", "hr_employees", {
+    ajaxURL: "{{ url_for('hr.api_employees') }}",
+    layout: "fitColumns",
+    pagination: true,
+    paginationSize: 15,
+    placeholder: "Məlumat yoxdur",
+    columns: [
+      { title: "ID", field: "id", width: 70, sorter: "number" },
+      { title: "Soyad", field: "last_name", headerFilter: "input", sorter: "string" },
+      { title: "Ad", field: "first_name", headerFilter: "input", sorter: "string" },
+      { title: "Ata adı", field: "father_name", headerFilter: "input" },
+      { title: "Cinsi", field: "gender", headerFilter: "input" },
+      { title: "Doğum tarixi", field: "birth_date", sorter: "date" },
+      { title: "Şöbə", field: "department", headerFilter: "input" },
+      { title: "Vəzifə", field: "position", headerFilter: "input" },
+      { title: "İşə qəbul tarixi", field: "hire_date", sorter: "date" },
+      { title: "Qalan məzuniyyət", field: "remaining_vacation_days", sorter: "number" },
+      { title: "Telefon", field: "phone" },
+      { title: "E-mail", field: "email", headerFilter: "input" },
+      {
+        title: "Aktiv", field: "is_active", width: 90,
+        formatter: "tickCross",
+        headerFilter: "tickCross", headerFilterParams: { tristate: true },
+      }
+    ]
+  }, {
+    idField: "id",
+    addUrl: canAdd ? "{{ url_for('hr.add_employee') }}" : null,
+    editUrlTemplate: canEdit ? "/hr/edit/{id}" : null,
+    deleteUrlTemplate: canDelete ? "/hr/delete/{id}" : null,
+    numericFields: ["remaining_vacation_days"],
+  });
+
+  wireGlobalSearch(table, document.getElementById("searchBox"),
+    ["last_name", "first_name", "father_name", "gender", "department", "position", "phone", "email"]);
+});
+</script>
+{% endblock %}

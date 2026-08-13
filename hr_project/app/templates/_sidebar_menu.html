@@ -1,0 +1,52 @@
+{#
+  APP-SPECIFIC sidebar menu (HR/Tabel/Salary navigation links).
+  base.html includes this file but knows nothing about its contents —
+  a future project reusing base.html as its shell only needs to swap out
+  this one file, not touch the generic layout/modal/grid/error-report
+  infrastructure at all.
+#}
+<a href="{{ url_for('dashboard.index') }}" class="{{ 'active' if request.endpoint=='dashboard.index' }}">
+  <i class="bi bi-speedometer2"></i> {{ t('dashboard') }}
+</a>
+<a href="{{ url_for('hr.list_employees') }}" class="{{ 'active' if request.blueprint=='hr' and request.endpoint not in ['hr.list_orders','hr.add_order','hr.edit_order','hr.delete_order','hr.list_leave_categories','hr.add_leave_category','hr.edit_leave_category','hr.delete_leave_category','hr.list_leave_reasons','hr.add_leave_reason','hr.edit_leave_reason','hr.delete_leave_reason','hr.list_holidays','hr.add_holiday','hr.edit_holiday','hr.delete_holiday'] }}">
+  <i class="bi bi-people"></i> {{ t('employees') }}
+</a>
+{% if current_user.has_perm('HR', 'dict_view') %}
+<a href="{{ url_for('hr.list_orders') }}" class="{{ 'active' if request.endpoint in ['hr.list_orders','hr.add_order','hr.edit_order','hr.delete_order'] }}">
+  <i class="bi bi-file-earmark-text"></i> Əmrlər
+</a>
+<a href="{{ url_for('hr.list_leave_categories') }}" class="{{ 'active' if request.endpoint in ['hr.list_leave_categories','hr.add_leave_category','hr.edit_leave_category','hr.delete_leave_category'] }}">
+  <i class="bi bi-calendar2-check"></i> Kateqoriyalar
+</a>
+<a href="{{ url_for('hr.list_leave_reasons') }}" class="{{ 'active' if request.endpoint in ['hr.list_leave_reasons','hr.add_leave_reason','hr.edit_leave_reason','hr.delete_leave_reason'] }}">
+  <i class="bi bi-clipboard2-pulse"></i> Məzuniyyət səbəbləri
+</a>
+<a href="{{ url_for('hr.list_holidays') }}" class="{{ 'active' if request.endpoint in ['hr.list_holidays','hr.add_holiday','hr.edit_holiday','hr.delete_holiday'] }}">
+  <i class="bi bi-calendar-event"></i> Bayram günləri
+</a>
+{% endif %}
+<a href="{{ url_for('tabel.list_entries') }}" class="{{ 'active' if request.blueprint=='tabel' }}">
+  <i class="bi bi-clock-history"></i> {{ t('tabel') }}
+</a>
+<a href="{{ url_for('salary.list_entries') }}" class="{{ 'active' if request.blueprint=='salary' }}">
+  <i class="bi bi-cash-coin"></i> {{ t('salary') }}
+</a>
+<a href="{{ url_for('dictionaries.index') }}" class="{{ 'active' if request.blueprint=='dictionaries' }}">
+  <i class="bi bi-journal-bookmark"></i> {{ t('dictionaries') }}
+</a>
+<a href="{{ url_for('reports.index') }}" class="{{ 'active' if request.blueprint=='reports' }}">
+  <i class="bi bi-bar-chart"></i> {{ t('reports') }}
+</a>
+
+<div class="nav-group-title">{{ t('tools') }}</div>
+<a href="{{ url_for('tools.profile') }}" class="sub {{ 'active' if request.endpoint=='tools.profile' }}">{{ t('change_user') }}</a>
+<a href="{{ url_for('tools.style') }}" class="sub {{ 'active' if request.endpoint=='tools.style' }}">{{ t('style') }}</a>
+<a href="{{ url_for('tools.change_password') }}" class="sub {{ 'active' if request.endpoint=='tools.change_password' }}">{{ t('change_password') }}</a>
+<a href="{{ url_for('tools.settings') }}" class="sub {{ 'active' if request.endpoint=='tools.settings' }}">{{ t('settings') }}</a>
+
+{% if current_user.is_admin %}
+<div class="nav-group-title">Admin</div>
+<a href="{{ url_for('admin.index') }}" class="{{ 'active' if request.blueprint=='admin' }}">
+  <i class="bi bi-gear"></i> {{ t('admin_panel') }}
+</a>
+{% endif %}

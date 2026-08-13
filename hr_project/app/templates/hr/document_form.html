@@ -1,0 +1,25 @@
+{% extends "modal_form_base.html" %}
+{% set form_title = 'Yeni sənəd — ' ~ employee.full_name() %}
+{% set form_action = url_for('hr.add_document', emp_id=employee.id) %}
+{% set cancel_url = url_for('hr.document_list', emp_id=employee.id) %}
+{% set form_enctype = 'multipart/form-data' %}
+{% set form_max_width = '500px' %}
+
+{% block form_fields %}
+  <label>Fayl</label>
+  <input type="file" name="file" required>
+
+  <label>Sənəd növü</label>
+  <div class="dict-select-row">
+    <select name="document_type_id" id="docTypeSelect">
+      <option value="">— seçin —</option>
+      {% for t in doc_types %}
+      <option value="{{ t.id }}">{{ t.name }}</option>
+      {% endfor %}
+    </select>
+    <button type="button" class="btn btn-secondary" onclick="quickAddDictionaryItem('HR', 'document_type', 'docTypeSelect', 'sənəd növü')">+</button>
+  </div>
+
+  <label>Qeyd</label>
+  <textarea name="note" rows="3" style="width:100%;max-width:100%;"></textarea>
+{% endblock %}

@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}{{ t('dashboard') }}{% endblock %}
+{% block content %}
+
+<div class="stats-row">
+  <div class="stat-box">
+    <div class="stat-value">{{ stats.employees }}</div>
+    <div class="stat-label">Aktiv əməkdaş</div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-value">{{ stats.tabel_entries }}</div>
+    <div class="stat-label">Tabel qeydi</div>
+  </div>
+  <div class="stat-box">
+    <div class="stat-value">{{ stats.salary_entries }}</div>
+    <div class="stat-label">Əməkhaqqı qeydi</div>
+  </div>
+</div>
+
+<div class="card" style="margin-top:20px;">
+  <h3>🔔 Bildirişlər</h3>
+  {% if notifications %}
+  <ul style="margin:0;padding-left:20px;">
+    {% for n in notifications %}
+    <li class="notification-{{ n.level }}">{{ n.message }}</li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p style="color:#888;font-size:0.9em;">
+    Hazırda bildiriş yoxdur. Sığorta müddəti / kart etibarlılığı bitmə xəbərdarlıqları
+    müvafiq modullar (Sığorta məlumatları, Maaş kartları) qurulduqdan sonra burada görünəcək.
+  </p>
+  {% endif %}
+</div>
+
+{% if current_user.is_admin %}
+<div class="card" style="margin-top:20px;">
+  <h3>Son fəaliyyət qeydləri (bütün sistem üzrə)</h3>
+  <table class="simple-table">
+    <thead><tr><th>Vaxt</th><th>İstifadəçi</th><th>Modul</th><th>Əməliyyat</th></tr></thead>
+    <tbody>
+      {% for log in recent_logs %}
+      <tr>
+        <td>{{ log.timestamp }}</td>
+        <td>{{ log.username }}</td>
+        <td>{{ log.module }}</td>
+        <td>{{ log.action }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="4">Hələ heç bir log yoxdur (yalnız log_flag=aktiv istifadəçilərin əməliyyatları yazılır).</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% endblock %}

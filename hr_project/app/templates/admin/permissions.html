@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Accesslər{% endblock %}
+{% block page_title %}Accesslər — {{ user.username }}{% endblock %}
+{% block content %}
+
+<form method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+{% for module in modules %}
+  {% set perm = perms_by_module.get(module.id) %}
+  <div class="card">
+    <h3>{{ module.name }} ({{ module.code }})</h3>
+    <table class="simple-table perm-table">
+      <thead><tr>{% for field, label in fields %}<th>{{ label }}</th>{% endfor %}</tr></thead>
+      <tbody>
+        <tr>
+          {% for field, label in fields %}
+          <td>
+            <input type="checkbox" name="{{ module.code }}__{{ field }}"
+                   {{ 'checked' if perm and (perm|attr(field)) }}>
+          </td>
+          {% endfor %}
+        </tr>
+      </tbody>
+    </table>
+  </div>
+{% endfor %}
+
+  <div class="actions">
+    <button class="btn" type="submit">{{ t('save') }}</button>
+    <a class="btn btn-secondary" href="{{ url_for('admin.index') }}">{{ t('cancel') }}</a>
+  </div>
+</form>
+
+{% endblock %}

@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}Sığorta məlumatları{% endblock %}
+{% block page_title %}Sığorta məlumatları — {{ employee.full_name() }}{% endblock %}
+{% block content %}
+
+<div class="record-tabs">
+  <a href="{{ url_for('hr.edit_employee', emp_id=employee.id) }}">Əsas məlumatlar</a>
+  <a href="{{ url_for('hr.work_history', emp_id=employee.id) }}">İş yerləri</a>
+  <a href="{{ url_for('hr.notifications', emp_id=employee.id) }}">Bildirişlər</a>
+  <a href="#" class="active">Sığorta məlumatları</a>
+  <a href="{{ url_for('hr.salary_card_list', emp_id=employee.id) }}">Maaş kartları</a>
+  <a href="{{ url_for('hr.vacation_periods', emp_id=employee.id) }}">Məzuniyyət günləri</a>
+  <a href="{{ url_for('hr.leave_requests', emp_id=employee.id) }}">İş buraxmaları</a>
+  <a href="{{ url_for('hr.document_list', emp_id=employee.id) }}">Sənədlər</a>
+</div>
+
+<div class="toolbar">
+  {% if current_user.has_perm('HR', 'can_add') %}
+  <button type="button" class="btn" onclick="openFormModal('{{ url_for('hr.add_insurance', emp_id=employee.id) }}', function(){ window.currentGridTable.setData(); })">+ Yeni qeyd</button>
+  {% endif %}
+</div>
+
+<div id="insuranceGrid"></div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const canEdit = {{ 'true' if current_user.has_perm('HR', 'can_edit') else 'false' }};
+  const canDelete = {{ 'true' if current_user.has_perm('HR', 'can_delete') else 'false' }};
+  const canAdd = {{ 'true' if current_user.has_perm('HR', 'can_add') else 'false' }};
+  const empId = {{ employee.id }};
+  const statusLabels = { active: "Aktiv", expiring_soon: "1 aydan az qalıb", expired: "Müddəti bitib" };
+
+  const table = createAdvancedGrid("insuranceGrid", "hr_insurance", {
+    ajaxURL: "/hr/" + empId + "/insurance/api/records",
+    pagination: true,
+    paginationSize: 15,
+    placeholder: "Hələ sığorta qeydi yoxdur",
+    columns: [
+      { title: "ID", field: "id", width: 60, sorter: "number" },
+      { title: "Başlama tarixi", field: "start_date", sorter: "date" },
+      { title: "Bitmə tarixi", field: "end_date", sorter: "date" },
+      { title: "Sığorta şirkəti", field: "company", headerFilter: "input" },
+      { title: "Sığorta növü", field: "type", headerFilter: "input" },
+      { title: "Sığorta nömrəsi", field: "policy_number", headerFilter: "input" },
+      { title: "Məbləğ", field: "amount", sorter: "number" },
+      {
+        title: "Status", field: "status", width: 140,
+        formatter: function (cell) {
+          const v = cell.getValue();
+          const cls = v === "expired" ? "flash-danger" : (v === "expiring_soon" ? "flash-warning" : "flash-success");
+          return `<span class="flash ${cls}" style="padding:2px 8px;margin:0;display:inline-block;">${statusLabels[v] || v}</span>`;
+        }
+      },
+      { title: "Qeyd", field: "note", headerFilter: "input" }
+    ]
+  }, {
+    idField: "id",
+    addUrl: canAdd ? "/hr/" + empId + "/insurance/add" : null,
+    editUrlTemplate: canEdit ? "/hr/" + empId + "/insurance/edit/{id}" : null,
+    deleteUrlTemplate: canDelete ? "/hr/" + empId + "/insurance/delete/{id}" : null,
+    numericFields: ["amount"],
+    height: "calc(100vh - 340px)",
+  });
+});
+</script>
+{% endblock %}

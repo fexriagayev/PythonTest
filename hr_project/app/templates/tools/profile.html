@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Profil{% endblock %}
+{% block page_title %}{{ t('change_user') }}{% endblock %}
+{% block content %}
+<div class="card" style="max-width:500px;">
+<form method="post" class="simple-form">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <label>İstifadəçi adı</label>
+  <input type="text" value="{{ current_user.username }}" disabled>
+  <label>Ad Soyad</label>
+  <input type="text" name="full_name" value="{{ current_user.full_name }}">
+  <label>E-mail</label>
+  <input type="email" name="email" value="{{ current_user.email or '' }}">
+  <div class="actions">
+    <button class="btn" type="submit">{{ t('save') }}</button>
+  </div>
+</form>
+</div>
+{% endblock %}

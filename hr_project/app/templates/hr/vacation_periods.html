@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Məzuniyyət günləri{% endblock %}
+{% block page_title %}Məzuniyyət günləri — {{ employee.full_name() }}{% endblock %}
+{% block content %}
+
+<div class="record-tabs">
+  <a href="{{ url_for('hr.edit_employee', emp_id=employee.id) }}">Əsas məlumatlar</a>
+  <a href="{{ url_for('hr.work_history', emp_id=employee.id) }}">İş yerləri</a>
+  <a href="{{ url_for('hr.notifications', emp_id=employee.id) }}">Bildirişlər</a>
+  <a href="{{ url_for('hr.insurance_list', emp_id=employee.id) }}">Sığorta məlumatları</a>
+  <a href="{{ url_for('hr.salary_card_list', emp_id=employee.id) }}">Maaş kartları</a>
+  <a href="#" class="active">Məzuniyyət günləri</a>
+  <a href="{{ url_for('hr.leave_requests', emp_id=employee.id) }}">İş buraxmaları</a>
+  <a href="{{ url_for('hr.document_list', emp_id=employee.id) }}">Sənədlər</a>
+</div>
+
+<p style="color:#888;font-size:0.82em;margin-top:-6px;">
+  Bu siyahı avtomatik hesablanır (işə qəbul tarixindən başlayaraq hər iş ili üzrə) — birbaşa redaktə
+  edilmir. Yalnız "Kompensasiya" sütununda dəyər qeyd edə bilərsiniz.
+</p>
+
+<div id="periodsGrid"></div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const canEdit = {{ 'true' if current_user.has_perm('HR', 'can_edit') else 'false' }};
+  const empId = {{ employee.id }};
+
+  const table = createAdvancedGrid("periodsGrid", "hr_vacation_periods", {
+    ajaxURL: "/hr/" + empId + "/vacation-periods/api/periods",
+    pagination: false,
+    placeholder: "Hələ məzuniyyət dövrü yoxdur (işə qəbul tarixi 'İş yerləri' bölməsindən qeyd olunmalıdır)",
+    columns: [
+      { title: "Dövrün başlaması", field: "period_start", sorter: "date" },
+      { title: "Dövrün bitməsi", field: "period_end", sorter: "date" },
+      { title: "Kateqoriya", field: "category", headerFilter: "input" },
+      { title: "Kateqoriya üzrə gün", field: "category_days", sorter: "number" },
+      { title: "Əsas gün (düşən)", field: "entitled_base", sorter: "number", bottomCalc: "sum" },
+      { title: "Əlavə gün (düşən)", field: "entitled_bonus", sorter: "number", bottomCalc: "sum" },
+      { title: "İstifadə (əsas)", field: "used_base", sorter: "number", bottomCalc: "sum" },
+      { title: "İstifadə (əlavə)", field: "used_bonus", sorter: "number", bottomCalc: "sum" },
+      { title: "Kompensasiya (əsas)", field: "compensated_base", sorter: "number", bottomCalc: "sum" },
+      { title: "Kompensasiya (əlavə)", field: "compensated_bonus", sorter: "number", bottomCalc: "sum" },
+      { title: "Qalıq (əsas)", field: "remaining_base", sorter: "number", bottomCalc: "sum" },
+      { title: "Qalıq (əlavə)", field: "remaining_bonus", sorter: "number", bottomCalc: "sum" }
+    ]
+  }, {
+    height: "calc(100vh - 400px)",
+    extraRowActions: canEdit ? function (data) {
+      return [{
+        label: "💰 Kompensasiya",
+        action: function () {
+          openFormModal(
+            "/hr/" + empId + "/vacation-periods/compensation?period_start=" + data.period_start + "&period_end=" + data.period_end,
+            function () { window.currentGridTable.setData(); }
+          );
+        },
+      }];
+    } : null,
+  });
+});
+</script>
+{% endblock %}

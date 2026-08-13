@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Kateqoriyalar{% endblock %}
+{% block page_title %}Məzuniyyət kateqoriyaları{% endblock %}
+{% block content %}
+
+<div class="toolbar">
+  {% if current_user.has_perm('HR', 'dict_add') %}
+  <button type="button" class="btn" onclick="openFormModal('{{ url_for('hr.add_leave_category') }}', function(){ window.currentGridTable.setData(); })">+ {{ t('add') }}</button>
+  {% endif %}  <input type="text" id="searchBox" class="form-control" style="max-width:280px;" placeholder="Axtar...">
+</div>
+<p style="color:#888;font-size:0.82em;margin-top:-6px;">
+  Hər kateqoriya əsas məzuniyyət günü sayını və stajа görə əlavə gün qaydasını müəyyən edir.
+  Bu, "Bildirişlər" bölməsində seçilir və "Məzuniyyət günləri" hesablamasında istifadə olunacaq.
+</p>
+
+<div id="categoryGrid"></div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const canEdit = {{ 'true' if current_user.has_perm('HR', 'dict_edit') else 'false' }};
+  const canDelete = {{ 'true' if current_user.has_perm('HR', 'dict_delete') else 'false' }};
+  const canAdd = {{ 'true' if current_user.has_perm('HR', 'dict_add') else 'false' }};
+
+  const table = createAdvancedGrid("categoryGrid", "hr_leave_categories", {
+    ajaxURL: "{{ url_for('hr.api_leave_categories') }}",
+    pagination: true,
+    paginationSize: 15,
+    placeholder: "Məlumat yoxdur",
+    columns: [
+      { title: "ID", field: "id", width: 60, sorter: "number" },
+      { title: "Ad", field: "name", headerFilter: "input" },
+      { title: "Əsas məzuniyyət günü", field: "base_vacation_days", sorter: "number" },
+      { title: "Hər neçə il", field: "seniority_years_per_bonus", sorter: "number" },
+      { title: "Əlavə gün / interval", field: "bonus_days_per_interval", sorter: "number" },
+      { title: "Maks. əlavə gün", field: "max_bonus_days", sorter: "number" },
+      {
+        title: "Aktiv", field: "is_active", width: 90, formatter: "tickCross",
+        headerFilter: "tickCross", headerFilterParams: { tristate: true },
+      }
+    ]
+  }, {
+    idField: "id",
+    addUrl: canAdd ? "{{ url_for('hr.add_leave_category') }}" : null,
+    editUrlTemplate: canEdit ? "/hr/leave-categories/edit/{id}" : null,
+    deleteUrlTemplate: canDelete ? "/hr/leave-categories/delete/{id}" : null,
+    numericFields: ["base_vacation_days", "seniority_years_per_bonus", "bonus_days_per_interval", "max_bonus_days"],
+  });
+
+  wireGlobalSearch(table, document.getElementById("searchBox"), ["name"]);
+});
+</script>
+{% endblock %}

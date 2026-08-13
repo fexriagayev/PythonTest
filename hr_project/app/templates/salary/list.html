@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Əməkhaqları{% endblock %}
+{% block page_title %}{{ t('salary') }}{% endblock %}
+{% block content %}
+
+<div class="toolbar">
+  {% if current_user.has_perm('SALARY', 'can_add') %}
+  <button type="button" class="btn" onclick="openFormModal('{{ url_for('salary.add_entry') }}', function(){ window.currentGridTable.setData(); })">+ {{ t('add') }}</button>
+  {% endif %}
+  <input type="text" id="searchBox" class="form-control" style="max-width:280px;" placeholder="Axtar (bütün sahələr üzrə)...">
+</div>
+<p style="color:#888;font-size:0.82em;margin-top:-6px;">
+  💡 Sütun başlığına sağ-klik: sıralama / footer (cəmi) / qrup footer / qruplaşdırma. Sətirə sağ-klik: yeni / dəyiş / sil.
+</p>
+
+<div id="salaryGrid"></div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const canEdit = {{ 'true' if current_user.has_perm('SALARY', 'can_edit') else 'false' }};
+  const canDelete = {{ 'true' if current_user.has_perm('SALARY', 'can_delete') else 'false' }};
+  const canAdd = {{ 'true' if current_user.has_perm('SALARY', 'can_add') else 'false' }};
+
+  const table = createAdvancedGrid("salaryGrid", "salary_entries", {
+    ajaxURL: "{{ url_for('salary.api_entries') }}",
+    layout: "fitColumns",
+    pagination: true,
+    paginationSize: 15,
+    placeholder: "Məlumat yoxdur",
+    groupBy: "period",
+    columns: [
+      { title: "ID", field: "id", width: 60, sorter: "number" },
+      { title: "Əməkdaş", field: "employee", headerFilter: "input" },
+      { title: "Dövr", field: "period", headerFilter: "input" },
+      { title: "Baza", field: "base_salary", sorter: "number" },
+      { title: "Bonus", field: "bonus", sorter: "number" },
+      { title: "Tutulma", field: "deductions", sorter: "number" },
+      { title: "Cəmi", field: "total", sorter: "number", bottomCalc: "sum" },
+      { title: "Qeyd", field: "note", headerFilter: "input" }
+    ]
+  }, {
+    idField: "id",
+    addUrl: canAdd ? "{{ url_for('salary.add_entry') }}" : null,
+    editUrlTemplate: canEdit ? "/salary/edit/{id}" : null,
+    deleteUrlTemplate: canDelete ? "/salary/delete/{id}" : null,
+    numericFields: ["base_salary", "bonus", "deductions", "total"],
+  });
+
+  wireGlobalSearch(table, document.getElementById("searchBox"), ["employee", "period", "note"]);
+});
+</script>
+{% endblock %}

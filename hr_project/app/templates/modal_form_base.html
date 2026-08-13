@@ -1,0 +1,56 @@
+{#
+  BASE MODAL FORM — every Add/Edit form in the project extends this one
+  template instead of repeating the same <form>/actions boilerplate.
+
+  A concrete form sets a few variables and fills in blocks:
+
+    {% extends "modal_form_base.html" %}
+    {% set form_title = "Yeni əmr" %}
+    {% set form_action = url_for(...) %}
+    {% set cancel_url = url_for(...) %}
+    {% set form_enctype = "multipart/form-data" %}   (only if uploading a file)
+    {% set form_no_wrapper_card = true %}            (only if your form defines its own div.card sections, e.g. a multi-section form)
+
+    {% block before_form %}...content shown above the <form>, e.g. tabs...{% endblock %}
+    {% block form_fields %}...the actual <label>/<input> pairs...{% endblock %}
+    {% block after_form %}...content shown below the form, e.g. usage tables...{% endblock %}
+    {% block form_actions %}...override only if you need custom buttons...{% endblock %}
+
+  This still renders as a bare fragment inside the modal popup (via
+  layout=modal_layout.html, see app/utils/modal.py) or as a full page when
+  opened directly — exactly like before, just without the duplicated
+  boilerplate in every individual form template.
+#}
+{% extends layout|default("base.html") %}
+{% block title %}{{ form_title|default("Forma") }}{% endblock %}
+{% block page_title %}{{ form_title|default("Forma") }}{% endblock %}
+
+{% block content %}
+
+<div class="dx-modal-form-shell" data-form-title="{{ form_title|default("Forma") }}">
+{% block before_form %}{% endblock %}
+
+{% if not form_no_wrapper_card %}<div class="card" style="max-width:{{ form_max_width|default('600px') }};">{% endif %}
+<form method="post" class="simple-form dx-modal-form"
+      {% if form_enctype %}enctype="{{ form_enctype }}"{% endif %}
+      action="{{ form_action }}">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+  <div class="dx-modal-form-fields">
+    {% block form_fields %}{% endblock %}
+  </div>
+
+  {% block form_actions %}
+  <div class="actions">
+    <button class="btn" type="submit">{{ t('save') }}</button>
+    {% if cancel_url %}<a class="btn btn-secondary" href="{{ cancel_url }}">{{ t('cancel') }}</a>{% endif %}
+  </div>
+  {% endblock %}
+
+</form>
+{% if not form_no_wrapper_card %}</div>{% endif %}
+
+{% block after_form %}{% endblock %}
+</div>
+
+{% endblock %}

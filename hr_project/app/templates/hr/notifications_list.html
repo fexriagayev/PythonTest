@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Bildirişlər{% endblock %}
+{% block page_title %}Bildirişlər — {{ employee.full_name() }}{% endblock %}
+{% block content %}
+
+<div class="record-tabs">
+  <a href="{{ url_for('hr.edit_employee', emp_id=employee.id) }}">Əsas məlumatlar</a>
+  <a href="{{ url_for('hr.work_history', emp_id=employee.id) }}">İş yerləri</a>
+  <a href="#" class="active">Bildirişlər</a>
+  <a href="{{ url_for('hr.insurance_list', emp_id=employee.id) }}">Sığorta məlumatları</a>
+  <a href="{{ url_for('hr.salary_card_list', emp_id=employee.id) }}">Maaş kartları</a>
+  <a href="{{ url_for('hr.vacation_periods', emp_id=employee.id) }}">Məzuniyyət günləri</a>
+  <a href="{{ url_for('hr.leave_requests', emp_id=employee.id) }}">İş buraxmaları</a>
+  <a href="{{ url_for('hr.document_list', emp_id=employee.id) }}">Sənədlər</a>
+</div>
+
+<div class="card" style="margin-bottom:16px;">
+  <div style="display:flex;flex-wrap:wrap;gap:24px;font-size:0.9em;">
+    <div><b>Cari maaş:</b> {{ employee.salary or '—' }}</div>
+    <div><b>Müqavilə başlama:</b> {{ employee.contract_start_date or '—' }}</div>
+    <div><b>Müqavilə bitmə:</b> {{ employee.contract_end_date or '—' }}</div>
+  </div>
+  <p style="color:#888;font-size:0.82em;margin:10px 0 0;">
+    💡 Yalnız dəyişən hissəni doldurmaq kifayətdir — qalan sahələr son bildirişdən avtomatik köçürülür.
+    Hər yeni bildirişdə Hissə 1 (nömrə, tarix, əmr) mütləq yenilənir.
+  </p>
+</div>
+
+<div class="toolbar">
+  {% if current_user.has_perm('HR', 'can_add') %}
+  <button type="button" class="btn" onclick="openFormModal('{{ url_for('hr.add_notification', emp_id=employee.id) }}', function(){ window.currentGridTable.setData(); })">+ Yeni bildiriş</button>
+  {% endif %}
+</div>
+<p style="color:#888;font-size:0.82em;margin-top:-6px;">
+  💡 Sütun başlığına sağ-klik: sıralama / footer. Sətirə sağ-klik: yeni / dəyiş / sil.
+</p>
+
+<div id="notificationGrid"></div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const canEdit = {{ 'true' if current_user.has_perm('HR', 'can_edit') else 'false' }};
+  const canDelete = {{ 'true' if current_user.has_perm('HR', 'can_delete') else 'false' }};
+  const canAdd = {{ 'true' if current_user.has_perm('HR', 'can_add') else 'false' }};
+  const empId = {{ employee.id }};
+
+  const table = createAdvancedGrid("notificationGrid", "hr_notifications", {
+    ajaxURL: "/hr/" + empId + "/notifications/api/records",
+    pagination: true,
+    paginationSize: 15,
+    placeholder: "Hələ bildiriş yoxdur",
+    columns: [
+      { title: "ID", field: "id", width: 60, sorter: "number" },
+      { title: "Bildiriş №", field: "number", headerFilter: "input" },
+      { title: "Başlama tarixi", field: "start_date", sorter: "date" },
+      { title: "Əmr", field: "order", headerFilter: "input" },
+      { title: "Məşğulluq təsnifatı", field: "employment_classification", headerFilter: "input" },
+      { title: "Məşğulluq vəzifəsi", field: "employment_position", headerFilter: "input" },
+      { title: "Müqavilə №", field: "contract_number", headerFilter: "input" },
+      { title: "Müqavilə tipi", field: "contract_type", headerFilter: "input" },
+      { title: "Müq. başlama", field: "contract_start_date", sorter: "date" },
+      { title: "Müq. bitmə", field: "contract_end_date", sorter: "date" },
+      { title: "İşin tipi", field: "work_type", headerFilter: "input" },
+      { title: "Əməyin növü", field: "labor_type", headerFilter: "input" },
+      { title: "Kateqoriya", field: "leave_category", headerFilter: "input" },
+      { title: "Maaş", field: "salary", sorter: "number" },
+      { title: "Qeyd", field: "note", headerFilter: "input" }
+    ]
+  }, {
+    idField: "id",
+    addUrl: canAdd ? "/hr/" + empId + "/notifications/add" : null,
+    editUrlTemplate: canEdit ? "/hr/" + empId + "/notifications/edit/{id}" : null,
+    deleteUrlTemplate: canDelete ? "/hr/" + empId + "/notifications/delete/{id}" : null,
+    numericFields: ["salary"],
+    height: "calc(100vh - 460px)",
+  });
+});
+</script>
+{% endblock %}

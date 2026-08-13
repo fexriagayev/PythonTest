@@ -1,0 +1,79 @@
+{% extends "modal_form_base.html" %}
+{% set form_title = ('İş buraxmasını dəyiş' if record else 'Yeni iş buraxması') ~ ' — ' ~ employee.full_name() %}
+{% set form_action = url_for('hr.edit_leave_request', emp_id=employee.id, record_id=record.id) if record else url_for('hr.add_leave_request', emp_id=employee.id) %}
+{% set cancel_url = url_for('hr.leave_requests', emp_id=employee.id) %}
+
+{% block before_form %}
+<p style="color:#888;font-size:0.85em;max-width:600px;">
+  💡 Mövcud məzuniyyət balansı: <b>{{ balance.base }}</b> əsas + <b>{{ balance.bonus }}</b> əlavə =
+  <b>{{ balance.total }}</b> gün
+  {% if record %}(bu qeyd nəzərə alınmadan üstünə {{ record.day_count }} gün əlavə olunur){% endif %}.
+</p>
+{% endblock %}
+
+{% block form_fields %}
+  <label>Səbəb</label>
+  <div class="dict-select-row">
+    <select name="leave_reason_id" id="reasonSelect" required>
+      <option value="">— seçin —</option>
+      {% for r in reasons %}
+      <option value="{{ r.id }}" {{ 'selected' if record and record.leave_reason_id==r.id }} data-annual="{{ 'true' if r.is_annual_leave else 'false' }}">
+        {{ r.name }} ({{ r.counting_method_label() }})
+      </option>
+      {% endfor %}
+    </select>
+    <button type="button" class="btn btn-secondary" title="Yeni pəncərədə səbəb əlavə et" onclick="window.open('{{ url_for('hr.add_leave_reason') }}', '_blank')">+</button>
+  </div>
+
+  <label>Başlama tarixi</label>
+  <input type="date" name="start_date" id="startDateInput" value="{{ record.start_date if record else '' }}" required>
+
+  <label>Gün sayı</label>
+  <input type="number" name="day_count" id="dayCountInput" min="1" value="{{ record.day_count if record else '' }}" required>
+
+  <label>Bitmə tarixi (avtomatik)</label>
+  <input type="text" id="endDatePreview" class="field-readonly" disabled value="{{ record.end_date if record else '' }}">
+
+  <label>Əmr</label>
+  <div class="dict-select-row">
+    <select name="order_id">
+      <option value="">— seçin —</option>
+      {% for o in orders %}
+      <option value="{{ o.id }}" {{ 'selected' if record and record.order_id==o.id }}>{{ o.label() }}</option>
+      {% endfor %}
+    </select>
+    <button type="button" class="btn btn-secondary" title="Yeni pəncərədə əmr əlavə et" onclick="window.open('{{ url_for('hr.add_order') }}', '_blank')">+</button>
+  </div>
+
+  <label>Qeyd</label>
+  <textarea name="note" rows="3" style="width:100%;max-width:100%;">{{ record.note if record else '' }}</textarea>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  const empId = {{ employee.id }};
+  const reasonSelect = document.getElementById("reasonSelect");
+  const startInput = document.getElementById("startDateInput");
+  const dayCountInput = document.getElementById("dayCountInput");
+  const endPreview = document.getElementById("endDatePreview");
+  if (!reasonSelect) return;
+
+  function refreshEndDate() {
+    const reasonId = reasonSelect.value;
+    const start = startInput.value;
+    const days = dayCountInput.value;
+    if (!reasonId || !start || !days) { endPreview.value = ""; return; }
+    fetch(`/hr/${empId}/leave-requests/api/end-date?leave_reason_id=${reasonId}&start_date=${start}&day_count=${days}`,
+      { headers: { "X-Requested-With": "XMLHttpRequest" } })
+      .then(function (r) { return r.json(); })
+      .then(function (data) { endPreview.value = data.end_date || ""; });
+  }
+
+  reasonSelect.addEventListener("change", refreshEndDate);
+  startInput.addEventListener("change", refreshEndDate);
+  dayCountInput.addEventListener("input", refreshEndDate);
+  refreshEndDate();
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="{{ ui_lang }}">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+{% if csrf_token is defined %}<meta name="csrf-token" content="{{ csrf_token() }}">{% endif %}
+<title>{% block title %}HR System{% endblock %}</title>
+
+<!-- Bootstrap + Bootswatch theme (free, MIT licensed) — powers the
+     "proqramın stili" (Tools > Style) switcher -->
+<link id="theme-css" rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootswatch@5.3.3/dist/{{ ui_theme }}/bootstrap.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+
+<!-- DevExtreme DataGrid — powers all application data grids:
+     column resizing/reordering/chooser, filtering, sorting, grouping,
+     summaries and state management. -->
+<link rel="stylesheet" href="https://cdn3.devexpress.com/jslib/24.2.8/css/dx.common.css">
+<link rel="stylesheet" href="https://cdn3.devexpress.com/jslib/24.2.8/css/dx.light.css">
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn3.devexpress.com/jslib/24.2.8/js/dx.all.js"></script>
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+<script src="{{ url_for('static', filename='js/dx-ui.js') }}"></script>
+<script src="{{ url_for('static', filename='js/context-menu.js') }}"></script>
+<script src="{{ url_for('static', filename='js/modal.js') }}"></script>
+<script src="{{ url_for('static', filename='js/advanced-grid.js') }}"></script>
+<script src="{{ url_for('static', filename='js/error-report.js') }}"></script>
+{% if current_user.is_authenticated %}
+<script>window.CURRENT_USERNAME = {{ current_user.username|tojson }};</script>
+{% endif %}
+<style>
+  :root { --app-font-size: {{ ui_font_size }}px; }
+  body { font-size: var(--app-font-size); }
+</style>
+{% block extra_head %}{% endblock %}
+</head>
+<body>
+
+{% if current_user.is_authenticated %}
+<div class="app-shell">
+  <aside class="app-sidebar">
+    <div class="brand">{% block brand %}HR • Tabel • Salary{% endblock %}</div>
+    <nav>
+      {% block sidebar_menu %}{% include "_sidebar_menu.html" %}{% endblock %}
+    </nav>
+  </aside>
+
+  <div class="app-main">
+    <header class="app-topbar">
+      <div class="topbar-title">{% block page_title %}{% endblock %}</div>
+      <div class="topbar-user">
+        <span>{{ current_user.full_name or current_user.username }}</span>
+        <a href="{{ url_for('auth.logout') }}" class="logout-link">{{ t('logout') }}</a>
+      </div>
+    </header>
+
+    <main class="app-content">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+          <div class="flash-wrap">
+          {% for category, message in messages %}
+            <div class="flash flash-{{ category }}">{{ message }}</div>
+          {% endfor %}
+          </div>
+        {% endif %}
+      {% endwith %}
+
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+{% else %}
+  {% block guest_content %}{% endblock %}
+{% endif %}
+
+{% block extra_scripts %}{% endblock %}
+</body>
+</html>

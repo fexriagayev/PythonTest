@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Əmrlər{% endblock %}
+{% block page_title %}Əmrlər (kadr əmrləri){% endblock %}
+{% block content %}
+
+<div class="toolbar">
+  {% if current_user.has_perm('HR', 'dict_add') %}
+  <button type="button" class="btn" onclick="openFormModal('{{ url_for('hr.add_order') }}', function(){ window.currentGridTable.setData(); })">+ {{ t('add') }}</button>
+  {% endif %}  <input type="text" id="searchBox" class="form-control" style="max-width:280px;" placeholder="Axtar...">
+</div>
+<p style="color:#888;font-size:0.82em;margin-top:-6px;">
+  💡 Sütun başlığına sağ-klik: sıralama / footer. Sətirə sağ-klik: yeni / dəyiş / sil.
+</p>
+
+<div id="ordersGrid"></div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const canEdit = {{ 'true' if current_user.has_perm('HR', 'dict_edit') else 'false' }};
+  const canDelete = {{ 'true' if current_user.has_perm('HR', 'dict_delete') else 'false' }};
+  const canAdd = {{ 'true' if current_user.has_perm('HR', 'dict_add') else 'false' }};
+
+  const table = createAdvancedGrid("ordersGrid", "hr_orders", {
+    ajaxURL: "{{ url_for('hr.api_orders') }}",
+    layout: "fitColumns",
+    pagination: true,
+    paginationSize: 15,
+    placeholder: "Məlumat yoxdur",
+    columns: [
+      { title: "ID", field: "id", width: 60, sorter: "number" },
+      { title: "Əmrin nömrəsi", field: "number", headerFilter: "input" },
+      { title: "Tarixi", field: "order_date", sorter: "date" },
+      { title: "Qüvvəyə minmə tarixi", field: "effective_date", sorter: "date" },
+      { title: "Növü", field: "order_type", headerFilter: "input" },
+      { title: "Qeyd", field: "note", headerFilter: "input" }
+    ]
+  }, {
+    idField: "id",
+    addUrl: canAdd ? "{{ url_for('hr.add_order') }}" : null,
+    editUrlTemplate: canEdit ? "/hr/orders/edit/{id}" : null,
+    deleteUrlTemplate: canDelete ? "/hr/orders/delete/{id}" : null,
+  });
+
+  wireGlobalSearch(table, document.getElementById("searchBox"), ["number", "order_type", "note"]);
+});
+</script>
+{% endblock %}

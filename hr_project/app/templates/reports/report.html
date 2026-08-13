@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Hesabat{% endblock %}
+{% block page_title %}{{ t('reports') }} — {{ module_code }}{% endblock %}
+{% block content %}
+
+<div class="toolbar">
+  <a href="{{ url_for('reports.export_csv', module_code=module_code) }}" class="btn">CSV yüklə</a>
+  <a href="{{ url_for('reports.index') }}" class="btn btn-secondary">← Geri</a>
+</div>
+
+<table class="simple-table">
+  <thead><tr>{% for h in header %}<th>{{ h }}</th>{% endfor %}</tr></thead>
+  <tbody>
+    {% for row in rows %}
+    <tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>
+    {% else %}
+    <tr><td colspan="{{ header|length }}">Məlumat yoxdur.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% endblock %}

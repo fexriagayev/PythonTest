@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Stil{% endblock %}
+{% block page_title %}{{ t('style') }}{% endblock %}
+{% block content %}
+<div class="card">
+<form method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="theme-grid">
+    {% for code, label in themes %}
+    <label class="theme-option {{ 'selected' if current_user.theme == code }}">
+      <input type="radio" name="theme" value="{{ code }}" {{ 'checked' if current_user.theme == code }} style="display:none;" onclick="this.form.submit()">
+      {{ label }}
+    </label>
+    {% endfor %}
+  </div>
+</form>
+<p style="color:#888;font-size:0.85em;margin-top:16px;">
+  Bu, tətbiqin ümumi görünüş temini (Bootstrap/Bootswatch) dəyişir. Seçim dərhal yadda saxlanılır.
+</p>
+</div>
+{% endblock %}

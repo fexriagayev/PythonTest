@@ -1,0 +1,159 @@
+{% extends "modal_form_base.html" %}
+{% set form_title = 'Əməkdaşı dəyiş' if employee else 'Yeni əməkdaş' %}
+{% set form_action = url_for('hr.edit_employee', emp_id=employee.id) if employee else url_for('hr.add_employee') %}
+{% set cancel_url = url_for('hr.list_employees') %}
+{% set form_no_wrapper_card = true %}
+
+{% block before_form %}
+<div class="record-tabs">
+  <a href="#" class="active">Əsas məlumatlar</a>
+  {% if employee %}
+  <a href="{{ url_for('hr.work_history', emp_id=employee.id) }}">İş yerləri</a>
+  <a href="{{ url_for('hr.notifications', emp_id=employee.id) }}">Bildirişlər</a>
+  <a href="{{ url_for('hr.insurance_list', emp_id=employee.id) }}">Sığorta məlumatları</a>
+  <a href="{{ url_for('hr.salary_card_list', emp_id=employee.id) }}">Maaş kartları</a>
+  <a href="{{ url_for('hr.vacation_periods', emp_id=employee.id) }}">Məzuniyyət günləri</a>
+  <a href="{{ url_for('hr.leave_requests', emp_id=employee.id) }}">İş buraxmaları</a>
+  <a href="{{ url_for('hr.document_list', emp_id=employee.id) }}">Sənədlər</a>
+  {% else %}
+  {% for label in ['İş yerləri', 'Bildirişlər', 'Sığorta məlumatları', 'Maaş kartları', 'Məzuniyyət günləri', 'İş buraxmaları', 'Sənədlər'] %}
+  <a href="#" class="disabled" title="Əvvəlcə əməkdaşı yadda saxlayın">{{ label }}</a>
+  {% endfor %}
+  {% endif %}
+</div>
+
+{% if employee %}
+<div class="card" style="max-width:220px;">
+  <h3>Şəkil</h3>
+  {% if employee.photo_path %}
+  <img src="{{ url_for('hr.get_photo', emp_id=employee.id) }}" alt="Şəkil" style="width:100%;border-radius:6px;margin-bottom:10px;">
+  {% else %}
+  <div style="width:100%;aspect-ratio:1;background:#f1f4f9;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#aaa;margin-bottom:10px;">Şəkil yoxdur</div>
+  {% endif %}
+  <input type="file" accept="image/*" style="font-size:0.8em;margin-bottom:6px;"
+         onchange="uploadEmployeePhoto('{{ url_for('hr.upload_photo', emp_id=employee.id) }}', '{{ url_for('hr.edit_employee', emp_id=employee.id) }}', this)">
+  {% if employee.photo_path %}
+  <button type="button" class="btn btn-sm btn-danger"
+          onclick="ajaxDeleteAndReloadPage('{{ url_for('hr.delete_photo', emp_id=employee.id) }}', '{{ url_for('hr.edit_employee', emp_id=employee.id) }}')">Sil</button>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}
+
+{% block form_fields %}
+  <div class="card">
+    <h3>S.A.A. (Soyadı, Adı, Atasının adı)</h3>
+    <div class="form-grid">
+      <div><label>Soyadı</label><input type="text" name="last_name" value="{{ employee.last_name if employee else '' }}" required></div>
+      <div><label>Adı</label><input type="text" name="first_name" value="{{ employee.first_name if employee else '' }}" required></div>
+      <div><label>Atasının adı</label><input type="text" name="father_name" value="{{ employee.father_name if employee else '' }}"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Şəxsi məlumatlar</h3>
+    <div class="form-grid">
+      <div>
+        <label>Cinsi</label>
+        <div class="dict-select-row">
+          <select name="gender_id" id="genderSelect">
+            <option value="">— seçin —</option>
+            {% for g in genders %}
+            <option value="{{ g.id }}" {{ 'selected' if employee and employee.gender_id==g.id }}>{{ g.name }}</option>
+            {% endfor %}
+          </select>
+          <button type="button" class="btn btn-secondary" onclick="quickAddDictionaryItem('HR', 'gender', 'genderSelect', 'cinsi')">+</button>
+        </div>
+      </div>
+      <div>
+        <label>Doğum tarixi</label>
+        <input type="date" name="birth_date" value="{{ employee.birth_date if employee else '' }}">
+      </div>
+      <div>
+        <label>Ailə vəziyyəti</label>
+        <div class="dict-select-row">
+          <select name="family_status_id" id="familyStatusSelect">
+            <option value="">— seçin —</option>
+            {% for fs in family_statuses %}
+            <option value="{{ fs.id }}" {{ 'selected' if employee and employee.family_status_id==fs.id }}>{{ fs.name }}</option>
+            {% endfor %}
+          </select>
+          <button type="button" class="btn btn-secondary" onclick="quickAddDictionaryItem('HR', 'family_status', 'familyStatusSelect', 'ailə vəziyyəti')">+</button>
+        </div>
+      </div>
+      <div>
+        <label>Təhsilin tipi</label>
+        <div class="dict-select-row">
+          <select name="education_type_id" id="educationTypeSelect">
+            <option value="">— seçin —</option>
+            {% for et in education_types %}
+            <option value="{{ et.id }}" {{ 'selected' if employee and employee.education_type_id==et.id }}>{{ et.name }}</option>
+            {% endfor %}
+          </select>
+          <button type="button" class="btn btn-secondary" onclick="quickAddDictionaryItem('HR', 'education_type', 'educationTypeSelect', 'təhsil tipi')">+</button>
+        </div>
+      </div>
+    </div>
+
+    <label style="margin-top:16px;">Güzəşt</label>
+    <div class="dict-select-row">
+      <select name="benefit_id" id="benefitSelect">
+        <option value="">— seçin —</option>
+        {% for b in benefit_options %}
+        <option value="{{ b.id }}" {{ 'selected' if employee and employee.benefit_id==b.id }}>{{ b.name }}</option>
+        {% endfor %}
+      </select>
+      <button type="button" class="btn btn-secondary" onclick="quickAddDictionaryItem('HR', 'benefits', 'benefitSelect', 'güzəşt')">+</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Sənəd məlumatları</h3>
+    <div class="form-grid">
+      <div><label>S/V FİN nömrəsi</label><input type="text" name="fin_code" value="{{ employee.fin_code if employee else '' }}"></div>
+      <div><label>S/V seriya və nömrəsi</label><input type="text" name="id_card_number" value="{{ employee.id_card_number if employee else '' }}"></div>
+      <div><label>Sosial sığorta nömrəsi</label><input type="text" name="social_insurance_number" value="{{ employee.social_insurance_number if employee else '' }}"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>İş məlumatları</h3>
+    <p style="color:#888;font-size:0.85em;margin-top:-6px;">
+      Struktur, vəzifə, işə qəbul/çıxma tarixləri və stajlar
+      <a href="{{ url_for('hr.work_history', emp_id=employee.id) if employee else '#' }}">"İş yerləri"</a>,
+      Maaş və müqavilə tarixləri isə
+      <a href="{{ url_for('hr.notifications', emp_id=employee.id) if employee else '#' }}">"Bildirişlər"</a>
+      bölmələrindəki qeydlərə əsasən avtomatik hesablanır və burada redaktə edilmir.
+    </p>
+    <div class="form-grid">
+      <div><label>Şöbə (avtomatik)</label><input class="field-readonly" type="text" value="{{ employee.department if employee else '' }}" disabled></div>
+      <div><label>Vəzifə (avtomatik)</label><input class="field-readonly" type="text" value="{{ employee.position if employee else '' }}" disabled></div>
+      <div><label>Maaş (avtomatik — Bildirişlərdən)</label><input class="field-readonly" type="text" value="{{ employee.salary if employee else '' }}" disabled></div>
+
+      <div><label>İşə başlama tarixi (avtomatik)</label><input class="field-readonly" type="text" value="{{ employee.hire_date if employee else '' }}" disabled></div>
+      <div><label>İşdən çıxma tarixi (avtomatik)</label><input class="field-readonly" type="text" value="{{ employee.termination_date if employee else '' }}" disabled></div>
+      <div><label>Status (avtomatik)</label><input class="field-readonly" type="text" value="{{ 'Aktiv' if (not employee or employee.is_active) else 'İşdən çıxıb' }}" disabled></div>
+
+      <div><label>Müqavilənin başlama tarixi (avtomatik — Bildirişlərdən)</label><input class="field-readonly" type="text" value="{{ employee.contract_start_date if employee else '' }}" disabled></div>
+      <div><label>Müqavilənin bitmə tarixi (avtomatik — Bildirişlərdən)</label><input class="field-readonly" type="text" value="{{ employee.contract_end_date if employee else '' }}" disabled></div>
+      <div><label>Qalan məzuniyyət günü</label><input type="number" name="remaining_vacation_days" value="{{ employee.remaining_vacation_days if employee else '' }}"></div>
+
+      <div><label>Ümumi staj (avtomatik)</label><input class="field-readonly" type="text" value="{{ employee.total_experience if employee else '' }}" disabled></div>
+      <div><label>Şirkətdə staj (avtomatik)</label><input class="field-readonly" type="text" value="{{ employee.company_experience if employee else '' }}" disabled></div>
+      <div><label>Digər iş yerlərində staj (avtomatik)</label><input class="field-readonly" type="text" value="{{ employee.other_experience if employee else '' }}" disabled></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Əlaqə</h3>
+    <div class="form-grid">
+      <div><label>Telefon</label><input type="text" name="phone" value="{{ employee.phone if employee else '' }}"></div>
+      <div><label>E-mail</label><input type="email" name="email" value="{{ employee.email if employee else '' }}"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Qeyd</h3>
+    <textarea name="note" rows="4" style="width:100%;max-width:100%;">{{ employee.note if employee else '' }}</textarea>
+  </div>
+{% endblock %}

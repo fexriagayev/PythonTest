@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}Yeni istifadəçi{% endblock %}
+{% block page_title %}Yeni istifadəçi yarat{% endblock %}
+{% block content %}
+<div class="card" style="max-width:500px;">
+<form method="post" class="simple-form">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <label>İstifadəçi adı</label>
+  <input type="text" name="username" required>
+  <label>Ad Soyad</label>
+  <input type="text" name="full_name">
+  <label>E-mail</label>
+  <input type="email" name="email">
+  <div class="checkbox-row">
+    <input type="checkbox" name="is_admin" id="is_admin">
+    <label for="is_admin" style="margin:0;">Admin</label>
+  </div>
+  <p style="color:#888;font-size:0.85em;">
+    Standart parol avtomatik olaraq <b>test</b> təyin ediləcək. İstifadəçi ilk dəfə daxil olduqda parolunu dəyişməsi tövsiyə olunur.
+  </p>
+  <div class="actions">
+    <button class="btn" type="submit">Yarat</button>
+    <a class="btn btn-secondary" href="{{ url_for('admin.index') }}">{{ t('cancel') }}</a>
+  </div>
+</form>
+</div>
+{% endblock %}

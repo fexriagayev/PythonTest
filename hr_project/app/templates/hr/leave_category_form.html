@@ -1,0 +1,30 @@
+{% extends "modal_form_base.html" %}
+{% set form_title = 'Kateqoriyanı dəyiş' if category else 'Yeni kateqoriya' %}
+{% set form_action = url_for('hr.edit_leave_category', category_id=category.id) if category else url_for('hr.add_leave_category') %}
+{% set cancel_url = url_for('hr.list_leave_categories') %}
+{% set form_max_width = '520px' %}
+
+{% block form_fields %}
+  <label>Ad</label>
+  <input type="text" name="name" placeholder="məs: Dövlət qulluqçusu" value="{{ category.name if category else '' }}" required>
+
+  <label>Əsas məzuniyyət günü sayı</label>
+  <input type="number" name="base_vacation_days" value="{{ category.base_vacation_days if category else 30 }}" required>
+
+  <p style="color:#888;font-size:0.85em;margin-top:16px;margin-bottom:4px;">
+    Əlavə (staja görə) məzuniyyət günü qaydası — məsələn "hər 5 ildən bir 2 gün, maksimum 6 gün":
+  </p>
+  <label>Hər neçə il stajdan bir</label>
+  <input type="number" name="seniority_years_per_bonus" value="{{ category.seniority_years_per_bonus if category else 0 }}">
+
+  <label>O interval üzrə neçə əlavə gün</label>
+  <input type="number" name="bonus_days_per_interval" value="{{ category.bonus_days_per_interval if category else 0 }}">
+
+  <label>Maksimal əlavə gün sayı</label>
+  <input type="number" name="max_bonus_days" value="{{ category.max_bonus_days if category else 0 }}">
+
+  <div class="checkbox-row">
+    <input type="checkbox" name="is_active" id="is_active" {{ 'checked' if (category and category.is_active) or not category }}>
+    <label for="is_active" style="margin:0;">Aktiv</label>
+  </div>
+{% endblock %}

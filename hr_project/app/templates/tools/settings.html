@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Tənzimləmələr{% endblock %}
+{% block page_title %}{{ t('settings') }}{% endblock %}
+{% block content %}
+<div class="card" style="max-width:420px;">
+<form method="post" class="simple-form">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <label>Şrift ölçüsü (10-24px)</label>
+  <input type="number" name="font_size" min="10" max="24" value="{{ current_user.font_size }}">
+  <label>Dil</label>
+  <select name="language">
+    {% for lang in languages %}
+    <option value="{{ lang }}" {{ 'selected' if current_user.language == lang }}>
+      {{ 'Azərbaycan' if lang=='az' else 'English' }}
+    </option>
+    {% endfor %}
+  </select>
+  <div class="actions">
+    <button class="btn" type="submit">{{ t('save') }}</button>
+  </div>
+</form>
+</div>
+{% endblock %}

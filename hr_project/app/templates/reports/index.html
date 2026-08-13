@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Hesabatlar{% endblock %}
+{% block page_title %}{{ t('reports') }}{% endblock %}
+{% block content %}
+<div class="stats-row">
+  {% for m in visible_modules %}
+  <a class="stat-box" style="text-decoration:none;color:inherit;" href="{{ url_for('reports.view_report', module_code=m) }}">
+    <div class="stat-value">{{ m }}</div>
+    <div class="stat-label">Hesabata bax</div>
+  </a>
+  {% else %}
+  <p>Heç bir modul üzrə hesabat icazəniz yoxdur.</p>
+  {% endfor %}
+</div>
+{% endblock %}

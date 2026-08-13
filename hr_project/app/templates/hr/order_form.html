@@ -1,0 +1,75 @@
+{% extends "modal_form_base.html" %}
+{% set form_title = 'Əmri dəyiş' if order else 'Yeni əmr' %}
+{% set form_action = url_for('hr.edit_order', order_id=order.id) if order else url_for('hr.add_order') %}
+{% set cancel_url = url_for('hr.list_orders') %}
+{% set form_max_width = '500px' %}
+
+{% block form_fields %}
+  <label>Əmrin nömrəsi</label>
+  <input type="text" name="number" value="{{ order.number if order else '' }}" required>
+  <label>Əmrin tarixi</label>
+  <input type="date" name="order_date" value="{{ order.order_date if order else '' }}" required>
+  <label>Qüvvəyə minmə tarixi</label>
+  <input type="date" name="effective_date" value="{{ order.effective_date if order else '' }}">
+  <label>Əmrin növü</label>
+  <div class="dict-select-row">
+    <select name="order_type_id" id="orderTypeSelect">
+      <option value="">— seçin —</option>
+      {% for ot in order_types %}
+      <option value="{{ ot.id }}" {{ 'selected' if order and order.order_type_id==ot.id }}>{{ ot.name }}</option>
+      {% endfor %}
+    </select>
+    <button type="button" class="btn btn-secondary" title="Siyahıya yeni növ əlavə et"
+            onclick="quickAddDictionaryItem('HR', 'order_type', 'orderTypeSelect', 'əmr növü')">+</button>
+  </div>
+  <label>Qeyd</label>
+  <textarea name="note" rows="3" style="width:100%;max-width:100%;">{{ order.note if order else '' }}</textarea>
+{% endblock %}
+
+{% block after_form %}
+{% if order %}
+<div class="card" style="max-width:700px;">
+  <h3>Bu əmrin istifadə olunduğu yerlər</h3>
+  {% if usage_records %}
+  <table class="simple-table">
+    <thead><tr><th>Əməkdaş</th><th>Hərəkət</th><th>Struktur</th><th>Vəzifə</th><th>Tarix</th></tr></thead>
+    <tbody>
+      {% for r in usage_records %}
+      <tr>
+        <td><a href="{{ url_for('hr.edit_employee', emp_id=r.employee_id) }}" target="_blank">{{ r.employee.full_name() }}</a></td>
+        <td>{{ {'hire': 'İşə qəbul', 'transfer': 'Daxili keçid', 'termination': 'İşdən çıxma'}.get(r.movement_type, r.movement_type) }}</td>
+        <td>{{ r.department.name if r.department else '—' }}</td>
+        <td>{{ r.position.name if r.position else '—' }}</td>
+        <td>{{ r.date_from }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p style="color:#888;">Bu əmr hələ heç bir iş yeri qeydində istifadə olunmayıb.</p>
+  {% endif %}
+
+  <h3 style="margin-top:20px;">Bildiriş qeydlərində istifadəsi</h3>
+  {% if usage_notifications %}
+  <table class="simple-table">
+    <thead><tr><th>Əməkdaş</th><th>Bildiriş №</th><th>Başlama tarixi</th></tr></thead>
+    <tbody>
+      {% for n in usage_notifications %}
+      <tr>
+        <td><a href="{{ url_for('hr.edit_employee', emp_id=n.employee_id) }}" target="_blank">{{ n.employee.full_name() }}</a></td>
+        <td>{{ n.number }}</td>
+        <td>{{ n.start_date }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p style="color:#888;">Bu əmr hələ heç bir bildiriş qeydində istifadə olunmayıb.</p>
+  {% endif %}
+</div>
+{% endif %}
+
+<p style="color:#888;font-size:0.85em;max-width:700px;">
+  "Əmrin növü" siyahısını Məlumat kitabçaları → HR → <b>order_type</b> kateqoriyasından da idarə edə bilərsiniz.
+</p>
+{% endblock %}
