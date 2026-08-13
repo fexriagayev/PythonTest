@@ -11,7 +11,7 @@
   <a href="#"
    class="active"
    data-employee-tab="main"
-   onclick="openEmployeeModalTab(this);">
+   onclick="return window.openEmployeeModalTab(this);"
   Əsas məlumatlar
   </a>
   <script>
@@ -143,7 +143,7 @@
        data-tab-url="{{ tab_url }}"
        class="{{ 'disabled' if not employee else '' }}"
        title="{{ 'Əvvəlcə əməkdaşı yadda saxlayın' if not employee else '' }}"
-       onclick="openEmployeeModalTab(this); ">
+       onclick="return window.openEmployeeModalTab(this);">
       {{ label }}
     </a>
   {% endfor %}
