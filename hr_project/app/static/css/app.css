@@ -688,7 +688,51 @@ table.simple-table th {
 }
 
 #modalBody .record-tabs {
-  display: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 0;
+  margin: 0 0 14px;
+  padding: 0;
+  border-bottom: 1px solid var(--bs-border-color, #d9d9d9);
+  background: var(--bs-body-bg, #fff);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+#modalBody .record-tabs a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 7px 12px;
+  margin: 0;
+  border: 1px solid transparent;
+  border-bottom: 0;
+  color: var(--bs-body-color, #333);
+  background: transparent;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+#modalBody .record-tabs a:hover {
+  background: var(--bs-tertiary-bg, #f2f2f2);
+}
+
+#modalBody .record-tabs a.active {
+  background: var(--bs-body-bg, #fff);
+  border-color: var(--bs-border-color, #d9d9d9);
+  border-bottom-color: var(--bs-body-bg, #fff);
+  margin-bottom: -1px;
+  font-weight: 600;
+}
+
+#modalBody .record-tabs a.disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 /* tabs make no sense inside a modal */
