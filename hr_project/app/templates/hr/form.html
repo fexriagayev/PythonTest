@@ -9,9 +9,10 @@
      data-employee-id="{{ employee.id if employee else '' }}">
 
   <a href="#"
-     class="active"
-     data-employee-tab="main">
-    Əsas məlumatlar
+   class="active"
+   data-employee-tab="main"
+   onclick="openEmployeeModalTab(this); return false;">
+  Əsas məlumatlar
   </a>
 
   {% set employee_tabs = [
@@ -29,7 +30,8 @@
        data-employee-tab="{{ tab_id }}"
        data-tab-url="{{ tab_url }}"
        class="{{ 'disabled' if not employee else '' }}"
-       title="{{ 'Əvvəlcə əməkdaşı yadda saxlayın' if not employee else '' }}">
+       title="{{ 'Əvvəlcə əməkdaşı yadda saxlayın' if not employee else '' }}"
+       onclick="openEmployeeModalTab(this); return false;">
       {{ label }}
     </a>
   {% endfor %}

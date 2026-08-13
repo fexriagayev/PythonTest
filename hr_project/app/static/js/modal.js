@@ -332,7 +332,6 @@ function wireModalForm(onSavedCallback) {
   if (!form) return;
 
   upgradeModalForm(form);
-  wireEmployeeModalTabs();
 
   /* The form's own actions are hidden inside the popup; the popup footer
      provides Save/Cancel buttons. */
@@ -400,7 +399,6 @@ function wireModalForm(onSavedCallback) {
 
                 executeInjectedScripts(body);
                 wireModalForm(onSavedCallback);
-                wireEmployeeModalTabs();
 
                 return data;
               });
@@ -540,6 +538,11 @@ function setEmployeeModalView(tabId) {
 
 function loadEmployeeModalTab(link) {
   const body = getModalBody();
+
+  if (!body) {
+    return;
+  }
+
   const subpage = body.querySelector("#employeeModalSubpage");
 
   if (!subpage) {
@@ -552,7 +555,9 @@ function loadEmployeeModalTab(link) {
     return;
   }
 
-  setEmployeeModalView(link.getAttribute("data-employee-tab"));
+  setEmployeeModalView(
+    link.getAttribute("data-employee-tab")
+  );
 
   subpage.innerHTML = `
     <div style="
@@ -565,8 +570,10 @@ function loadEmployeeModalTab(link) {
   `;
 
   const separator = url.includes("?") ? "&" : "?";
+  const embeddedUrl = url + separator + "embedded=1";
 
-  fetch(url + separator + "embedded=1", {
+  fetch(embeddedUrl, {
+    method: "GET",
     headers: {
       "X-Requested-With": "XMLHttpRequest"
     }
@@ -583,10 +590,6 @@ function loadEmployeeModalTab(link) {
     .then(function (html) {
       subpage.innerHTML = html;
 
-      /*
-       * Child səhifənin script-lərini DOM-a yerləşdikdən
-       * sonra işə salırıq.
-       */
       executeInjectedScripts(subpage);
     })
     .catch(function (error) {
@@ -598,43 +601,35 @@ function loadEmployeeModalTab(link) {
     });
 }
 
-
 function wireEmployeeModalTabs() {
+  // Employee tabs use direct onclick handlers from form.html.
+}
+
+function openEmployeeModalTab(link) {
   const body = getModalBody();
-  if (!body || body.__employeeTabsHandler) {
-    return;
+
+  if (!body || !link) {
+    return false;
   }
 
-  const handler = function (event) {
-    const link = event.target.closest("[data-employee-tab]");
+  if (link.classList.contains("disabled")) {
+    return false;
+  }
 
-    if (!link) {
-      return;
-    }
+  body.querySelectorAll("[data-employee-tab]").forEach(function (item) {
+    item.classList.remove("active");
+  });
 
-    event.preventDefault();
-    event.stopPropagation();
+  link.classList.add("active");
 
-    if (link.classList.contains("disabled")) {
-      return;
-    }
+  const tabId = link.getAttribute("data-employee-tab");
 
-    body.querySelectorAll("[data-employee-tab]").forEach(function (item) {
-      item.classList.remove("active");
-    });
+  if (tabId === "main") {
+    setEmployeeModalView("main");
+    return false;
+  }
 
-    link.classList.add("active");
+  loadEmployeeModalTab(link);
 
-    const tabId = link.getAttribute("data-employee-tab");
-
-    if (tabId === "main") {
-      setEmployeeModalView("main");
-      return;
-    }
-
-    loadEmployeeModalTab(link);
-  };
-
-  body.addEventListener("click", handler);
-  body.__employeeTabsHandler = handler;
+  return false;
 }
