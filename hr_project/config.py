@@ -43,10 +43,10 @@ class Config:
     # DevExpress/DevExtreme suite. Tables use Tabulator.js (also MIT/free)
     # which natively supports column filtering, sorting, global search,
     # grouping with per-group footer totals, and table-wide totals.
-    DEFAULT_THEME = "cosmo"
+    DEFAULT_THEME = "devexpress"
 
-    # Available Bootswatch themes the user can pick from in Tools > Style
     AVAILABLE_THEMES = [
+        ("devexpress", "DevExpress"),
         ("cosmo", "Cosmo (açıq)"),
         ("flatly", "Flatly (açıq)"),
         ("cerulean", "Cerulean (açıq)"),
