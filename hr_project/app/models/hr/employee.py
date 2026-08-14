@@ -69,9 +69,7 @@ class Employee(db.Model):
     educations = db.relationship(
         "EmployeeEducation", back_populates="employee", cascade="all, delete-orphan"
     )
-    
+
     @property
-        def full_name(self):
-            return f"{self.last_name} {self.first_name}"
-    
-        
+    def full_name(self):
+        return f"{self.last_name} {self.first_name}"
