@@ -36,7 +36,7 @@ function defaultGridSettings() {
     titles: {},
     footerCalc: {},
     groupCalc: {},
-    groupBy: null,
+    groupBy: [],
     columnOrder: null,
     hiddenFields: [],
     columnWidths: {},
@@ -70,6 +70,7 @@ function fetchGridSettingsFromServer(baseKey) {
 }
 
 function saveGridSettingsToServer(baseKey, settings) {
+
   if (!window._gridSaveQueues) {
     window._gridSaveQueues = {};
   }
@@ -82,7 +83,7 @@ function saveGridSettingsToServer(baseKey, settings) {
 
   window._gridSaveQueues[baseKey] =
     window._gridSaveQueues[baseKey]
-      .catch(function () {})
+      .catch(function () { })
       .then(function () {
         return fetch(
           "/core/grid-prefs/" + encodeURIComponent(baseKey),
@@ -112,31 +113,6 @@ function saveGridSettingsToServer(baseKey, settings) {
       });
 
   return window._gridSaveQueues[baseKey];
-}
-
-function computeAggregate(values, type) {
-  const nums = values.map(Number).filter(function (v) {
-    return !isNaN(v);
-  });
-
-  switch (type) {
-    case "sum":
-      return nums.reduce(function (a, b) { return a + b; }, 0);
-    case "avg":
-      return nums.length
-        ? nums.reduce(function (a, b) { return a + b; }, 0) / nums.length
-        : 0;
-    case "min":
-      return nums.length ? Math.min.apply(null, nums) : 0;
-    case "max":
-      return nums.length ? Math.max.apply(null, nums) : 0;
-    case "count":
-      return values.length;
-    case "count_distinct":
-      return new Set(values).size;
-    default:
-      return null;
-  }
 }
 
 function aggregateOptionsForField(isNumericHint) {
@@ -188,14 +164,14 @@ function applyFormatterCompatibility(dx, original) {
     dx.cellTemplate = function (container, options) {
       const result = original.formatter(
         makeCompatCell(options),
-        function () {},
-        function () {}
+        function () { },
+        function () { }
       );
 
       if (result instanceof Node) {
         container.appendChild(result);
       } else {
-        container.innerHTML = result == null ? "" : String(result);
+        container.textContent = result == null ? "" : String(result);
       }
     };
   }
@@ -438,6 +414,10 @@ function applySummaries(grid, settings) {
   const totalItems = [];
   const groupItems = [];
 
+  const firstColumn = grid
+    .getVisibleColumns()
+    .find(c => c && c.dataField);
+
   if (settings.showFooter !== false) {
     Object.keys(settings.footerCalc || {}).forEach(function (field) {
       const type = settings.footerCalc[field];
@@ -522,25 +502,25 @@ function applySummaries(grid, settings) {
 
   grid.option("showColumnLines", true);
 
-  if (!hasFooterItems) {
-      totalItems.push({
-          column: firstColumn.dataField,
-          summaryType: "custom",
-          customizeText: function () {
-              return " ";
-          }
-      });
+  if (!hasFooterItems && firstColumn) {
+    totalItems.push({
+      column: firstColumn.dataField,
+      summaryType: "custom",
+      customizeText: function () {
+        return " ";
+      }
+    });
   }
 
-  if (!hasGroupItems) {
-      groupItems.push({
-          column: firstColumn.dataField,
-          summaryType: "custom",
-          showInGroupFooter: true,
-          customizeText: function () {
-              return " ";
-          }
-      });
+  if (!hasGroupItems && firstColumn) {
+    groupItems.push({
+      column: firstColumn.dataField,
+      summaryType: "custom",
+      showInGroupFooter: true,
+      customizeText: function () {
+        return " ";
+      }
+    });
   }
 }
 
@@ -595,10 +575,10 @@ function bestFitOneColumn(grid, field) {
   ) + 36;
 
   /* Measure rendered data rows. */
-  const rowCount = Math.min(
-    50,
-    grid.getDataSource().items().length
-  );
+  const items =
+    grid.getDataSource()?.items?.() || [];
+
+  const rowCount = Math.min(50, items.length);
 
   for (let rowIndex = 0; rowIndex < rowCount; rowIndex++) {
     const cell = domElement(
@@ -724,6 +704,12 @@ function buildSimpleRowContextItems(data, meta, reloadGrid) {
     items.push({
       label: "➕ Yeni qeyd",
       action: function () {
+
+        if (typeof meta.inlineAdd === "function") {
+          meta.inlineAdd(meta.addUrl, reloadGrid);
+          return;
+        }
+
         if (typeof openFormModal === "function") {
           openFormModal(meta.addUrl, reloadGrid);
         }
@@ -737,10 +723,20 @@ function buildSimpleRowContextItems(data, meta, reloadGrid) {
       action: function () {
         if (typeof openFormModal === "function") {
           const id = data[idField];
-          openFormModal(
-            meta.editUrlTemplate.replace("{id}", encodeURIComponent(id)),
-            reloadGrid
-          );
+          const url =
+            meta.editUrlTemplate.replace(
+              "{id}",
+              encodeURIComponent(id)
+            );
+
+          if (typeof meta.inlineEdit === "function") {
+            meta.inlineEdit(url, reloadGrid, data);
+            return;
+          }
+
+          if (typeof openFormModal === "function") {
+            openFormModal(url, reloadGrid);
+          }
         }
       }
     });
@@ -869,15 +865,15 @@ function buildFooterMenuItems(
   let targetStore;
 
   if (
-      e.target === "groupFooter" ||
-      (e.row && (
-          e.row.rowType === "groupFooter" ||
-          e.row.rowType === "group"
-      ))
+    e.target === "groupFooter" ||
+    (e.row && (
+      e.row.rowType === "groupFooter" ||
+      e.row.rowType === "group"
+    ))
   ) {
-      targetStore = settings.groupCalc;
+    targetStore = settings.groupCalc;
   } else {
-      targetStore = settings.footerCalc;
+    targetStore = settings.footerCalc;
   }
 
   const isNumeric =
@@ -1184,15 +1180,25 @@ function createAdvancedGrid(elementId, baseKey, tabulatorOptions, meta) {
        * All of these simply mark the grid dirty.
        * Nothing is POSTed automatically.
        */
+      const fullName = e.fullName || "";
+
       if (
-        e.fullName.indexOf("columns[") === 0 ||
-        e.fullName.indexOf("sorting") === 0 ||
-        e.fullName.indexOf("grouping") === 0 ||
-        e.fullName.indexOf("filterValue") === 0
+        fullName.indexOf("columns[") === 0 ||
+        fullName.indexOf("sorting") === 0 ||
+        fullName.indexOf("grouping") === 0 ||
+        fullName.indexOf("filterValue") === 0
       ) {
         markDirty();
       }
+    },
+
+    onDisposing: function () {
+      window.removeEventListener(
+        "resize",
+        resizeHandler
+      );
     }
+
   };
 
   const grid =
@@ -1241,7 +1247,13 @@ function createAdvancedGrid(elementId, baseKey, tabulatorOptions, meta) {
    * Capture DevExtreme's native state.
    */
   function getCurrentState() {
-    const state = grid.state();
+    const state =
+      JSON.parse(
+        JSON.stringify(
+          grid.state()
+        )
+      );
+
 
     settings.devExtremeState = state;
 
@@ -1293,14 +1305,17 @@ function createAdvancedGrid(elementId, baseKey, tabulatorOptions, meta) {
 
     const columns = grid.option("columns") || [];
 
+    settings.groupBy = [];
+
     columns.forEach(function (col) {
       if (
-        col.dataField &&
         col.groupIndex != null &&
         col.groupIndex >= 0
       ) {
-        settings.groupBy =
-          col.dataField;
+        settings.groupBy.push({
+          field: col.dataField,
+          index: col.groupIndex
+        });
       }
     });
 
@@ -1349,6 +1364,7 @@ function createAdvancedGrid(elementId, baseKey, tabulatorOptions, meta) {
         "DevExtreme grid persistNow() failed:",
         e
       );
+      return Promise.reject(e);
     }
   }
 
@@ -1379,7 +1395,7 @@ function createAdvancedGrid(elementId, baseKey, tabulatorOptions, meta) {
           ) === -1,
         visibleIndex:
           loaded.columnOrder &&
-          loaded.columnOrder.indexOf(field) !== -1
+            loaded.columnOrder.indexOf(field) !== -1
             ? loaded.columnOrder.indexOf(field)
             : index
       };
@@ -1428,10 +1444,10 @@ function createAdvancedGrid(elementId, baseKey, tabulatorOptions, meta) {
           settings.devExtremeState
         );
       } else if (
-        settings.columnWidths ||
-        settings.columnOrder ||
-        settings.hiddenFields ||
-        settings.sorters
+        Object.keys(settings.columnWidths || {}).length ||
+        (settings.columnOrder || []).length ||
+        (settings.hiddenFields || []).length ||
+        (settings.sorters || []).length
       ) {
         grid.state(
           buildLegacyState(settings)
@@ -1457,14 +1473,17 @@ function createAdvancedGrid(elementId, baseKey, tabulatorOptions, meta) {
        */
       if (
         !settings.devExtremeState &&
-        settings.groupBy
+        Array.isArray(settings.groupBy)
       ) {
         grid.clearGrouping();
-        grid.columnOption(
-          settings.groupBy,
-          "groupIndex",
-          0
-        );
+
+        settings.groupBy.forEach(function (g) {
+          grid.columnOption(
+            g.field,
+            "groupIndex",
+            g.index
+          );
+        });
       }
 
       applySummaries(
@@ -1477,8 +1496,8 @@ function createAdvancedGrid(elementId, baseKey, tabulatorOptions, meta) {
     } catch (e) {
       console.error(
         "Failed to apply grid settings for '" +
-          baseKey +
-          "':",
+        baseKey +
+        "':",
         e
       );
     } finally {
@@ -1502,8 +1521,8 @@ function createAdvancedGrid(elementId, baseKey, tabulatorOptions, meta) {
     .catch(function (err) {
       console.error(
         "Failed to initialize grid settings for '" +
-          baseKey +
-          "':",
+        baseKey +
+        "':",
         err
       );
 
@@ -1530,7 +1549,10 @@ function createAdvancedGrid(elementId, baseKey, tabulatorOptions, meta) {
     }
   };
 
-  window.addEventListener("resize", resizeHandler);
+  window.addEventListener(
+    "resize",
+    resizeHandler
+  );
 
   /*
    * Public helpers for external buttons/code.
@@ -1567,41 +1589,8 @@ function saveAdvancedGrid(grid) {
   if (
     grid &&
     typeof grid._advancedGridPersist ===
-      "function"
+    "function"
   ) {
     return grid._advancedGridPersist();
   }
-}
-
-
-/* === PATCH: Center captions + always show footer/group footer === */
-
-/* Add to CSS:
-.dx-datagrid-headers .dx-header-row > td { text-align:center !important; }
-.dx-datagrid-headers .dx-datagrid-text-content { width:100%; text-align:center !important; }
-*/
-
-// In applySummaries(), before grid.option("summary", ...):
-
-if (settings.showFooter !== false && totalItems.length === 0) {
-    const firstColumn = grid.getVisibleColumns().find(c => c.dataField);
-    if (firstColumn) {
-        totalItems.push({
-            column: firstColumn.dataField,
-            summaryType: "count",
-            customizeText: function () { return "—"; }
-        });
-    }
-}
-
-if (settings.showGroupFooter !== false && groupItems.length === 0) {
-    const firstColumn = grid.getVisibleColumns().find(c => c.dataField);
-    if (firstColumn) {
-        groupItems.push({
-            column: firstColumn.dataField,
-            summaryType: "count",
-            showInGroupFooter: true,
-            customizeText: function () { return "—"; }
-        });
-    }
 }

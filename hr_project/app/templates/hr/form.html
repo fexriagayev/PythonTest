@@ -152,26 +152,25 @@
 <div id="employeeModalSubpage"
      class="employee-modal-subpage"
      style="display:none;"></div>
-
-{% if employee %}
-<div class="card" style="max-width:220px;">
-  <h3>Şəkil</h3>
-  {% if employee.photo_path %}
-  <img src="{{ url_for('hr.get_photo', emp_id=employee.id) }}" alt="Şəkil" style="width:100%;border-radius:6px;margin-bottom:10px;">
-  {% else %}
-  <div style="width:100%;aspect-ratio:1;background:#f1f4f9;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#aaa;margin-bottom:10px;">Şəkil yoxdur</div>
-  {% endif %}
-  <input type="file" accept="image/*" style="font-size:0.8em;margin-bottom:6px;"
-         onchange="uploadEmployeePhoto('{{ url_for('hr.upload_photo', emp_id=employee.id) }}', '{{ url_for('hr.edit_employee', emp_id=employee.id) }}', this)">
-  {% if employee.photo_path %}
-  <button type="button" class="btn btn-sm btn-danger"
-          onclick="ajaxDeleteAndReloadPage('{{ url_for('hr.delete_photo', emp_id=employee.id) }}', '{{ url_for('hr.edit_employee', emp_id=employee.id) }}')">Sil</button>
-  {% endif %}
-</div>
-{% endif %}
 {% endblock %}
 
 {% block form_fields %}
+  {% if employee %}
+  <div class="card" style="max-width:220px;">
+    <h3>Şəkil</h3>
+    {% if employee.photo_path %}
+    <img src="{{ url_for('hr.get_photo', emp_id=employee.id) }}" alt="Şəkil" style="width:100%;border-radius:6px;margin-bottom:10px;">
+    {% else %}
+    <div style="width:100%;aspect-ratio:1;background:#f1f4f9;border-radius:6px;display:flex;align-items:center;justify-content:center;color:#aaa;margin-bottom:10px;">Şəkil yoxdur</div>
+    {% endif %}
+    <input type="file" accept="image/*" style="font-size:0.8em;margin-bottom:6px;"
+          onchange="uploadEmployeePhoto('{{ url_for('hr.upload_photo', emp_id=employee.id) }}', '{{ url_for('hr.edit_employee', emp_id=employee.id) }}', this)">
+    {% if employee.photo_path %}
+    <button type="button" class="btn btn-sm btn-danger"
+            onclick="ajaxDeleteAndReloadPage('{{ url_for('hr.delete_photo', emp_id=employee.id) }}', '{{ url_for('hr.edit_employee', emp_id=employee.id) }}')">Sil</button>
+    {% endif %}
+  </div>
+  {% endif %}
   <div class="card">
     <h3>S.A.A. (Soyadı, Adı, Atasının adı)</h3>
     <div class="form-grid">
