@@ -42,6 +42,10 @@ function ensureModalRoot() {
           type: "normal",
           stylingMode: "outlined",
           onClick: function () {
+            if (restoreParentModal()) {
+              return;
+            }
+
             hideModal();
           }
         }
@@ -71,7 +75,10 @@ function ensureModalRoot() {
     },
     onHiding: function () {
       const body = document.getElementById("modalBody");
-      if (body) body.innerHTML = "";
+
+      if (body) {
+        body.innerHTML = "";
+      }
     }
   });
 
@@ -100,6 +107,43 @@ function hideModal() {
   if (root && root.__dxPopup) {
     root.__dxPopup.hide();
   }
+}
+
+function restoreParentModal() {
+  if (!modalStateStack.length) {
+    return false;
+  }
+
+  const state = modalStateStack.pop();
+
+  const body = getModalBody();
+  const popup = getModalPopup();
+
+  if (!body) {
+    return false;
+  }
+
+  body.innerHTML = state.html;
+
+  popup.option(
+    "title",
+    state.title || "Əməkdaş"
+  );
+
+  executeInjectedScripts(body);
+
+  /*
+   * Parent modalın içindəki form/tab eventlərini yenidən qoş.
+   */
+  const parentForm = body.querySelector("form");
+
+  if (parentForm) {
+    wireModalForm(state.onSavedCallback);
+  }
+
+  popup.show();
+
+  return true;
 }
 
 function getFieldLabel(form, field) {
@@ -404,9 +448,15 @@ function wireModalForm(onSavedCallback) {
               });
           }
 
-          hideModal();
+          if (modalStateStack.length) {
+            restoreParentModal();
+          } else {
+            hideModal();
 
-          if (onSavedCallback) onSavedCallback();
+            if (onSavedCallback) {
+              onSavedCallback();
+            }
+          } 
 
         } else {
           body.innerHTML = data.html;
@@ -460,14 +510,29 @@ function getModalTitleFromHtml(html) {
   return heading ? heading.textContent.trim() : "Forma";
 }
 
+const modalStateStack = [];
+
 function openFormModal(url, onSavedCallback) {
   setLastAction("Forma açmağa çalışdı: " + url);
 
   const popup = getModalPopup();
-  popup.show();
+  const body = getModalBody();
+
+  /*
+   * Hazırkı modalı yadda saxla.
+   */
+  if (body && body.innerHTML.trim()) {
+    modalStateStack.push({
+      html: body.innerHTML,
+      title: popup.option("title"),
+      onSavedCallback: onSavedCallback
+    });
+  }
 
   fetch(url, {
-    headers: { "X-Requested-With": "XMLHttpRequest" }
+    headers: {
+      "X-Requested-With": "XMLHttpRequest"
+    }
   })
     .then(function (r) {
       if (!r.ok) {
@@ -475,10 +540,10 @@ function openFormModal(url, onSavedCallback) {
           "Server " + r.status + " qaytardı (" + url + ")"
         );
       }
+
       return r.text();
     })
     .then(function (html) {
-      const body = getModalBody();
       body.innerHTML = html;
 
       const title = getModalTitleFromHtml(html);
@@ -486,9 +551,12 @@ function openFormModal(url, onSavedCallback) {
 
       executeInjectedScripts(body);
       wireModalForm(onSavedCallback);
+
+      popup.show();
     })
     .catch(function (err) {
-      hideModal();
+      restoreParentModal();
+
       showErrorPopup(
         "Forma yüklənmədi: " + err.message,
         err.stack || ""

@@ -18,6 +18,6 @@ class Document(db.Model):
 
     employee = db.relationship(
         "Employee",
-        backref=db.backref("documents", cascade="all, delete-orphan", lazy="dynamic"),
+        back_populates="documents",
     )
     document_type = db.relationship("DictionaryItem", foreign_keys=[document_type_id])

@@ -23,7 +23,6 @@ class Order(db.Model):
 
     order_type = db.relationship("DictionaryItem", foreign_keys=[order_type_id])
 
-    @property
     def label(self):
         type_name = self.order_type.name if self.order_type else ""
         return f"№{self.number} / {self.order_date} — {type_name}"

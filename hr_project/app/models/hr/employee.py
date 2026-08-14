@@ -59,7 +59,7 @@ class Employee(db.Model):
 
     is_active = db.Column(db.Boolean, default=True)
 
-    document = db.relationship(
+    documents = db.relationship(
         "Document",
         back_populates="employee",
         cascade="all, delete-orphan",
@@ -69,6 +69,5 @@ class Employee(db.Model):
         "EmployeeEducation", back_populates="employee", cascade="all, delete-orphan"
     )
 
-    @property
     def full_name(self):
         return f"{self.last_name} {self.first_name}"
