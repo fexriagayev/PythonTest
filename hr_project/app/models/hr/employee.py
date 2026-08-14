@@ -3,7 +3,7 @@ from app.models.dictionaries.dictionary import DictionaryItem
 
 
 class Employee(db.Model):
-    __tablename__ = "employee"
+    __tablename__ = "employees"
 
     id = db.Column(db.Integer, primary_key=True)
 
