@@ -1,4 +1,5 @@
 from app import db
+from app.models.dictionaries.dictionary import DictionaryItem
 
 
 class Order(db.Model):
@@ -20,8 +21,9 @@ class Order(db.Model):
     )  # Əmrin növü
     note = db.Column(db.Text)  # Qeyd
 
-    order_type = db.relationship("DictionaryItem")
+    order_type = db.relationship("DictionaryItem", foreign_keys=[order_type_id])
 
+    @property
     def label(self):
         type_name = self.order_type.name if self.order_type else ""
         return f"№{self.number} / {self.order_date} — {type_name}"

@@ -1,4 +1,6 @@
 from app import db
+from app.models.dictionaries.dictionary import DictionaryItem
+
 
 class EmployeeEducation(db.Model):
     __tablename__ = "employee_educations"
@@ -16,6 +18,7 @@ class EmployeeEducation(db.Model):
     diploma_issue_date = db.Column(db.Date)
     note = db.Column(db.Text)
 
-    employee = db.relationship("Employee", backref=db.backref(
-        "educations", cascade="all, delete-orphan", lazy="dynamic"))
-    education_level = db.relationship("DictionaryItem", foreign_keys=[education_level_id])
+    employee = db.relationship("Employee", back_populates="educations")
+    education_level = db.relationship(
+        "DictionaryItem", foreign_keys=[education_level_id]
+    )

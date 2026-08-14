@@ -6,7 +6,8 @@ from .dictionaries.module import Module
 from .dictionaries.dictionary import DictionaryItem
 
 from .hr.employee import Employee
-from .hr.employment import EmploymentRecord, Order
+from .hr.employment import EmploymentRecord
+from .hr.order import Order
 from .hr.leave import LeaveCategory
 from .hr.document import EmployeeDocument
 from .hr.education import EmployeeEducation
