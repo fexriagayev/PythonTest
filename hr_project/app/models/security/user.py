@@ -1,11 +1,13 @@
 from datetime import datetime
+from app.models.dictionaries.module import Module
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
 
 from app import db
+from hr_project.app.models.base import TimestampMixin
 
 
-class User(db.Model, UserMixin):
+class User(db.Model, UserMixin, TimestampMixin):
     __tablename__ = "users"
 
     id = db.Column(db.Integer, primary_key=True)
@@ -25,7 +27,6 @@ class User(db.Model, UserMixin):
     font_size = db.Column(db.Integer, default=14)
     language = db.Column(db.String(5), default="az")
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
     must_change_password = db.Column(db.Boolean, default=True, nullable=False)
 
     permissions = db.relationship(
