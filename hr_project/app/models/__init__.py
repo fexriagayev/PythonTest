@@ -8,6 +8,8 @@ from .dictionaries.dictionary import DictionaryItem
 from .hr.employee import Employee
 from .hr.employment import EmploymentRecord, Order
 from .hr.leave import LeaveCategory
+from .hr.document import EmployeeDocument
+from .hr.education import EmployeeEducation
 
 from .payroll.salary import SalaryEntry
 
