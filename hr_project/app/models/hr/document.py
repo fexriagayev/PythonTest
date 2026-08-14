@@ -1,17 +1,23 @@
 from app import db
+from datetime import datetime
 
 
-class EmployeeDocument(db.Model):
-    __tablename__ = "employee_documents"
+class Document(db.Model):
+    """'Sənədlər' tab — uploaded files (ID photo, driving licence, etc.)."""
+
+    __tablename__ = "documents"
 
     id = db.Column(db.Integer, primary_key=True)
+    employee_id = db.Column(db.Integer, db.ForeignKey("employees.id"), nullable=False)
 
-    employee_id = db.Column(
-        db.Integer, db.ForeignKey("employees.id"), nullable=False, unique=True
+    original_filename = db.Column(db.String(255), nullable=False)
+    stored_filename = db.Column(db.String(255), nullable=False)  # actual name on disk
+    document_type_id = db.Column(db.Integer, db.ForeignKey("dictionary_items.id"))
+    note = db.Column(db.Text)
+    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    employee = db.relationship(
+        "Employee",
+        backref=db.backref("documents", cascade="all, delete-orphan", lazy="dynamic"),
     )
-
-    fin_code = db.Column(db.String(7), unique=True)
-    id_card_number = db.Column(db.String(30))
-    social_insurance_number = db.Column(db.String(30))
-
-    employee = db.relationship("Employee", back_populates="document")
+    document_type = db.relationship("DictionaryItem", foreign_keys=[document_type_id])

@@ -24,12 +24,19 @@ IMPORTANT — simplifying assumptions (documented so they can be adjusted):
 
 from datetime import date, timedelta
 
-from app.models import EmploymentRecord, BildirisRecord, LeaveRequest, LeaveReason, Holiday, VacationCompensation
-
+from app.models import (
+    EmploymentRecord,
+    EmploymentContractNotification,
+    LeaveRequest,
+    LeaveReason,
+    Holiday,
+    VacationCompensation,
+)
 
 # ---------------------------------------------------------------------------
 # İş buraxmaları — end-date calculation + overlap validation
 # ---------------------------------------------------------------------------
+
 
 def compute_end_date(start_date, day_count, counting_method):
     """First date reached after counting `day_count` qualifying days,
@@ -79,6 +86,7 @@ def validate_leave_request(employee, start_date, end_date, exclude_id=None):
 # Məzuniyyət günləri — automatic period computation
 # ---------------------------------------------------------------------------
 
+
 def _add_years(d, years):
     try:
         return d.replace(year=d.year + years)
@@ -91,8 +99,9 @@ def get_employment_stints(employee):
     employment at the current company, derived from 'hire'/'termination'
     EmploymentRecord rows. end_date=None means the stint is still ongoing."""
     records = (
-        EmploymentRecord.query
-        .filter_by(employee_id=employee.id, is_current_company=True)
+        EmploymentRecord.query.filter_by(
+            employee_id=employee.id, is_current_company=True
+        )
         .order_by(EmploymentRecord.date_from.asc())
         .all()
     )
@@ -101,7 +110,9 @@ def get_employment_stints(employee):
     for r in records:
         if r.movement_type == "hire":
             if current_start is not None:
-                stints.append((current_start, r.date_from))  # defensive: unterminated previous stint
+                stints.append(
+                    (current_start, r.date_from)
+                )  # defensive: unterminated previous stint
             current_start = r.date_from
         elif r.movement_type == "termination":
             if current_start is not None:
@@ -116,10 +127,9 @@ def get_category_timeline(employee):
     """List of (start_date, end_date_or_None, LeaveCategory) — which
     category was in effect over which date range, from Bildiriş history."""
     records = (
-        BildirisRecord.query
-        .filter_by(employee_id=employee.id)
-        .filter(BildirisRecord.leave_category_id.isnot(None))
-        .order_by(BildirisRecord.start_date.asc())
+        EmploymentContractNotification.query.filter_by(employee_id=employee.id)
+        .filter(EmploymentContractNotification.leave_category_id.isnot(None))
+        .order_by(EmploymentContractNotification.start_date.asc())
         .all()
     )
     timeline = []
@@ -208,7 +218,8 @@ def compute_leave_periods(employee):
     stints = get_employment_stints(employee)
     timeline = get_category_timeline(employee)
     compensations = {
-        c.period_start: c for c in VacationCompensation.query.filter_by(employee_id=employee.id).all()
+        c.period_start: c
+        for c in VacationCompensation.query.filter_by(employee_id=employee.id).all()
     }
 
     rows = []
@@ -217,13 +228,17 @@ def compute_leave_periods(employee):
         if stint_limit <= stint_start:
             continue
         for seg_start, seg_end in _generate_year_segments(stint_start, stint_limit):
-            for sub_start, sub_end in _split_by_category_changes(seg_start, seg_end, timeline):
+            for sub_start, sub_end in _split_by_category_changes(
+                seg_start, seg_end, timeline
+            ):
                 category = _category_at(timeline, sub_start)
                 period_days = (sub_end - sub_start).days
                 factor = min(period_days / 365.0, 1.0)
 
                 if category:
-                    years_of_service = _days_of_service_before(employee, sub_start) / 365.0
+                    years_of_service = (
+                        _days_of_service_before(employee, sub_start) / 365.0
+                    )
                     base_days = category.base_vacation_days or 0
                     bonus_days = category.extra_days_for_years(years_of_service)
                 else:
@@ -233,7 +248,9 @@ def compute_leave_periods(employee):
                 entitled_base = round(base_days * factor)
                 entitled_bonus = round(bonus_days * factor)
 
-                used_total = _days_used_in_period(employee, sub_start, sub_end, is_annual=True)
+                used_total = _days_used_in_period(
+                    employee, sub_start, sub_end, is_annual=True
+                )
                 # Bonus days are used up FIRST, then base days. This matters
                 # because compensation for unused days is only ever paid for
                 # the BASE bucket — so an employee should draw down their
@@ -246,22 +263,31 @@ def compute_leave_periods(employee):
                 compensated_bonus = comp.compensated_bonus_days if comp else 0
 
                 remaining_base = max(entitled_base - used_base - compensated_base, 0)
-                remaining_bonus = max(entitled_bonus - used_bonus - compensated_bonus, 0)
+                remaining_bonus = max(
+                    entitled_bonus - used_bonus - compensated_bonus, 0
+                )
 
-                rows.append({
-                    "period_start": sub_start,
-                    "period_end": sub_end - timedelta(days=1),  # show as inclusive last day
-                    "category": category.name if category else "(kateqoriya təyin edilməyib)",
-                    "category_days": category.base_vacation_days if category else 0,
-                    "entitled_base": entitled_base,
-                    "entitled_bonus": entitled_bonus,
-                    "used_base": used_base,
-                    "used_bonus": used_bonus,
-                    "compensated_base": compensated_base,
-                    "compensated_bonus": compensated_bonus,
-                    "remaining_base": remaining_base,
-                    "remaining_bonus": remaining_bonus,
-                })
+                rows.append(
+                    {
+                        "period_start": sub_start,
+                        "period_end": sub_end
+                        - timedelta(days=1),  # show as inclusive last day
+                        "category": (
+                            category.name
+                            if category
+                            else "(kateqoriya təyin edilməyib)"
+                        ),
+                        "category_days": category.base_vacation_days if category else 0,
+                        "entitled_base": entitled_base,
+                        "entitled_bonus": entitled_bonus,
+                        "used_base": used_base,
+                        "used_bonus": used_bonus,
+                        "compensated_base": compensated_base,
+                        "compensated_bonus": compensated_bonus,
+                        "remaining_base": remaining_base,
+                        "remaining_bonus": remaining_bonus,
+                    }
+                )
     return rows
 
 

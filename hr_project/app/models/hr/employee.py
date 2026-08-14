@@ -3,7 +3,7 @@ from app.models.dictionaries.dictionary import DictionaryItem
 
 
 class Employee(db.Model):
-    __tablename__ = "employees"
+    __tablename__ = "employee"
 
     id = db.Column(db.Integer, primary_key=True)
 
@@ -60,9 +60,8 @@ class Employee(db.Model):
     is_active = db.Column(db.Boolean, default=True)
 
     document = db.relationship(
-        "EmployeeDocument",
+        "Document",
         back_populates="employee",
-        uselist=False,
         cascade="all, delete-orphan",
     )
 

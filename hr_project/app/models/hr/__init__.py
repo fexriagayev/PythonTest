@@ -1,6 +1,10 @@
 from .employee import Employee
 from .employment import EmploymentRecord
 from .order import Order
-from .leave import LeaveCategory
-from .document import EmployeeDocument
+from .leave import LeaveCategory, LeaveReason, LeaveRequest, VacationCompensation
+from .document import Document
 from .education import EmployeeEducation
+from .employment_contract_notification import EmploymentContractNotification
+from .holiday import Holiday
+from .salary_card import SalaryCard
+from .insurance import InsurancePolicy

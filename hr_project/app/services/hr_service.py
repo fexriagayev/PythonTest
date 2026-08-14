@@ -11,7 +11,7 @@ commit the session.
 """
 
 from datetime import date
-from app.models import EmploymentRecord, BildirisRecord
+from app.models import EmploymentRecord, EmploymentContractNotification
 
 
 def _format_experience(total_days):
@@ -34,7 +34,11 @@ def _record_days(record, employee_is_active, employee_termination_date):
 
     end = record.date_to
     if end is None:
-        if record.is_current_company and not employee_is_active and employee_termination_date:
+        if (
+            record.is_current_company
+            and not employee_is_active
+            and employee_termination_date
+        ):
             end = employee_termination_date
         else:
             end = date.today()
@@ -48,8 +52,7 @@ def recompute_employee_from_history(employee):
     `employee` based on its EmploymentRecord rows."""
 
     all_records = (
-        EmploymentRecord.query
-        .filter_by(employee_id=employee.id)
+        EmploymentRecord.query.filter_by(employee_id=employee.id)
         .order_by(EmploymentRecord.date_from.asc())
         .all()
     )
@@ -66,8 +69,12 @@ def recompute_employee_from_history(employee):
             employee.termination_date = latest.date_from
             # Son bilinən vəzifə/struktur — çıxışdan əvvəlki qeyd
             prior = current_records[-2] if len(current_records) >= 2 else None
-            employee.department = prior.department.name if (prior and prior.department) else None
-            employee.position = prior.position.name if (prior and prior.position) else None
+            employee.department = (
+                prior.department.name if (prior and prior.department) else None
+            )
+            employee.position = (
+                prior.position.name if (prior and prior.position) else None
+            )
         else:
             employee.is_active = True
             employee.termination_date = None
@@ -83,11 +90,13 @@ def recompute_employee_from_history(employee):
     # --- Staj hesablamaları (bütün qeydlər üzrə) ----------------------------
     company_days = sum(
         _record_days(r, employee.is_active, employee.termination_date)
-        for r in all_records if r.is_current_company
+        for r in all_records
+        if r.is_current_company
     )
     other_days = sum(
         _record_days(r, employee.is_active, employee.termination_date)
-        for r in all_records if not r.is_current_company
+        for r in all_records
+        if not r.is_current_company
     )
 
     employee.company_experience = _format_experience(company_days)
@@ -103,9 +112,11 @@ def recompute_employee_contract_from_bildiris(employee):
     directly. Call this after any Bildiriş add/edit/delete, then commit.
     """
     latest = (
-        BildirisRecord.query
-        .filter_by(employee_id=employee.id)
-        .order_by(BildirisRecord.start_date.desc(), BildirisRecord.created_at.desc())
+        EmploymentContractNotification.query.filter_by(employee_id=employee.id)
+        .order_by(
+            EmploymentContractNotification.start_date.desc(),
+            EmploymentContractNotification.created_at.desc(),
+        )
         .first()
     )
     if latest:

@@ -1,4 +1,38 @@
 from app import db
+from datetime import datetime
+
+
+class LeaveReason(db.Model):
+    """
+    'İş buraxma səbəbi' (İş buraxmaları → dictionary) — a structured
+    dictionary because each reason needs a day-counting rule for computing
+    the end date automatically:
+      - calendar:              end = start + day_count - 1 (all days count)
+      - workdays:               weekends don't count towards day_count
+      - workdays_no_holidays:    weekends AND Holiday-table dates don't count
+    """
+
+    __tablename__ = "leave_reasons"
+
+    COUNTING_METHODS = [
+        ("calendar", "Təqvim günləri (hamısı)"),
+        ("workdays", "İş günləri (həftə sonu xaric)"),
+        ("workdays_no_holidays", "İş günləri (həftə sonu + bayram/matəm xaric)"),
+    ]
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(150), nullable=False)
+    counting_method = db.Column(db.String(30), nullable=False, default="calendar")
+    # Marks the reason that represents ordinary paid leave, i.e. the one
+    # that draws down the Məzuniyyət günləri balance and needs the
+    # available-days check before it can be submitted.
+    is_annual_leave = db.Column(db.Boolean, default=False)
+    is_active = db.Column(db.Boolean, default=True)
+
+    def counting_method_label(self):
+        return dict(self.COUNTING_METHODS).get(
+            self.counting_method, self.counting_method
+        )
 
 
 class LeaveCategory(db.Model):
@@ -69,3 +103,33 @@ class LeaveRequest(db.Model):
     )
     leave_reason = db.relationship("LeaveReason")
     order = db.relationship("Order")
+
+
+class VacationCompensation(db.Model):
+    """
+    Manual entry recording how many unused base/bonus vacation days were
+    paid out (compensated) for a given computed leave period. Leave
+    periods themselves are computed on the fly (see
+    app/services/leave_service.py), so this is matched back to a period by
+    (employee_id, period_start) rather than a foreign key to a stored row.
+    """
+
+    __tablename__ = "vacation_compensations"
+    __table_args__ = (
+        db.UniqueConstraint("employee_id", "period_start", name="uq_employee_period"),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    employee_id = db.Column(db.Integer, db.ForeignKey("employees.id"), nullable=False)
+    period_start = db.Column(db.Date, nullable=False)
+    period_end = db.Column(db.Date, nullable=False)
+    compensated_base_days = db.Column(db.Integer, default=0)
+    compensated_bonus_days = db.Column(db.Integer, default=0)
+    note = db.Column(db.Text)
+
+    employee = db.relationship(
+        "Employee",
+        backref=db.backref(
+            "vacation_compensations", cascade="all, delete-orphan", lazy="dynamic"
+        ),
+    )
