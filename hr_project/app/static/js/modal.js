@@ -22,6 +22,7 @@ function ensureModalRoot() {
 
   $(root).dxPopup({
     visible: false,
+    deferRendering: false,
     dragEnabled: true,
     hideOnOutsideClick: false,
     showCloseButton: true,
@@ -449,13 +450,17 @@ function wireModalForm(onSavedCallback) {
           }
 
           if (modalStateStack.length) {
-            restoreParentModal();
-          } else {
-            hideModal();
+              const restored = restoreParentModal();
 
-            if (onSavedCallback) {
-              onSavedCallback();
-            }
+              if (restored && onSavedCallback) {
+                  onSavedCallback();
+              }
+          } else {
+              hideModal();
+
+              if (onSavedCallback) {
+                  onSavedCallback();
+              }
           } 
 
         } else {

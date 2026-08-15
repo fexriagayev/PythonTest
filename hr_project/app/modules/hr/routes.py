@@ -527,12 +527,13 @@ def _validate_work_history_form(form, employee_id, exclude_id=None):
 
     new_start = _parse_date(form.get("date_from"))
     new_end = _parse_date(form.get("date_to"))
-    existing = EmploymentRecord.query.filter_by(
-        employee_id=employee_id, is_current_company=is_current
-    ).all()
+    # Paralel iş qadağandır: işçi eyni tarix aralığında həm cari şirkətdə,
+    # həm də kənar iş yerində ola bilməz — ona görə bütün qeydlər (is_current_
+    # company-dən asılı olmayaraq) bir-biri ilə müqayisə olunur.
+    existing = EmploymentRecord.query.filter_by(employee_id=employee_id).all()
     conflict = find_overlapping(existing, new_start, new_end, exclude_id=exclude_id)
     if conflict:
-        scope = "cari şirkət" if is_current else "kənar iş yeri"
+        scope = "cari şirkət" if conflict.is_current_company else "kənar iş yeri"
         conflict_end = (
             conflict.date_to.isoformat() if conflict.date_to else "davam edir"
         )

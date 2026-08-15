@@ -19,6 +19,7 @@ function ensureErrorModalRoot() {
 
   $(root).dxPopup({
     visible: false,
+    deferRendering: false,
     width: "min(560px, 92vw)",
     maxHeight: "90vh",
     showTitle: true,

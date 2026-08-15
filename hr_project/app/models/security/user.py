@@ -54,7 +54,12 @@ class User(db.Model, UserMixin, TimestampMixin):
             return False
         return bool(getattr(perm, field, False))
 
-    def is_active_account(self):
+    @property
+    def is_active(self):
+        # Flask-Login (UserMixin) reads this exact property name to decide
+        # whether a session/login is allowed. Blocked users must not count
+        # as active, as an extra safety net alongside the login-time check
+        # and the check_blocked_user before_request hook.
         return not self.is_blocked
 
     def __repr__(self):
