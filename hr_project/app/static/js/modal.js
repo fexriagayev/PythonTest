@@ -31,6 +31,16 @@ function ensureModalRoot() {
     width: "min(960px, 94vw)",
     height: "auto",
     maxHeight: "92vh",
+    // Anchored near the top instead of the default vertical centering.
+    // Centering recalculates (and visibly jumps) every time the content
+    // height changes — e.g. switching employee tabs. Anchoring the top
+    // edge keeps it fixed; only the bottom edge grows/shrinks.
+    position: {
+      my: "top",
+      at: "top",
+      of: window,
+      offset: "0 32"
+    },
     showTitle: true,
     title: "Forma",
     toolbarItems: [
@@ -39,7 +49,7 @@ function ensureModalRoot() {
         location: "after",
         widget: "dxButton",
         options: {
-          text: "Ləğv et",
+          text: "Bağla",
           type: "normal",
           stylingMode: "outlined",
           onClick: function () {
@@ -130,6 +140,17 @@ function restoreParentModal() {
     "title",
     state.title || "Əməkdaş"
   );
+
+  // Restore the previous view's Save button state exactly as it was
+  // (e.g. still disabled if the parent view was an employee sub-tab)
+  // instead of assuming it should always be enabled.
+  const toolbarItems = popup.option("toolbarItems");
+  const saveItem = toolbarItems && toolbarItems[1];
+  if (saveItem && saveItem.options) {
+    saveItem.options.disabled = !!state.saveDisabled;
+    saveItem.options.text = state.saveText || "Yadda saxla";
+    popup.option("toolbarItems", toolbarItems);
+  }
 
   executeInjectedScripts(body);
 
@@ -376,6 +397,12 @@ function wireModalForm(onSavedCallback) {
   const form = body ? body.querySelector("form") : null;
   if (!form) return;
 
+  // Tracked globally so an unrelated in-place reload (e.g. after an
+  // employee photo upload, see uploadEmployeePhoto() in app.js) can
+  // re-wire the form without losing the original "list refresh" callback
+  // the modal was opened with.
+  window.__currentModalSavedCallback = onSavedCallback;
+
   upgradeModalForm(form);
 
   /* The form's own actions are hidden inside the popup; the popup footer
@@ -444,6 +471,14 @@ function wireModalForm(onSavedCallback) {
 
                 executeInjectedScripts(body);
                 wireModalForm(onSavedCallback);
+
+                // The save already happened server-side even though the
+                // modal stays open (employee add/edit keeps editing after
+                // the first save). The list grid behind the modal is now
+                // stale, so refresh it now instead of only on close.
+                if (onSavedCallback) {
+                  onSavedCallback();
+                }
 
                 return data;
               });
@@ -527,10 +562,14 @@ function openFormModal(url, onSavedCallback) {
    * Hazırkı modalı yadda saxla.
    */
   if (body && body.innerHTML.trim()) {
+    const toolbarItemsNow = popup.option("toolbarItems");
+    const saveItemNow = toolbarItemsNow && toolbarItemsNow[1];
     modalStateStack.push({
       html: body.innerHTML,
       title: popup.option("title"),
-      onSavedCallback: onSavedCallback
+      onSavedCallback: onSavedCallback,
+      saveDisabled: !!(saveItemNow && saveItemNow.options && saveItemNow.options.disabled),
+      saveText: (saveItemNow && saveItemNow.options && saveItemNow.options.text) || "Yadda saxla"
     });
   }
 
@@ -553,6 +592,19 @@ function openFormModal(url, onSavedCallback) {
 
       const title = getModalTitleFromHtml(html);
       popup.option("title", title || "Forma");
+
+      // A previous modal session (e.g. an employee sub-tab, or an
+      // interrupted save) may have left the shared "Yadda saxla" button
+      // disabled. Since the popup/toolbar instance is reused for every
+      // form in the page session, that stale state otherwise carries
+      // over into this new form. Always reset it for a freshly loaded form.
+      const toolbarItems = popup.option("toolbarItems");
+      const saveItem = toolbarItems && toolbarItems[1];
+      if (saveItem && saveItem.options) {
+        saveItem.options.disabled = false;
+        saveItem.options.text = "Yadda saxla";
+        popup.option("toolbarItems", toolbarItems);
+      }
 
       executeInjectedScripts(body);
       wireModalForm(onSavedCallback);

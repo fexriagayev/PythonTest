@@ -269,6 +269,137 @@ body {
   color: var(--bs-body-color, #2b2b2b);
 }
 
+/* Employee form: dense, label-beside-input layout with a photo panel on
+   the right, matching the compact legacy-style reference layout. */
+.emp-form-layout {
+  display: grid;
+  grid-template-columns: 1fr 200px;
+  gap: 0 24px;
+  align-items: start;
+}
+
+.dense-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px 20px;
+}
+
+.dense-grid>div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.dense-grid label {
+  font-weight: 600;
+  font-size: 0.85em;
+  white-space: normal;
+  line-height: 1.2;
+}
+
+.dense-grid label::after {
+  content: ":";
+}
+
+.dense-grid input,
+.dense-grid select {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--bs-border-color, #ccd3de);
+  border-radius: 4px;
+  font-size: 0.9em;
+  background: var(--bs-body-bg, #fff);
+  color: var(--bs-body-color, #2b2b2b);
+}
+
+.dense-grid .dict-select-row {
+  display: flex;
+  gap: 4px;
+}
+
+.dense-grid-full {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin-top: 6px;
+}
+
+.dense-grid-full textarea {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--bs-border-color, #ccd3de);
+  border-radius: 4px;
+  font-size: 0.9em;
+  font-family: inherit;
+  background: var(--bs-body-bg, #fff);
+  color: var(--bs-body-color, #2b2b2b);
+}
+
+.field-auto-hint {
+  font-weight: 400;
+  font-size: 0.85em;
+  color: #9aa3b0;
+}
+
+.emp-form-photo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.emp-photo-box {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  border: 1px solid var(--bs-border-color, #ccd3de);
+  border-radius: 6px;
+  overflow: hidden;
+  background: #f8f9fb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.emp-photo-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.emp-photo-placeholder {
+  color: #aaa;
+  font-size: 0.85em;
+  text-align: center;
+  padding: 0 10px;
+}
+
+.emp-photo-input {
+  font-size: 0.8em;
+  width: 100%;
+}
+
+.emp-photo-hint {
+  font-size: 0.78em;
+  color: #9aa3b0;
+  margin: 0;
+  line-height: 1.3;
+}
+
+@media (max-width: 760px) {
+  .emp-form-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .dense-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .emp-form-photo {
+    order: -1;
+    max-width: 200px;
+  }
+}
+
 .form-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(200px, 1fr));
@@ -854,6 +985,7 @@ table.simple-table th {
 .dx-modal-form-fields>.checkbox-row,
 .dx-modal-form-fields>.dict-select-row,
 .dx-modal-form-fields>.form-grid,
+.dx-modal-form-fields>.emp-form-layout,
 .dx-modal-form-fields>h4,
 .dx-modal-form-fields>.card,
 .dx-modal-form-fields>p {
@@ -864,7 +996,8 @@ table.simple-table th {
 .dx-modal-form-fields>.card,
 .dx-modal-form-fields>p,
 .dx-modal-form-fields>textarea,
-.dx-modal-form-fields>.form-grid {
+.dx-modal-form-fields>.form-grid,
+.dx-modal-form-fields>.emp-form-layout {
   grid-column: 1 / -1;
 }
 
@@ -922,6 +1055,41 @@ table.simple-table th {
 
 .dx-popup-content {
   padding: 18px !important;
+}
+
+/* Employee sub-tab summary panel (work history / notifications tabs).
+   Fixed column count + single-line values means this panel's height never
+   changes based on whether the data is short, long, or empty ("—") —
+   it always wraps to the same number of rows, so the grid below it never
+   jumps down when switching between employees or tabs. */
+.employee-info-grid {
+  display: grid;
+  gap: 6px 24px;
+  font-size: 0.9em;
+}
+
+.employee-info-grid>div {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.employee-info-grid--7col {
+  grid-template-columns: repeat(4, minmax(140px, 1fr));
+}
+
+.employee-info-grid--3col {
+  grid-template-columns: repeat(3, minmax(140px, 1fr));
+}
+
+@media (max-width: 760px) {
+  .employee-info-grid--7col {
+    grid-template-columns: repeat(2, minmax(140px, 1fr));
+  }
+
+  .employee-info-grid--3col {
+    grid-template-columns: repeat(1, minmax(140px, 1fr));
+  }
 }
 
 .dx-popup-title {

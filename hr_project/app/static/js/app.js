@@ -204,3 +204,72 @@ function postAndReload(url) {
   document.body.appendChild(f);
   f.submit();
 }
+
+/** Reloads a single form in place after a side-action that doesn't go
+ * through the normal submit flow (photo upload/delete). Reuses the modal
+ * body swap if a modal is open, otherwise falls back to a full page
+ * navigation (e.g. the form was opened directly, not inside a modal). */
+function reloadFormInPlace(reloadUrl) {
+  const body = document.getElementById("modalBody");
+  const form = body ? body.querySelector("form") : null;
+  if (!body || !form) {
+    window.location.href = reloadUrl;
+    return Promise.resolve();
+  }
+  return fetch(reloadUrl, {
+    headers: { "X-Requested-With": "XMLHttpRequest" },
+  })
+    .then(function (r) {
+      if (!r.ok) throw new Error("Server " + r.status + " qaytardı (" + reloadUrl + ")");
+      return r.text();
+    })
+    .then(function (html) {
+      body.innerHTML = html;
+      if (typeof executeInjectedScripts === "function") executeInjectedScripts(body);
+      if (typeof wireModalForm === "function") {
+        wireModalForm(window.__currentModalSavedCallback);
+      }
+    });
+}
+
+/** Uploads a photo (employee, etc.) via AJAX, then reloads the form so the
+ * new image and the enabled "Sil" button show up. */
+function uploadEmployeePhoto(uploadUrl, reloadUrl, inputEl) {
+  const file = inputEl && inputEl.files && inputEl.files[0];
+  if (!file) return;
+
+  const formData = new FormData();
+  formData.append("photo", file);
+
+  setLastAction("Şəkil yükləməyə çalışdı: " + uploadUrl);
+  fetch(uploadUrl, {
+    method: "POST",
+    headers: { "X-Requested-With": "XMLHttpRequest" },
+    body: formData,
+  })
+    .then(function (r) {
+      if (!r.ok) throw new Error("Server " + r.status + " qaytardı (" + uploadUrl + ")");
+      return reloadFormInPlace(reloadUrl);
+    })
+    .catch(function (err) {
+      showErrorPopup("Şəkil yüklənmədi: " + err.message, err.stack || "");
+    });
+}
+
+/** Deletes a record via AJAX, then reloads a single form in place
+ * (used by the employee photo "Sil" button). */
+function ajaxDeleteAndReloadPage(deleteUrl, reloadUrl) {
+  if (!confirm("Silmək istədiyinizə əminsiniz?")) return;
+  setLastAction("Silməyə çalışdı: " + deleteUrl);
+  fetch(deleteUrl, {
+    method: "POST",
+    headers: { "X-Requested-With": "XMLHttpRequest" },
+  })
+    .then(function (r) {
+      if (!r.ok) throw new Error("Server " + r.status + " qaytardı (" + deleteUrl + ")");
+      return reloadFormInPlace(reloadUrl);
+    })
+    .catch(function (err) {
+      showErrorPopup("Silinmə zamanı xəta baş verdi: " + err.message, err.stack || "");
+    });
+}

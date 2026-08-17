@@ -14,8 +14,8 @@
   <a href="{{ url_for('hr.document_list', emp_id=employee.id) }}">Sənədlər</a>
 </div>
 
-<div class="card" style="margin-bottom:16px;">
-  <div style="display:flex;flex-wrap:wrap;gap:24px;font-size:0.9em;">
+<div class="card employee-info-panel" style="margin-bottom:16px;">
+  <div class="employee-info-grid employee-info-grid--3col">
     <div><b>Cari maaş:</b> {{ employee.salary or '—' }}</div>
     <div><b>Müqavilə başlama:</b> {{ employee.contract_start_date or '—' }}</div>
     <div><b>Müqavilə bitmə:</b> {{ employee.contract_end_date or '—' }}</div>
