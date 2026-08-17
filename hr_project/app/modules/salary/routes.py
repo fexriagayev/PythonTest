@@ -26,7 +26,7 @@ def api_entries():
     entries = SalaryEntry.query.all()
     data = [{
         "id": e.id,
-        "employee": e.employee.full_name() if e.employee else "",
+        "employee": e.employee.full_name if e.employee else "",
         "employee_id": e.employee_id,
         "period": e.period,
         "base_salary": float(e.base_salary or 0),

@@ -20,16 +20,16 @@ def index():
 
 def _rows_for(module_code):
     if module_code == "HR":
-        header = ["ID", "Ad", "Soyad", "Şöbə", "Vəzifə", "İşə qəbul tarixi", "Aktiv"]
-        rows = [[e.id, e.first_name, e.last_name, e.department, e.position,
+        header = ["ID", "Ad Soyad Ata adı", "Şöbə", "Vəzifə", "İşə qəbul tarixi", "Aktiv"]
+        rows = [[e.id, e.full_name, e.department, e.position,
                   e.hire_date, e.is_active] for e in Employee.query.all()]
     elif module_code == "TABEL":
         header = ["ID", "Əməkdaş", "Tarix", "Saat", "Status", "Qeyd"]
-        rows = [[t.id, t.employee.full_name() if t.employee else "", t.work_date,
+        rows = [[t.id, t.employee.full_name if t.employee else "", t.work_date,
                   t.hours_worked, t.status, t.note] for t in TabelEntry.query.all()]
     elif module_code == "SALARY":
         header = ["ID", "Əməkdaş", "Dövr", "Baza", "Bonus", "Tutulma", "Cəmi"]
-        rows = [[s.id, s.employee.full_name() if s.employee else "", s.period,
+        rows = [[s.id, s.employee.full_name if s.employee else "", s.period,
                   s.base_salary, s.bonus, s.deductions, s.total] for s in SalaryEntry.query.all()]
     else:
         header, rows = [], []

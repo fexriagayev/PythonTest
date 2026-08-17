@@ -23,7 +23,7 @@ def get_notifications():
     for p in expired_policies:
         notifications.append({
             "level": "danger",
-            "message": f"{p.employee.full_name()} — sığorta müddəti bitib ({p.end_date})",
+            "message": f"{p.employee.full_name} — sığorta müddəti bitib ({p.end_date})",
         })
 
     expiring_policies = (InsurancePolicy.query.join(Employee)
@@ -32,7 +32,7 @@ def get_notifications():
     for p in expiring_policies:
         notifications.append({
             "level": "warning",
-            "message": f"{p.employee.full_name()} — sığorta müddəti bitməsinə az qalıb ({p.end_date})",
+            "message": f"{p.employee.full_name} — sığorta müddəti bitməsinə az qalıb ({p.end_date})",
         })
 
     expired_cards = (SalaryCard.query.join(Employee)
@@ -41,7 +41,7 @@ def get_notifications():
     for c in expired_cards:
         notifications.append({
             "level": "danger",
-            "message": f"{c.employee.full_name()} — maaş kartının etibarlılıq müddəti bitib ({c.valid_until})",
+            "message": f"{c.employee.full_name} — maaş kartının etibarlılıq müddəti bitib ({c.valid_until})",
         })
 
     expiring_cards = (SalaryCard.query.join(Employee)
@@ -51,7 +51,7 @@ def get_notifications():
     for c in expiring_cards:
         notifications.append({
             "level": "warning",
-            "message": f"{c.employee.full_name()} — maaş kartının etibarlılıq müddəti bitməsinə az qalıb ({c.valid_until})",
+            "message": f"{c.employee.full_name} — maaş kartının etibarlılıq müddəti bitməsinə az qalıb ({c.valid_until})",
         })
 
     return notifications

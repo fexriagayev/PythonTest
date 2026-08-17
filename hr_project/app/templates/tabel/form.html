@@ -8,7 +8,7 @@
   <select name="employee_id" required>
     <option value="">— seçin —</option>
     {% for emp in employees %}
-    <option value="{{ emp.id }}" {{ 'selected' if entry and entry.employee_id==emp.id }}>{{ emp.full_name() }}</option>
+    <option value="{{ emp.id }}" {{ 'selected' if entry and entry.employee_id==emp.id }}>{{ emp.full_name }}</option>
     {% endfor %}
   </select>
   <label>Tarix</label>

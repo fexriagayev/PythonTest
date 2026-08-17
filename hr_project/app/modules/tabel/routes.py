@@ -26,7 +26,7 @@ def api_entries():
     entries = TabelEntry.query.all()
     data = [{
         "id": e.id,
-        "employee": e.employee.full_name() if e.employee else "",
+        "employee": e.employee.full_name if e.employee else "",
         "employee_id": e.employee_id,
         "work_date": e.work_date.isoformat() if e.work_date else None,
         "hours_worked": e.hours_worked,

@@ -1,6 +1,6 @@
 {% extends "modal_form_base.html" %}
 {% set src = record or latest %}
-{% set form_title = ('Bildirişi dəyiş' if record else 'Yeni bildiriş') ~ ' — ' ~ employee.full_name() %}
+{% set form_title = ('Bildirişi dəyiş' if record else 'Yeni bildiriş') ~ ' — ' ~ employee.full_name %}
 {% set form_action = url_for('hr.edit_notification', emp_id=employee.id, record_id=record.id) if record else url_for('hr.add_notification', emp_id=employee.id) %}
 {% set cancel_url = url_for('hr.notifications', emp_id=employee.id) %}
 {% set form_max_width = '720px' %}

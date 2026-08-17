@@ -84,10 +84,8 @@ def _form_choices():
 
 
 def _apply_form_to_employee(employee, form):
-    # S.A.A.
-    employee.first_name = form.get("first_name", "").strip()
-    employee.last_name = form.get("last_name", "").strip()
-    employee.father_name = form.get("father_name", "").strip()
+    # Ad Soyad Ata adı (vahid sahə)
+    employee.full_name = form.get("full_name", "").strip()
 
     # Şəxsi məlumatlar (dictionary-driven)
     employee.gender_id = _parse_int(form.get("gender_id"))
@@ -110,10 +108,8 @@ def _apply_form_to_employee(employee, form):
     # salary / contract_start_date / contract_end_date are NOT read here —
     # they are computed from the employee's "Bildirişlər" records. See
     # app/services/hr_service.py:recompute_employee_contract_from_bildiris().
-    if not employee.first_name:
-        raise ValueError("Ad mütləqdir")
-    if not employee.last_name:
-        raise ValueError("Soyad mütləqdir")
+    if not employee.full_name:
+        raise ValueError("Ad Soyad Ata adı mütləqdir")
     employee.remaining_vacation_days = _parse_int(form.get("remaining_vacation_days"))
 
     # Əlaqə / digər
@@ -141,9 +137,7 @@ def api_employees():
     data = [
         {
             "id": e.id,
-            "first_name": e.first_name,
-            "last_name": e.last_name,
-            "father_name": e.father_name,
+            "full_name": e.full_name,
             "gender": e.gender.name if e.gender else None,
             "birth_date": e.birth_date.isoformat() if e.birth_date else None,
             "department": e.department,

@@ -1,5 +1,5 @@
 {% extends "modal_form_base.html" %}
-{% set form_title = ('İş yeri qeydini dəyiş' if record else 'Yeni iş yeri qeydi') ~ ' — ' ~ employee.full_name() %}
+{% set form_title = ('İş yeri qeydini dəyiş' if record else 'Yeni iş yeri qeydi') ~ ' — ' ~ employee.full_name %}
 {% set form_action = url_for('hr.edit_work_history', emp_id=employee.id, record_id=record.id) if record else url_for('hr.add_work_history', emp_id=employee.id) %}
 {% set cancel_url = url_for('hr.work_history', emp_id=employee.id) %}
 {% set form_max_width = '700px' %}

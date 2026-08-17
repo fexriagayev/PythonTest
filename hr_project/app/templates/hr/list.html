@@ -33,9 +33,7 @@ document.addEventListener("DOMContentLoaded", function () {
     placeholder: "Məlumat yoxdur",
     columns: [
       { title: "ID", field: "id", width: 70, sorter: "number" },
-      { title: "Soyad", field: "last_name", headerFilter: "input", sorter: "string" },
-      { title: "Ad", field: "first_name", headerFilter: "input", sorter: "string" },
-      { title: "Ata adı", field: "father_name", headerFilter: "input" },
+      { title: "Ad Soyad Ata adı", field: "full_name", headerFilter: "input", sorter: "string", widthGrow: 2 },
       { title: "Cinsi", field: "gender", headerFilter: "input" },
       { title: "Doğum tarixi", field: "birth_date", sorter: "date" },
       { title: "Şöbə", field: "department", headerFilter: "input" },
@@ -59,7 +57,7 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   wireGlobalSearch(table, document.getElementById("searchBox"),
-    ["last_name", "first_name", "father_name", "gender", "department", "position", "phone", "email"]);
+    ["full_name", "gender", "department", "position", "phone", "email"]);
 });
 </script>
 {% endblock %}

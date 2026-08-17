@@ -7,10 +7,8 @@ class Employee(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
 
-    # --- S.A.A. (Soyadı, Adı, Atasının adı) ---------------------------------
-    first_name = db.Column(db.String(80), nullable=False)
-    last_name = db.Column(db.String(80), nullable=False)
-    father_name = db.Column(db.String(80))
+    # --- Ad Soyad Ata adı (vahid sahə) --------------------------------------
+    full_name = db.Column(db.String(200), nullable=False)
 
     # --- Şəxsi məlumatlar — all combo fields point to DictionaryItem -------
     gender_id = db.Column(db.Integer, db.ForeignKey("dictionary_items.id"))
@@ -69,5 +67,5 @@ class Employee(db.Model):
         "EmployeeEducation", back_populates="employee", cascade="all, delete-orphan"
     )
 
-    def full_name(self):
-        return f"{self.last_name} {self.first_name}"
+    def __repr__(self):
+        return f"<Employee {self.id} {self.full_name}>"

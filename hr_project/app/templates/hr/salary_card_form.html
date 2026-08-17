@@ -1,5 +1,5 @@
 {% extends "modal_form_base.html" %}
-{% set form_title = ('Kartı dəyiş' if record else 'Yeni kart') ~ ' — ' ~ employee.full_name() %}
+{% set form_title = ('Kartı dəyiş' if record else 'Yeni kart') ~ ' — ' ~ employee.full_name %}
 {% set form_action = url_for('hr.edit_salary_card', emp_id=employee.id, record_id=record.id) if record else url_for('hr.add_salary_card', emp_id=employee.id) %}
 {% set cancel_url = url_for('hr.salary_card_list', emp_id=employee.id) %}
 {% set form_max_width = '500px' %}
@@ -23,7 +23,7 @@
   <input type="date" name="valid_until" value="{{ record.valid_until if record else '' }}">
 
   <label>Kart sahibinin adı</label>
-  <input type="text" name="card_holder_name" value="{{ record.card_holder_name if record else employee.full_name() }}">
+  <input type="text" name="card_holder_name" value="{{ record.card_holder_name if record else employee.full_name }}">
 
   <label>Qeyd</label>
   <textarea name="note" rows="3" style="width:100%;max-width:100%;">{{ record.note if record else '' }}</textarea>

@@ -43,13 +43,49 @@
 {% endblock %}
 
 {% block form_fields %}
-<div class="emp-form-layout">
-  <div class="emp-form-fields dense-grid">
+<div class="emp-profile-header">
+  <div class="emp-photo-box emp-photo-box--sm">
+    {% if employee and employee.photo_path %}
+    <img src="{{ url_for('hr.get_photo', emp_id=employee.id) }}" alt="Şəkil">
+    {% else %}
+    <div class="emp-photo-placeholder">Şəkil yoxdur</div>
+    {% endif %}
+  </div>
 
-    <div><label>Soyadı</label><input type="text" name="last_name" value="{{ employee.last_name if employee else '' }}" required></div>
-    <div><label>Adı</label><input type="text" name="first_name" value="{{ employee.first_name if employee else '' }}" required></div>
-    <div><label>Atasının adı</label><input type="text" name="father_name" value="{{ employee.father_name if employee else '' }}"></div>
+  <div class="emp-profile-main">
+    <label>Ad Soyad Ata adı</label>
+    <input type="text" name="full_name" class="emp-name-input" value="{{ employee.full_name if employee else '' }}" required placeholder="Məmmədov Anar Elşad oğlu">
 
+    <div class="emp-profile-sub">
+      <span class="emp-status-badge {{ 'emp-status-badge--active' if (not employee or employee.is_active) else 'emp-status-badge--inactive' }}">
+        {{ 'Aktiv' if (not employee or employee.is_active) else 'İşdən çıxıb' }}
+      </span>
+      {% if employee and employee.position %}<span>{{ employee.position }}</span>{% endif %}
+      {% if employee and employee.department %}<span>{{ employee.department }}</span>{% endif %}
+    </div>
+
+    {% if employee %}
+    <div class="emp-photo-actions">
+      <label class="emp-photo-upload-btn">
+        <i class="ti-upload">📎</i> Şəkil dəyiş
+        <input type="file" accept="image/*" class="emp-photo-input-hidden"
+              onchange="uploadEmployeePhoto('{{ url_for('hr.upload_photo', emp_id=employee.id) }}', '{{ url_for('hr.edit_employee', emp_id=employee.id) }}', this)">
+      </label>
+      {% if employee.photo_path %}
+      <button type="button" class="btn btn-sm btn-danger"
+              onclick="ajaxDeleteAndReloadPage('{{ url_for('hr.delete_photo', emp_id=employee.id) }}', '{{ url_for('hr.edit_employee', emp_id=employee.id) }}')">Şəkli sil</button>
+      {% endif %}
+    </div>
+    {% else %}
+    <p class="emp-photo-hint">Şəkil əməkdaşı yadda saxladıqdan sonra əlavə edilə bilər</p>
+    {% endif %}
+  </div>
+</div>
+
+<div class="emp-section">
+  <div class="emp-section-title">Şəxsi məlumatlar</div>
+  <div class="emp-grid emp-grid--3col">
+    <div><label>Doğum tarixi</label><input type="date" name="birth_date" value="{{ employee.birth_date if employee else '' }}"></div>
     <div>
       <label>Cinsi</label>
       <div class="dict-select-row">
@@ -74,8 +110,6 @@
         <button type="button" class="btn btn-secondary" onclick="quickAddDictionaryItem('HR', 'family_status', 'familyStatusSelect', 'ailə vəziyyəti')">+</button>
       </div>
     </div>
-    <div><label>Ş/V FİN nömrəsi</label><input type="text" name="fin_code" value="{{ employee.fin_code if employee else '' }}"></div>
-
     <div>
       <label>Güzəşt</label>
       <div class="dict-select-row">
@@ -100,54 +134,49 @@
         <button type="button" class="btn btn-secondary" onclick="quickAddDictionaryItem('HR', 'education_type', 'educationTypeSelect', 'təhsil tipi')">+</button>
       </div>
     </div>
-    <div><label>Ş/V seriya və nömrəsi</label><input type="text" name="id_card_number" value="{{ employee.id_card_number if employee else '' }}"></div>
-
-    <div><label>Müqavilənin başlama tarixi <span class="field-auto-hint" title="'Bildirişlər' bölməsindən avtomatik">(avto)</span></label><input class="field-readonly" type="text" value="{{ employee.contract_start_date if employee else '' }}" disabled></div>
-    <div><label>Müqavilənin bitmə tarixi <span class="field-auto-hint" title="'Bildirişlər' bölməsindən avtomatik">(avto)</span></label><input class="field-readonly" type="text" value="{{ employee.contract_end_date if employee else '' }}" disabled></div>
-    <div><label>Doğum tarixi</label><input type="date" name="birth_date" value="{{ employee.birth_date if employee else '' }}"></div>
-
-    <div><label>İşə başlama tarixi <span class="field-auto-hint" title="'İş yerləri' bölməsindən avtomatik">(avto)</span></label><input class="field-readonly" type="text" value="{{ employee.hire_date if employee else '' }}" disabled></div>
-    <div><label>İşdən çıxma tarixi <span class="field-auto-hint" title="'İş yerləri' bölməsindən avtomatik">(avto)</span></label><input class="field-readonly" type="text" value="{{ employee.termination_date if employee else '' }}" disabled></div>
-    <div><label>Ümumi staj <span class="field-auto-hint" title="'İş yerləri' bölməsindən avtomatik">(avto)</span></label><input class="field-readonly" type="text" value="{{ employee.total_experience if employee else '' }}" disabled></div>
-
-    <div><label>Vəzifə <span class="field-auto-hint" title="'İş yerləri' bölməsindən avtomatik">(avto)</span></label><input class="field-readonly" type="text" value="{{ employee.position if employee else '' }}" disabled></div>
-    <div><label>Qalan məzuniyyət günü</label><input type="number" name="remaining_vacation_days" value="{{ employee.remaining_vacation_days if employee else '' }}"></div>
-    <div><label>Şirkətdə staj <span class="field-auto-hint" title="'İş yerləri' bölməsindən avtomatik">(avto)</span></label><input class="field-readonly" type="text" value="{{ employee.company_experience if employee else '' }}" disabled></div>
-
-    <div><label>Maaş <span class="field-auto-hint" title="'Bildirişlər' bölməsindən avtomatik">(avto)</span></label><input class="field-readonly" type="text" value="{{ employee.salary if employee else '' }}" disabled></div>
-    <div><label>Sosial sığorta nömrəsi</label><input type="text" name="social_insurance_number" value="{{ employee.social_insurance_number if employee else '' }}"></div>
-    <div><label>Digər iş yerlərində staj <span class="field-auto-hint" title="'İş yerləri' bölməsindən avtomatik">(avto)</span></label><input class="field-readonly" type="text" value="{{ employee.other_experience if employee else '' }}" disabled></div>
-
-    <div><label>Telefon</label><input type="text" name="phone" value="{{ employee.phone if employee else '' }}"></div>
-    <div><label>E-mail</label><input type="email" name="email" value="{{ employee.email if employee else '' }}"></div>
-    <div><label>Status <span class="field-auto-hint" title="'İş yerləri' bölməsindən avtomatik">(avto)</span></label><input class="field-readonly" type="text" value="{{ 'Aktiv' if (not employee or employee.is_active) else 'İşdən çıxıb' }}" disabled></div>
-
-    <div class="dense-grid-full">
-      <label>Qeyd</label>
-      <textarea name="note" rows="4">{{ employee.note if employee else '' }}</textarea>
-    </div>
-  </div>
-
-  <div class="emp-form-photo">
-    <div class="emp-photo-box">
-      {% if employee and employee.photo_path %}
-      <img src="{{ url_for('hr.get_photo', emp_id=employee.id) }}" alt="Şəkil">
-      {% else %}
-      <div class="emp-photo-placeholder">Şəkil yoxdur</div>
-      {% endif %}
-    </div>
-    {% if employee %}
-    <input type="file" accept="image/*" class="emp-photo-input"
-          onchange="uploadEmployeePhoto('{{ url_for('hr.upload_photo', emp_id=employee.id) }}', '{{ url_for('hr.edit_employee', emp_id=employee.id) }}', this)">
-    {% if employee.photo_path %}
-    <button type="button" class="btn btn-sm btn-danger"
-            onclick="ajaxDeleteAndReloadPage('{{ url_for('hr.delete_photo', emp_id=employee.id) }}', '{{ url_for('hr.edit_employee', emp_id=employee.id) }}')">Sil</button>
-    {% endif %}
-    {% else %}
-    <input type="file" accept="image/*" class="emp-photo-input" disabled title="Əvvəlcə əməkdaşı yadda saxlayın">
-    <p class="emp-photo-hint">Şəkil əməkdaşı yadda saxladıqdan sonra əlavə edilə bilər</p>
-    {% endif %}
   </div>
 </div>
+
+<div class="emp-section">
+  <div class="emp-section-title">Sənəd məlumatları</div>
+  <div class="emp-grid emp-grid--3col">
+    <div><label>Ş/V FİN nömrəsi</label><input type="text" name="fin_code" value="{{ employee.fin_code if employee else '' }}"></div>
+    <div><label>Ş/V seriya və nömrəsi</label><input type="text" name="id_card_number" value="{{ employee.id_card_number if employee else '' }}"></div>
+    <div><label>Sosial sığorta nömrəsi</label><input type="text" name="social_insurance_number" value="{{ employee.social_insurance_number if employee else '' }}"></div>
+  </div>
+</div>
+
+<div class="emp-section">
+  <div class="emp-section-title">
+    İş məlumatları
+    <span class="emp-section-hint">🔒 qıfıllı sahələr "İş yerləri" / "Bildirişlər" bölmələrindən avtomatik hesablanır</span>
+  </div>
+  <div class="emp-grid emp-grid--3col">
+    <div><label>Vəzifə 🔒</label><input class="field-readonly" type="text" value="{{ employee.position if employee else '' }}" disabled></div>
+    <div><label>İşə başlama tarixi 🔒</label><input class="field-readonly" type="text" value="{{ employee.hire_date if employee else '' }}" disabled></div>
+    <div><label>İşdən çıxma tarixi 🔒</label><input class="field-readonly" type="text" value="{{ employee.termination_date if employee else '' }}" disabled></div>
+    <div><label>Ümumi staj 🔒</label><input class="field-readonly" type="text" value="{{ employee.total_experience if employee else '' }}" disabled></div>
+    <div><label>Şirkətdə staj 🔒</label><input class="field-readonly" type="text" value="{{ employee.company_experience if employee else '' }}" disabled></div>
+    <div><label>Digər iş yerlərində staj 🔒</label><input class="field-readonly" type="text" value="{{ employee.other_experience if employee else '' }}" disabled></div>
+    <div><label>Müqavilənin başlama tarixi 🔒</label><input class="field-readonly" type="text" value="{{ employee.contract_start_date if employee else '' }}" disabled></div>
+    <div><label>Müqavilənin bitmə tarixi 🔒</label><input class="field-readonly" type="text" value="{{ employee.contract_end_date if employee else '' }}" disabled></div>
+    <div><label>Maaş 🔒</label><input class="field-readonly" type="text" value="{{ employee.salary if employee else '' }}" disabled></div>
+    <div><label>Qalan məzuniyyət günü</label><input type="number" name="remaining_vacation_days" value="{{ employee.remaining_vacation_days if employee else '' }}"></div>
+  </div>
+</div>
+
+<div class="emp-section">
+  <div class="emp-section-title">Əlaqə</div>
+  <div class="emp-grid emp-grid--3col">
+    <div><label>Telefon</label><input type="text" name="phone" value="{{ employee.phone if employee else '' }}"></div>
+    <div><label>E-mail</label><input type="email" name="email" value="{{ employee.email if employee else '' }}"></div>
+  </div>
+</div>
+
+<div class="emp-section">
+  <div class="emp-section-title">Qeyd</div>
+  <textarea name="note" rows="3" class="emp-note">{{ employee.note if employee else '' }}</textarea>
+</div>
 {% endblock %}
+
 
