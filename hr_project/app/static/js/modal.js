@@ -43,6 +43,17 @@ function ensureModalRoot() {
     },
     showTitle: true,
     title: "Forma",
+    // The dark "shading" only visually blocks the background — it does
+    // not stop the underlying page from scrolling on its own, which is
+    // why the page's own scrollbar was visible next to the popup card.
+    // Lock/unlock page scroll on every show/hide (X button, Escape,
+    // hideModal(), etc. all funnel through these).
+    onShowing: function () {
+      document.body.style.overflow = "hidden";
+    },
+    onHidden: function () {
+      document.body.style.overflow = "";
+    },
     toolbarItems: [
       {
         toolbar: "bottom",
