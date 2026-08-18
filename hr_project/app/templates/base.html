@@ -24,6 +24,7 @@
 
 <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script>window.I18N = {{ ui_i18n_json|tojson }};</script>
 <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 <script src="{{ url_for('static', filename='js/dx-ui.js') }}"></script>
 <script src="{{ url_for('static', filename='js/context-menu.js') }}"></script>

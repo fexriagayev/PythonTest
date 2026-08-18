@@ -7,7 +7,7 @@
   {% if current_user.has_perm('HR', 'can_add') %}
   <button type="button" class="btn" onclick="openFormModal('{{ url_for('hr.add_employee') }}', function(){ window.currentGridTable.setData(); })">+ {{ t('add') }}</button>
   {% endif %}
-  <input type="text" id="searchBox" class="form-control" style="max-width:280px;" placeholder="Axtar (bütün sahələr üzrə)...">
+  <input type="text" id="searchBox" class="form-control" style="max-width:280px;" placeholder="{{ t('search_placeholder') }}">
 </div>
 <p style="color:#888;font-size:0.82em;margin-top:-6px;">
   💡 Sütun başlığına sağ-klik: sıralama / footer / qruplaşdırma. Sətirə sağ-klik: yeni / dəyiş / sil.
@@ -30,20 +30,20 @@ document.addEventListener("DOMContentLoaded", function () {
     layout: "fitColumns",
     pagination: true,
     paginationSize: 15,
-    placeholder: "Məlumat yoxdur",
+    placeholder: "{{ t('no_data_placeholder') }}",
     columns: [
-      { title: "ID", field: "id", width: 70, sorter: "number" },
-      { title: "Ad Soyad Ata adı", field: "full_name", headerFilter: "input", sorter: "string", widthGrow: 2 },
-      { title: "Cinsi", field: "gender", headerFilter: "input" },
-      { title: "Doğum tarixi", field: "birth_date", sorter: "date" },
-      { title: "Şöbə", field: "department", headerFilter: "input" },
-      { title: "Vəzifə", field: "position", headerFilter: "input" },
-      { title: "İşə qəbul tarixi", field: "hire_date", sorter: "date" },
-      { title: "Qalan məzuniyyət", field: "remaining_vacation_days", sorter: "number" },
-      { title: "Telefon", field: "phone" },
-      { title: "E-mail", field: "email", headerFilter: "input" },
+      { title: "{{ t('emp_col_id') }}", field: "id", width: 70, sorter: "number" },
+      { title: "{{ t('emp_col_full_name') }}", field: "full_name", headerFilter: "input", sorter: "string", widthGrow: 2 },
+      { title: "{{ t('emp_col_gender') }}", field: "gender", headerFilter: "input" },
+      { title: "{{ t('emp_col_birth_date') }}", field: "birth_date", sorter: "date" },
+      { title: "{{ t('emp_col_department') }}", field: "department", headerFilter: "input" },
+      { title: "{{ t('emp_col_position') }}", field: "position", headerFilter: "input" },
+      { title: "{{ t('emp_col_hire_date') }}", field: "hire_date", sorter: "date" },
+      { title: "{{ t('emp_col_remaining_vacation') }}", field: "remaining_vacation_days", sorter: "number" },
+      { title: "{{ t('emp_col_phone') }}", field: "phone" },
+      { title: "{{ t('emp_col_email') }}", field: "email", headerFilter: "input" },
       {
-        title: "Aktiv", field: "is_active", width: 90,
+        title: "{{ t('emp_col_active') }}", field: "is_active", width: 90,
         formatter: "tickCross",
         headerFilter: "tickCross", headerFilterParams: { tristate: true },
       }

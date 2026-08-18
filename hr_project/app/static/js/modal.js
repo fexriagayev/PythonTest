@@ -64,13 +64,14 @@ function ensureModalRoot() {
       // the sub-form. Replacing it with our own button, wired to the
       // exact same handler as "Bağla", is the only reliable fix.
       {
+        name: "titleClose",
         toolbar: "top",
         location: "after",
         widget: "dxButton",
         options: {
           icon: "close",
           stylingMode: "text",
-          hint: "Bağla",
+          hint: t("js_close"),
           onClick: function () {
             if (restoreParentModal()) {
               return;
@@ -81,11 +82,12 @@ function ensureModalRoot() {
         }
       },
       {
+        name: "cancel",
         toolbar: "bottom",
         location: "after",
         widget: "dxButton",
         options: {
-          text: "Bağla",
+          text: t("js_close"),
           type: "normal",
           stylingMode: "outlined",
           onClick: function () {
@@ -98,11 +100,16 @@ function ensureModalRoot() {
         }
       },
       {
+        // Identified by `name`, not by matching its display text — the
+        // text changes with the user's language (and briefly to
+        // "Yadda saxlanılır..." while saving), so text-matching would
+        // silently break as soon as either of those changes.
+        name: "save",
         toolbar: "bottom",
         location: "after",
         widget: "dxButton",
         options: {
-          text: "Yadda saxla",
+          text: t("js_save"),
           type: "default",
           stylingMode: "contained",
           onClick: function () {
@@ -143,6 +150,18 @@ function getModalBody() {
   return document.getElementById("modalBody");
 }
 
+// Finds the Save toolbar button by its stable `name`, not by matching
+// display text — the text changes with the user's language and while
+// saving ("Yadda saxlanılır..."), so a text-based lookup breaks easily.
+function findSaveToolbarItem(toolbarItems) {
+  return (
+    toolbarItems &&
+    toolbarItems.find(function (item) {
+      return item.name === "save";
+    })
+  );
+}
+
 function showModal(title) {
   const popup = getModalPopup();
   if (title) popup.option("title", title);
@@ -181,10 +200,10 @@ function restoreParentModal() {
   // (e.g. still disabled if the parent view was an employee sub-tab)
   // instead of assuming it should always be enabled.
   const toolbarItems = popup.option("toolbarItems");
-  const saveItem = toolbarItems && toolbarItems[1];
+  const saveItem = findSaveToolbarItem(toolbarItems);
   if (saveItem && saveItem.options) {
     saveItem.options.disabled = !!state.saveDisabled;
-    saveItem.options.text = state.saveText || "Yadda saxla";
+    saveItem.options.text = state.saveText || t("js_save");
     popup.option("toolbarItems", toolbarItems);
   }
 
@@ -464,10 +483,10 @@ function wireModalForm(onSavedCallback) {
 
     /* Disable the footer Save button while the request is running. */
     const popup = getModalPopup();
-    const saveButton = popup.option("toolbarItems")[1];
+    const saveButton = findSaveToolbarItem(popup.option("toolbarItems"));
     if (saveButton && saveButton.options) {
       saveButton.options.disabled = true;
-      saveButton.options.text = "Yadda saxlanılır...";
+      saveButton.options.text = t("js_saving");
       popup.option("toolbarItems", popup.option("toolbarItems"));
     }
 
@@ -543,16 +562,17 @@ function wireModalForm(onSavedCallback) {
       })
       .catch(function (err) {
         showErrorPopup(
-          "Formanı yadda saxlamaq mümkün olmadı: " + err.message,
+          t("js_form_load_error") + err.message,
           err.stack || ""
         );
         throw err;
       })
       .finally(function () {
         const currentItems = popup.option("toolbarItems");
-        if (currentItems && currentItems[1] && currentItems[1].options) {
-          currentItems[1].options.disabled = false;
-          currentItems[1].options.text = "Yadda saxla";
+        const saveItem = findSaveToolbarItem(currentItems);
+        if (saveItem && saveItem.options) {
+          saveItem.options.disabled = false;
+          saveItem.options.text = t("js_save");
           popup.option("toolbarItems", currentItems);
         }
       });
@@ -599,13 +619,13 @@ function openFormModal(url, onSavedCallback) {
    */
   if (body && body.innerHTML.trim()) {
     const toolbarItemsNow = popup.option("toolbarItems");
-    const saveItemNow = toolbarItemsNow && toolbarItemsNow[1];
+    const saveItemNow = findSaveToolbarItem(toolbarItemsNow);
     modalStateStack.push({
       html: body.innerHTML,
       title: popup.option("title"),
       onSavedCallback: onSavedCallback,
       saveDisabled: !!(saveItemNow && saveItemNow.options && saveItemNow.options.disabled),
-      saveText: (saveItemNow && saveItemNow.options && saveItemNow.options.text) || "Yadda saxla"
+      saveText: (saveItemNow && saveItemNow.options && saveItemNow.options.text) || t("js_save")
     });
   }
 
@@ -635,10 +655,10 @@ function openFormModal(url, onSavedCallback) {
       // form in the page session, that stale state otherwise carries
       // over into this new form. Always reset it for a freshly loaded form.
       const toolbarItems = popup.option("toolbarItems");
-      const saveItem = toolbarItems && toolbarItems[1];
+      const saveItem = findSaveToolbarItem(toolbarItems);
       if (saveItem && saveItem.options) {
         saveItem.options.disabled = false;
-        saveItem.options.text = "Yadda saxla";
+        saveItem.options.text = t("js_save");
         popup.option("toolbarItems", toolbarItems);
       }
 
@@ -651,7 +671,7 @@ function openFormModal(url, onSavedCallback) {
       restoreParentModal();
 
       showErrorPopup(
-        "Forma yüklənmədi: " + err.message,
+        t("js_form_fetch_error") + err.message,
         err.stack || ""
       );
     });
@@ -669,9 +689,7 @@ function setEmployeeModalView(tabId) {
   const popup = getModalPopup();
   const toolbarItems = popup.option("toolbarItems");
 
-  const saveItem = toolbarItems.find(function (item) {
-    return item.options && item.options.text === "Yadda saxla";
-  });
+  const saveItem = findSaveToolbarItem(toolbarItems);
 
   if (tabId === "main") {
     mainForm.style.display = "";

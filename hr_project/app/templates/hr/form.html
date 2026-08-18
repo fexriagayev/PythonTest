@@ -1,5 +1,5 @@
 {% extends "modal_form_base.html" %}
-{% set form_title = 'Əməkdaşı dəyiş' if employee else 'Yeni əməkdaş' %}
+{% set form_title = t('emp_form_title_edit') if employee else t('emp_form_title_add') %}
 {% set form_action = url_for('hr.edit_employee', emp_id=employee.id) if employee else url_for('hr.add_employee') %}
 {% set cancel_url = url_for('hr.list_employees') %}
 {% set form_no_wrapper_card = true %}
@@ -12,17 +12,17 @@
    class="active"
    data-employee-tab="main"
    onclick="return window.openEmployeeModalTab(this);">
-  Əsas məlumatlar
+  {{ t('emp_tab_main') }}
   </a>
   
   {% set employee_tabs = [
-    ('work-history', 'İş yerləri', url_for('hr.work_history', emp_id=employee.id) if employee else ''),
-    ('notifications', 'Bildirişlər', url_for('hr.notifications', emp_id=employee.id) if employee else ''),
-    ('insurance', 'Sığorta məlumatları', url_for('hr.insurance_list', emp_id=employee.id) if employee else ''),
-    ('salary-cards', 'Maaş kartları', url_for('hr.salary_card_list', emp_id=employee.id) if employee else ''),
-    ('vacation-periods', 'Məzuniyyət günləri', url_for('hr.vacation_periods', emp_id=employee.id) if employee else ''),
-    ('leave-requests', 'İş buraxmaları', url_for('hr.leave_requests', emp_id=employee.id) if employee else ''),
-    ('documents', 'Sənədlər', url_for('hr.document_list', emp_id=employee.id) if employee else '')
+    ('work-history', t('emp_tab_work_history'), url_for('hr.work_history', emp_id=employee.id) if employee else ''),
+    ('notifications', t('emp_tab_notifications'), url_for('hr.notifications', emp_id=employee.id) if employee else ''),
+    ('insurance', t('emp_tab_insurance'), url_for('hr.insurance_list', emp_id=employee.id) if employee else ''),
+    ('salary-cards', t('emp_tab_salary_cards'), url_for('hr.salary_card_list', emp_id=employee.id) if employee else ''),
+    ('vacation-periods', t('emp_tab_vacation_periods'), url_for('hr.vacation_periods', emp_id=employee.id) if employee else ''),
+    ('leave-requests', t('emp_tab_leave_requests'), url_for('hr.leave_requests', emp_id=employee.id) if employee else ''),
+    ('documents', t('emp_tab_documents'), url_for('hr.document_list', emp_id=employee.id) if employee else '')
   ] %}
 
   {% for tab_id, label, tab_url in employee_tabs %}
@@ -30,7 +30,7 @@
        data-employee-tab="{{ tab_id }}"
        data-tab-url="{{ tab_url }}"
        class="{{ 'disabled' if not employee else '' }}"
-       title="{{ 'Əvvəlcə əməkdaşı yadda saxlayın' if not employee else '' }}"
+       title="{{ t('emp_tab_save_first_hint') if not employee else '' }}"
        onclick="return window.openEmployeeModalTab(this);">
       {{ label }}
     </a>
@@ -46,19 +46,19 @@
 <div class="emp-profile-header">
   <div class="emp-photo-box emp-photo-box--sm">
     {% if employee and employee.photo_path %}
-    <img src="{{ url_for('hr.get_photo', emp_id=employee.id) }}" alt="Şəkil">
+    <img src="{{ url_for('hr.get_photo', emp_id=employee.id) }}" alt="{{ t('photo_alt') }}">
     {% else %}
-    <div class="emp-photo-placeholder">Şəkil yoxdur</div>
+    <div class="emp-photo-placeholder">{{ t('emp_photo_none') }}</div>
     {% endif %}
   </div>
 
   <div class="emp-profile-main">
-    <label>Ad Soyad Ata adı</label>
-    <input type="text" name="full_name" class="emp-name-input" value="{{ (employee.full_name or '') if employee else '' }}" required placeholder="Məmmədov Anar Elşad oğlu">
+    <label>{{ t('emp_full_name_label') }}</label>
+    <input type="text" name="full_name" class="emp-name-input" value="{{ (employee.full_name or '') if employee else '' }}" required placeholder="{{ t('emp_full_name_placeholder') }}">
 
     <div class="emp-profile-sub">
       <span class="emp-status-badge {{ 'emp-status-badge--active' if (not employee or employee.is_active) else 'emp-status-badge--inactive' }}">
-        {{ 'Aktiv' if (not employee or employee.is_active) else 'İşdən çıxıb' }}
+        {{ t('emp_status_active') if (not employee or employee.is_active) else t('emp_status_inactive') }}
       </span>
       {% if employee and employee.position %}<span>{{ employee.position }}</span>{% endif %}
       {% if employee and employee.department %}<span>{{ employee.department }}</span>{% endif %}
@@ -66,26 +66,26 @@
 
     {% if employee %}
     <div class="emp-photo-actions">
-      <button type="button" class="emp-photo-upload-btn" onclick="document.getElementById('empPhotoInput{{ employee.id }}').click()">Şəkil dəyiş</button>
+      <button type="button" class="emp-photo-upload-btn" onclick="document.getElementById('empPhotoInput{{ employee.id }}').click()">{{ t('emp_photo_change') }}</button>
       <input type="file" id="empPhotoInput{{ employee.id }}" accept="image/*" class="emp-photo-input-hidden"
             onchange="uploadEmployeePhoto('{{ url_for('hr.upload_photo', emp_id=employee.id) }}', '{{ url_for('hr.edit_employee', emp_id=employee.id) }}', this)">
       {% if employee.photo_path %}
       <button type="button" class="btn btn-sm btn-danger"
-              onclick="ajaxDeleteAndReloadPage('{{ url_for('hr.delete_photo', emp_id=employee.id) }}', '{{ url_for('hr.edit_employee', emp_id=employee.id) }}')">Şəkli sil</button>
+              onclick="ajaxDeleteAndReloadPage('{{ url_for('hr.delete_photo', emp_id=employee.id) }}', '{{ url_for('hr.edit_employee', emp_id=employee.id) }}')">{{ t('emp_photo_delete') }}</button>
       {% endif %}
     </div>
     {% else %}
-    <p class="emp-photo-hint">Şəkil əməkdaşı yadda saxladıqdan sonra əlavə edilə bilər</p>
+    <p class="emp-photo-hint">{{ t('emp_photo_hint_before_save') }}</p>
     {% endif %}
   </div>
 </div>
 
 <div class="emp-section">
-  <div class="emp-section-title">Şəxsi məlumatlar</div>
+  <div class="emp-section-title">{{ t('emp_section_personal') }}</div>
   <div class="emp-grid emp-grid--3col">
-    <div><label>Doğum tarixi</label><input type="date" name="birth_date" value="{{ (employee.birth_date or '') if employee else '' }}"></div>
+    <div><label>{{ t('emp_birth_date') }}</label><input type="date" name="birth_date" value="{{ (employee.birth_date or '') if employee else '' }}"></div>
     <div>
-      <label>Cinsi</label>
+      <label>{{ t('emp_gender') }}</label>
       <div class="dict-select-row">
         <select name="gender_id" id="genderSelect">
           <option value="">— seçin —</option>
@@ -93,11 +93,11 @@
           <option value="{{ g.id }}" {{ 'selected' if employee and employee.gender_id==g.id }}>{{ g.name }}</option>
           {% endfor %}
         </select>
-        <button type="button" class="btn btn-secondary" onclick="quickAddDictionaryItem('HR', 'gender', 'genderSelect', 'cinsi')">+</button>
+        <button type="button" class="btn btn-secondary" onclick="quickAddDictionaryItem('HR', 'gender', 'genderSelect', '{{ t('dict_label_gender') }}')">+</button>
       </div>
     </div>
     <div>
-      <label>Ailə vəziyyəti</label>
+      <label>{{ t('emp_family_status') }}</label>
       <div class="dict-select-row">
         <select name="family_status_id" id="familyStatusSelect">
           <option value="">— seçin —</option>
@@ -105,11 +105,11 @@
           <option value="{{ fs.id }}" {{ 'selected' if employee and employee.family_status_id==fs.id }}>{{ fs.name }}</option>
           {% endfor %}
         </select>
-        <button type="button" class="btn btn-secondary" onclick="quickAddDictionaryItem('HR', 'family_status', 'familyStatusSelect', 'ailə vəziyyəti')">+</button>
+        <button type="button" class="btn btn-secondary" onclick="quickAddDictionaryItem('HR', 'family_status', 'familyStatusSelect', '{{ t('dict_label_family_status') }}')">+</button>
       </div>
     </div>
     <div>
-      <label>Güzəşt</label>
+      <label>{{ t('emp_benefit') }}</label>
       <div class="dict-select-row">
         <select name="benefit_id" id="benefitSelect">
           <option value="">— seçin —</option>
@@ -117,11 +117,11 @@
           <option value="{{ b.id }}" {{ 'selected' if employee and employee.benefit_id==b.id }}>{{ b.name }}</option>
           {% endfor %}
         </select>
-        <button type="button" class="btn btn-secondary" onclick="quickAddDictionaryItem('HR', 'benefits', 'benefitSelect', 'güzəşt')">+</button>
+        <button type="button" class="btn btn-secondary" onclick="quickAddDictionaryItem('HR', 'benefits', 'benefitSelect', '{{ t('dict_label_benefit') }}')">+</button>
       </div>
     </div>
     <div>
-      <label>Təhsilin tipi</label>
+      <label>{{ t('emp_education_type') }}</label>
       <div class="dict-select-row">
         <select name="education_type_id" id="educationTypeSelect">
           <option value="">— seçin —</option>
@@ -129,49 +129,49 @@
           <option value="{{ et.id }}" {{ 'selected' if employee and employee.education_type_id==et.id }}>{{ et.name }}</option>
           {% endfor %}
         </select>
-        <button type="button" class="btn btn-secondary" onclick="quickAddDictionaryItem('HR', 'education_type', 'educationTypeSelect', 'təhsil tipi')">+</button>
+        <button type="button" class="btn btn-secondary" onclick="quickAddDictionaryItem('HR', 'education_type', 'educationTypeSelect', '{{ t('dict_label_education_type') }}')">+</button>
       </div>
     </div>
   </div>
 </div>
 
 <div class="emp-section">
-  <div class="emp-section-title">Sənəd məlumatları</div>
+  <div class="emp-section-title">{{ t('emp_section_document') }}</div>
   <div class="emp-grid emp-grid--3col">
-    <div><label>Ş/V FİN nömrəsi</label><input type="text" name="fin_code" value="{{ (employee.fin_code or '') if employee else '' }}"></div>
-    <div><label>Ş/V seriya və nömrəsi</label><input type="text" name="id_card_number" value="{{ (employee.id_card_number or '') if employee else '' }}"></div>
-    <div><label>Sosial sığorta nömrəsi</label><input type="text" name="social_insurance_number" value="{{ (employee.social_insurance_number or '') if employee else '' }}"></div>
+    <div><label>{{ t('emp_fin_code') }}</label><input type="text" name="fin_code" value="{{ (employee.fin_code or '') if employee else '' }}"></div>
+    <div><label>{{ t('emp_id_card_number') }}</label><input type="text" name="id_card_number" value="{{ (employee.id_card_number or '') if employee else '' }}"></div>
+    <div><label>{{ t('emp_social_insurance_number') }}</label><input type="text" name="social_insurance_number" value="{{ (employee.social_insurance_number or '') if employee else '' }}"></div>
   </div>
 </div>
 
 <div class="emp-section">
   <div class="emp-section-title">
-    İş məlumatları
-    <span class="emp-section-hint">🔒 qıfıllı sahələr "İş yerləri" / "Bildirişlər" bölmələrindən avtomatik hesablanır</span>
+    {{ t('emp_section_work') }}
+    <span class="emp-section-hint">🔒 {{ t('emp_section_work_hint') }}</span>
   </div>
   <div class="emp-grid emp-grid--3col">
-    <div><label>İşə başlama tarixi 🔒</label><input class="field-readonly" type="text" value="{{ (employee.hire_date or '') if employee else '' }}" disabled></div>
-    <div><label>İşdən çıxma tarixi 🔒</label><input class="field-readonly" type="text" value="{{ (employee.termination_date or '') if employee else '' }}" disabled></div>
-    <div><label>Qalan məzuniyyət günü</label><input type="number" name="remaining_vacation_days" value="{{ (employee.remaining_vacation_days or '') if employee else '' }}"></div>
-    <div><label>Ümumi staj 🔒</label><input class="field-readonly" type="text" value="{{ (employee.total_experience or '') if employee else '' }}" disabled></div>
-    <div><label>Şirkətdə staj 🔒</label><input class="field-readonly" type="text" value="{{ (employee.company_experience or '') if employee else '' }}" disabled></div>
-    <div><label>Digər iş yerlərində staj 🔒</label><input class="field-readonly" type="text" value="{{ (employee.other_experience or '') if employee else '' }}" disabled></div>
-    <div><label>Müqavilənin başlama tarixi 🔒</label><input class="field-readonly" type="text" value="{{ (employee.contract_start_date or '') if employee else '' }}" disabled></div>
-    <div><label>Müqavilənin bitmə tarixi 🔒</label><input class="field-readonly" type="text" value="{{ (employee.contract_end_date or '') if employee else '' }}" disabled></div>
-    <div><label>Maaş 🔒</label><input class="field-readonly" type="text" value="{{ (employee.salary or '') if employee else '' }}" disabled></div>
+    <div><label>{{ t('emp_hire_date') }} 🔒</label><input class="field-readonly" type="text" value="{{ (employee.hire_date or '') if employee else '' }}" disabled></div>
+    <div><label>{{ t('emp_termination_date') }} 🔒</label><input class="field-readonly" type="text" value="{{ (employee.termination_date or '') if employee else '' }}" disabled></div>
+    <div><label>{{ t('emp_remaining_vacation_days') }}</label><input type="number" name="remaining_vacation_days" value="{{ (employee.remaining_vacation_days or '') if employee else '' }}"></div>
+    <div><label>{{ t('emp_total_experience') }} 🔒</label><input class="field-readonly" type="text" value="{{ (employee.total_experience or '') if employee else '' }}" disabled></div>
+    <div><label>{{ t('emp_company_experience') }} 🔒</label><input class="field-readonly" type="text" value="{{ (employee.company_experience or '') if employee else '' }}" disabled></div>
+    <div><label>{{ t('emp_other_experience') }} 🔒</label><input class="field-readonly" type="text" value="{{ (employee.other_experience or '') if employee else '' }}" disabled></div>
+    <div><label>{{ t('emp_contract_start_date') }} 🔒</label><input class="field-readonly" type="text" value="{{ (employee.contract_start_date or '') if employee else '' }}" disabled></div>
+    <div><label>{{ t('emp_contract_end_date') }} 🔒</label><input class="field-readonly" type="text" value="{{ (employee.contract_end_date or '') if employee else '' }}" disabled></div>
+    <div><label>{{ t('emp_salary') }} 🔒</label><input class="field-readonly" type="text" value="{{ (employee.salary or '') if employee else '' }}" disabled></div>
   </div>
 </div>
 
 <div class="emp-section">
-  <div class="emp-section-title">Əlaqə</div>
+  <div class="emp-section-title">{{ t('emp_section_contact') }}</div>
   <div class="emp-grid emp-grid--3col">
-    <div><label>Telefon</label><input type="text" name="phone" value="{{ (employee.phone or '') if employee else '' }}"></div>
-    <div><label>E-mail</label><input type="email" name="email" value="{{ (employee.email or '') if employee else '' }}"></div>
+    <div><label>{{ t('emp_phone') }}</label><input type="text" name="phone" value="{{ (employee.phone or '') if employee else '' }}"></div>
+    <div><label>{{ t('emp_email') }}</label><input type="email" name="email" value="{{ (employee.email or '') if employee else '' }}"></div>
   </div>
 </div>
 
 <div class="emp-section">
-  <div class="emp-section-title">Qeyd</div>
+  <div class="emp-section-title">{{ t('emp_section_note') }}</div>
   <textarea name="note" rows="3" class="emp-note">{{ (employee.note or '') if employee else '' }}</textarea>
 </div>
 {% endblock %}

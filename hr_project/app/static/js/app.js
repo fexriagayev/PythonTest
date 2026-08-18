@@ -1,4 +1,24 @@
 
+/**
+ * Client-side translation lookup — mirrors the server's t(key) so JS
+ * (modal.js, app.js, ...) doesn't hardcode its own copy of the same
+ * strings. window.I18N is populated once in base.html from the same
+ * TRANSLATIONS dict the server templates use (app/i18n.py), for the
+ * user's current language.
+ *
+ * Supports simple {placeholder} substitution, e.g.:
+ *   t("js_generic_fetch_error", {status: 500, url: "/hr/add"})
+ */
+function t(key, vars) {
+  var text = (window.I18N && window.I18N[key]) || key;
+  if (vars) {
+    Object.keys(vars).forEach(function (k) {
+      text = text.replace("{" + k + "}", vars[k]);
+    });
+  }
+  return text;
+}
+
 /** CSRF protection for native forms and same-origin AJAX requests. */
 (function () {
   function csrfToken() {
@@ -180,24 +200,24 @@ function quickAddCheckboxDictionaryItem(moduleCode, category, gridElementId, inp
 /** Deletes a record via AJAX and reloads the current grid in place
  * (no full page navigation) — used by the row action buttons. */
 function ajaxDeleteAndReload(url) {
-  if (!confirm("Silmək istədiyinizə əminsiniz?")) return;
+  if (!confirm(t("js_confirm_delete"))) return;
   setLastAction("Silməyə çalışdı: " + url);
   fetch(url, {
     method: "POST",
     headers: { "X-Requested-With": "XMLHttpRequest" },
   })
     .then(function (r) {
-      if (!r.ok) throw new Error("Server " + r.status + " qaytardı (" + url + ")");
+      if (!r.ok) throw new Error(t("js_generic_fetch_error", { status: r.status, url: url }));
       if (window.currentGridTable) window.currentGridTable.setData();
     })
     .catch(function (err) {
-      showErrorPopup("Silinmə zamanı xəta baş verdi: " + err.message, err.stack || "");
+      showErrorPopup(t("js_delete_error") + err.message, err.stack || "");
     });
 }
 
 /** Kept for any legacy full-page form (non-modal) delete buttons. */
 function postAndReload(url) {
-  if (!confirm("Silmək istədiyinizə əminsiniz?")) return;
+  if (!confirm(t("js_confirm_delete"))) return;
   const f = document.createElement("form");
   f.method = "post";
   f.action = url;
@@ -220,7 +240,7 @@ function reloadFormInPlace(reloadUrl) {
     headers: { "X-Requested-With": "XMLHttpRequest" },
   })
     .then(function (r) {
-      if (!r.ok) throw new Error("Server " + r.status + " qaytardı (" + reloadUrl + ")");
+      if (!r.ok) throw new Error(t("js_generic_fetch_error", { status: r.status, url: reloadUrl }));
       return r.text();
     })
     .then(function (html) {
@@ -248,28 +268,28 @@ function uploadEmployeePhoto(uploadUrl, reloadUrl, inputEl) {
     body: formData,
   })
     .then(function (r) {
-      if (!r.ok) throw new Error("Server " + r.status + " qaytardı (" + uploadUrl + ")");
+      if (!r.ok) throw new Error(t("js_generic_fetch_error", { status: r.status, url: uploadUrl }));
       return reloadFormInPlace(reloadUrl);
     })
     .catch(function (err) {
-      showErrorPopup("Şəkil yüklənmədi: " + err.message, err.stack || "");
+      showErrorPopup(t("js_photo_upload_error") + err.message, err.stack || "");
     });
 }
 
 /** Deletes a record via AJAX, then reloads a single form in place
  * (used by the employee photo "Sil" button). */
 function ajaxDeleteAndReloadPage(deleteUrl, reloadUrl) {
-  if (!confirm("Silmək istədiyinizə əminsiniz?")) return;
+  if (!confirm(t("js_confirm_delete"))) return;
   setLastAction("Silməyə çalışdı: " + deleteUrl);
   fetch(deleteUrl, {
     method: "POST",
     headers: { "X-Requested-With": "XMLHttpRequest" },
   })
     .then(function (r) {
-      if (!r.ok) throw new Error("Server " + r.status + " qaytardı (" + deleteUrl + ")");
+      if (!r.ok) throw new Error(t("js_generic_fetch_error", { status: r.status, url: deleteUrl }));
       return reloadFormInPlace(reloadUrl);
     })
     .catch(function (err) {
-      showErrorPopup("Silinmə zamanı xəta baş verdi: " + err.message, err.stack || "");
+      showErrorPopup(t("js_delete_error") + err.message, err.stack || "");
     });
 }

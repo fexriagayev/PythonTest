@@ -118,7 +118,7 @@ def create_app(config_class="config.Config"):
     app.register_blueprint(dashboard_bp)
 
     # Make current_user preferences (theme/font/lang) available everywhere
-    from app.i18n import translate
+    from app.i18n import translate, TRANSLATIONS
 
     @app.context_processor
     def inject_globals():
@@ -135,6 +135,11 @@ def create_app(config_class="config.Config"):
             ui_font_size=font_size,
             ui_lang=lang,
             t=lambda key: translate(key, lang),
+            # Flat {key: translated_text} for the current language, so
+            # client-side JS (modal.js, app.js, ...) can call the same
+            # t(key) translations as the server-rendered templates,
+            # instead of hardcoding its own copy of the same strings.
+            ui_i18n_json={key: translate(key, lang) for key in TRANSLATIONS},
             available_themes=app.config["AVAILABLE_THEMES"],
         )
 
