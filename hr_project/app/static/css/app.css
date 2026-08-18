@@ -1176,6 +1176,23 @@ table.simple-table th {
 
 .dx-popup-content {
   padding: 18px !important;
+  /* Our own .dx-modal-body is the single intended scroll container.
+     DevExtreme sometimes ALSO makes this outer wrapper scrollable
+     (adds .dx-popup-content-scrollable), producing two nested
+     scrollbars. Contain/clip it (don't let it grow past its allotted
+     space) but don't give it its OWN scrollbar — .dx-modal-body inside
+     it already handles scrolling. (Not "visible": that let content push
+     past its box entirely and shove the Bağla/Yadda saxla footer off
+     screen.) */
+  overflow: hidden !important;
+}
+
+/* Applied to <html> while any modal is open. Uses !important so it can't
+   be quietly lost to a more specific/competing rule the way a plain
+   inline style could be. */
+html.modal-scroll-lock,
+html.modal-scroll-lock body {
+  overflow: hidden !important;
 }
 
 /* Employee sub-tab summary panel (work history / notifications tabs).

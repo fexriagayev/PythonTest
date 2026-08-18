@@ -25,7 +25,7 @@ function ensureModalRoot() {
     deferRendering: false,
     dragEnabled: true,
     hideOnOutsideClick: false,
-    showCloseButton: true,
+    showCloseButton: false,
     resizeEnabled: true,
     shading: true,
     width: "min(960px, 94vw)",
@@ -46,15 +46,40 @@ function ensureModalRoot() {
     // The dark "shading" only visually blocks the background — it does
     // not stop the underlying page from scrolling on its own, which is
     // why the page's own scrollbar was visible next to the popup card.
-    // Lock/unlock page scroll on every show/hide (X button, Escape,
-    // hideModal(), etc. all funnel through these).
+    // Lock/unlock page scroll on every show/hide. Some browsers scroll
+    // <html> rather than <body>, so both are locked to be safe.
     onShowing: function () {
-      document.body.style.overflow = "hidden";
+      document.documentElement.classList.add("modal-scroll-lock");
     },
     onHidden: function () {
-      document.body.style.overflow = "";
+      document.documentElement.classList.remove("modal-scroll-lock");
     },
     toolbarItems: [
+      // Custom title-bar close ("X"). DevExtreme's own built-in
+      // showCloseButton icon always hides the popup outright and its
+      // onHiding event is NOT cancelable for dxPopup, so there was no
+      // way to make the default X respect a parent form waiting on the
+      // modalStateStack (e.g. "+" a work-history record from inside the
+      // employee tabs) — it always closed everything instead of just
+      // the sub-form. Replacing it with our own button, wired to the
+      // exact same handler as "Bağla", is the only reliable fix.
+      {
+        toolbar: "top",
+        location: "after",
+        widget: "dxButton",
+        options: {
+          icon: "close",
+          stylingMode: "text",
+          hint: "Bağla",
+          onClick: function () {
+            if (restoreParentModal()) {
+              return;
+            }
+
+            hideModal();
+          }
+        }
+      },
       {
         toolbar: "bottom",
         location: "after",
