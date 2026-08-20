@@ -54,7 +54,7 @@ function initVacationPeriodsGrid() {
         action: function () {
           openFormModal(
             "/hr/" + empId + "/vacation-periods/compensation?period_start=" + data.period_start + "&period_end=" + data.period_end,
-            function () { window.currentGridTable.setData(); }
+            function () { table.setData(); }
           );
         },
       }];

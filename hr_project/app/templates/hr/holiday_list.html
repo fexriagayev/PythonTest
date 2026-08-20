@@ -5,7 +5,7 @@
 
 <div class="toolbar">
   {% if current_user.has_perm('HR', 'dict_add') %}
-  <button type="button" class="btn" onclick="openFormModal('{{ url_for('hr.add_holiday') }}', function(){ window.currentGridTable.setData(); })">+ {{ t('add') }}</button>
+  <button type="button" id="addHolidayBtn" class="btn">+ {{ t('add') }}</button>
   {% endif %}  <input type="text" id="searchBox" class="form-control" style="max-width:280px;" placeholder="{{ t('search_generic') }}">
 </div>
 <p style="color:#888;font-size:0.82em;margin-top:-6px;">
@@ -41,6 +41,16 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   wireGlobalSearch(table, document.getElementById("searchBox"), ["name"]);
+
+  // NOTE: captures `table` directly instead of window.currentGridTable
+  // -- see the identical comment in hr/list.html for why.
+  const addBtn = document.getElementById("addHolidayBtn");
+  if (addBtn) {
+    addBtn.addEventListener("click", function () {
+      openFormModal("{{ url_for('hr.add_holiday') }}", function () { table.setData(); });
+    });
+  }
+
 });
 </script>
 {% endblock %}

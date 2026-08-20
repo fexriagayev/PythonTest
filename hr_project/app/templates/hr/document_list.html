@@ -16,7 +16,7 @@
 
 <div class="toolbar">
   {% if current_user.has_perm('HR', 'can_add') %}
-  <button type="button" class="btn" onclick="openFormModal('{{ url_for('hr.add_document', emp_id=employee.id) }}', function(){ window.currentGridTable.setData(); })">+ {{ t('doc_upload_button') }}</button>
+  <button type="button" id="addDocumentBtn" class="btn">+ {{ t('doc_upload_button') }}</button>
   {% endif %}
 </div>
 
@@ -55,6 +55,15 @@ function initDocumentGrid() {
       ];
     },
   });
+
+  // NOTE: captures `table` directly instead of window.currentGridTable
+  // -- see the identical comment in hr/list.html for why.
+  const addBtn = document.getElementById("addDocumentBtn");
+  if (addBtn) {
+    addBtn.addEventListener("click", function () {
+      openFormModal("{{ url_for('hr.add_document', emp_id=employee.id) }}", function () { table.setData(); });
+    });
+  }
   }
 
   if (document.readyState === "loading") {

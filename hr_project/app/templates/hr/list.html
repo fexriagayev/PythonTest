@@ -1,11 +1,11 @@
 {% extends "base.html" %}
-{% block title %}Əməkdaşlar{% endblock %}
+{% block title %}{{ t('employees') }}{% endblock %}
 {% block page_title %}{{ t('employees') }}{% endblock %}
 {% block content %}
 
 <div class="toolbar">
   {% if current_user.has_perm('HR', 'can_add') %}
-  <button type="button" class="btn" onclick="openFormModal('{{ url_for('hr.add_employee') }}', function(){ window.currentGridTable.setData(); })">+ {{ t('add') }}</button>
+  <button type="button" id="addEmployeeBtn" class="btn">+ {{ t('add') }}</button>
   {% endif %}
   <input type="text" id="searchBox" class="form-control" style="max-width:280px;" placeholder="{{ t('search_placeholder') }}">
   <label style="display:inline-flex;align-items:center;gap:6px;margin-left:12px;font-size:0.9em;cursor:pointer;">
@@ -14,8 +14,7 @@
   </label>
 </div>
 <p style="color:#888;font-size:0.82em;margin-top:-6px;">
-  💡 Sütun başlığına sağ-klik: sıralama / footer / qruplaşdırma. Sətirə sağ-klik: yeni / dəyiş / sil.
-  İlk sütundakı ☰ işarəsi — sütunları göstər/gizlət.
+  {{ t('emp_grid_hint_full') }}
 </p>
 
 <div id="employeeGrid"></div>
@@ -70,6 +69,24 @@ document.addEventListener("DOMContentLoaded", function () {
     ajaxParams.include_inactive = e.target.checked ? "1" : "0";
     table.setData();
   });
+
+  // NOTE: deliberately captures `table` directly (this exact grid
+  // instance) instead of going through window.currentGridTable. The
+  // employee edit modal creates its OWN nested grids per tab (İş yerləri,
+  // Bildirişlər, Sığorta, ...), and each of those overwrites
+  // window.currentGridTable when its tab is opened. If this "+ Add"
+  // button's refresh callback depended on that global instead of this
+  // closure-captured `table`, saving the employee after visiting any
+  // other tab would silently refresh the wrong grid (or none at all) and
+  // this list would appear stale.
+  const addBtn = document.getElementById("addEmployeeBtn");
+  if (addBtn) {
+    addBtn.addEventListener("click", function () {
+      openFormModal("{{ url_for('hr.add_employee') }}", function () {
+        table.setData();
+      });
+    });
+  }
 });
 </script>
 {% endblock %}

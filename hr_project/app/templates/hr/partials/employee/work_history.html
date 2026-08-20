@@ -16,15 +16,8 @@
     {% if current_user.has_perm('HR', 'can_add') %}
     <button
       type="button"
-      class="btn"
-      onclick="openFormModal(
-        '{{ url_for('hr.add_work_history', emp_id=employee.id) }}',
-        function () {
-          if (window.currentGridTable) {
-            window.currentGridTable.setData();
-          }
-        }
-      )">
+      id="addWorkHistoryBtn"
+      class="btn">
       + {{ t('wh_new_record') }}
     </button>
     {% endif %}
@@ -96,5 +89,19 @@ const table = createAdvancedGrid(
     height: "calc(100vh - 420px)"
     }
 );
+
+// NOTE: captures `table` directly instead of window.currentGridTable —
+// see the identical comment in hr/list.html for why. Without this, adding
+// a record here after another tab (or the outer employee list) has
+// already reassigned the global would silently refresh the wrong grid.
+const addBtn = document.getElementById("addWorkHistoryBtn");
+if (addBtn) {
+    addBtn.addEventListener("click", function () {
+        openFormModal(
+            "/hr/" + empId + "/work-history/add",
+            function () { table.setData(); }
+        );
+    });
+}
 })();
 </script>

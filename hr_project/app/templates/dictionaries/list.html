@@ -5,7 +5,7 @@
 
 <div class="toolbar">
   {% if current_user.has_perm(module_code, 'dict_add') %}
-  <button type="button" class="btn" onclick="openFormModal('{{ url_for('dictionaries.add_item', module_code=module_code) }}', function(){ window.currentGridTable.setData(); })">+ {{ t('add') }}</button>
+  <button type="button" id="addDictItemBtn" class="btn">+ {{ t('add') }}</button>
   {% endif %}
   <a href="{{ url_for('dictionaries.index') }}" class="btn btn-secondary">{{ t('back_button') }}</a>
   <input type="text" id="searchBox" class="form-control" style="max-width:280px;" placeholder="{{ t('search_generic') }}">
@@ -51,6 +51,16 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   wireGlobalSearch(table, document.getElementById("searchBox"), ["category", "name", "value"]);
+
+  // NOTE: captures `table` directly instead of window.currentGridTable
+  // -- see the identical comment in hr/list.html for why.
+  const addBtn = document.getElementById("addDictItemBtn");
+  if (addBtn) {
+    addBtn.addEventListener("click", function () {
+      openFormModal("{{ url_for('dictionaries.add_item', module_code=module_code) }}", function () { table.setData(); });
+    });
+  }
+
 });
 </script>
 {% endblock %}

@@ -5,7 +5,7 @@
 
 <div class="toolbar">
   {% if current_user.has_perm('SALARY', 'can_add') %}
-  <button type="button" class="btn" onclick="openFormModal('{{ url_for('salary.add_entry') }}', function(){ window.currentGridTable.setData(); })">+ {{ t('add') }}</button>
+  <button type="button" id="addSalaryEntryBtn" class="btn">+ {{ t('add') }}</button>
   {% endif %}
   <input type="text" id="searchBox" class="form-control" style="max-width:280px;" placeholder="{{ t('search_all_fields') }}">
 </div>
@@ -50,6 +50,16 @@ document.addEventListener("DOMContentLoaded", function () {
   });
 
   wireGlobalSearch(table, document.getElementById("searchBox"), ["employee", "period", "note"]);
+
+  // NOTE: captures `table` directly instead of window.currentGridTable
+  // -- see the identical comment in hr/list.html for why.
+  const addBtn = document.getElementById("addSalaryEntryBtn");
+  if (addBtn) {
+    addBtn.addEventListener("click", function () {
+      openFormModal("{{ url_for('salary.add_entry') }}", function () { table.setData(); });
+    });
+  }
+
 });
 </script>
 {% endblock %}

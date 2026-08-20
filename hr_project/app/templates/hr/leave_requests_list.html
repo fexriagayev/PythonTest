@@ -16,7 +16,7 @@
 
 <div class="toolbar">
   {% if current_user.has_perm('HR', 'can_add') %}
-  <button type="button" class="btn" onclick="openFormModal('{{ url_for('hr.add_leave_request', emp_id=employee.id) }}', function(){ window.currentGridTable.setData(); })">+ {{ t('lr_new_record') }}</button>
+  <button type="button" id="addLeaveRequestBtn" class="btn">+ {{ t('lr_new_record') }}</button>
   {% endif %}
 </div>
 <p style="color:#888;font-size:0.82em;margin-top:-6px;">
@@ -57,6 +57,15 @@ function initLeaveRequestsGrid() {
     numericFields: ["day_count"],
     height: "calc(100vh - 340px)",
   });
+
+  // NOTE: captures `table` directly instead of window.currentGridTable
+  // -- see the identical comment in hr/list.html for why.
+  const addBtn = document.getElementById("addLeaveRequestBtn");
+  if (addBtn) {
+    addBtn.addEventListener("click", function () {
+      openFormModal("{{ url_for('hr.add_leave_request', emp_id=employee.id) }}", function () { table.setData(); });
+    });
+  }
   }
 
   if (document.readyState === "loading") {

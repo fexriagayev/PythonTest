@@ -645,6 +645,14 @@ TRANSLATIONS = {
     "server_returned_status_url": {"az": "Server {status} qaytardı ({url})", "en": "Server returned {status} ({url})"},
     "server_returned_status": {"az": "Server {status} qaytardı", "en": "Server returned {status}"},
     "js_form_title_default": {"az": "Forma", "en": "Form"},
+
+    # --- Əməkdaşlar siyahısı əlavə hint (hr/list.html) ------------------------
+    "emp_grid_hint_full": {
+        "az": "💡 Sütun başlığına sağ-klik: sıralama / footer / qruplaşdırma. Sətirə sağ-klik: yeni / dəyiş / sil. "
+              "İlk sütundakı ☰ işarəsi — sütunları göstər/gizlət.",
+        "en": "💡 Right-click a column header: sort / footer / grouping. Right-click a row: new / edit / delete. "
+              "The ☰ icon on the first column shows/hides columns.",
+    },
 }
 
 
