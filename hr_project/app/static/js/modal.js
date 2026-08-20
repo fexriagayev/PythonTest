@@ -173,6 +173,20 @@ function hideModal() {
   if (root && root.__dxPopup) {
     root.__dxPopup.hide();
   }
+
+  // Full close (not "back to parent tab/form"): clear out this session's
+  // state so the next openFormModal() call starts clean. Without this,
+  // stale HTML left in the body from the just-closed modal would make the
+  // *next* openFormModal() think a parent modal is still open and wrongly
+  // push that stale content (and whatever callback happened to be set at
+  // the time) onto modalStateStack — corrupting the next modal session's
+  // "restore parent" / close behavior.
+  const body = getModalBody();
+  if (body) {
+    body.innerHTML = "";
+  }
+  modalStateStack.length = 0;
+  window.__currentModalSavedCallback = null;
 }
 
 function restoreParentModal() {
@@ -623,7 +637,20 @@ function openFormModal(url, onSavedCallback) {
     modalStateStack.push({
       html: body.innerHTML,
       title: popup.option("title"),
-      onSavedCallback: onSavedCallback,
+      // BUG FIX: this must be the CURRENTLY OPEN (parent) form's own
+      // saved-callback (e.g. "refresh the employees list"), not the
+      // `onSavedCallback` parameter of *this* openFormModal() call — that
+      // parameter belongs to the form we are about to open (the child,
+      // e.g. "refresh the work-history sub-grid"). Storing the child's
+      // callback here meant that after closing a nested modal (add/edit
+      // work history, insurance, etc. from inside the employee tabs) and
+      // returning to the parent employee form, saving the parent form
+      // would incorrectly call the child's refresh function instead of
+      // the parent's — so the employees list behind the modal never got
+      // refreshed. window.__currentModalSavedCallback always holds the
+      // callback the currently-visible form was wired with (set in
+      // wireModalForm below), which is exactly what we need to restore.
+      onSavedCallback: window.__currentModalSavedCallback,
       saveDisabled: !!(saveItemNow && saveItemNow.options && saveItemNow.options.disabled),
       saveText: (saveItemNow && saveItemNow.options && saveItemNow.options.text) || t("js_save")
     });
