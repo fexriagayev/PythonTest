@@ -1,22 +1,22 @@
 {% extends layout|default("base.html") %}
-{% block title %}Sənədlər{% endblock %}
-{% block page_title %}Sənədlər — {{ employee.full_name }}{% endblock %}
+{% block title %}{{ t('emp_tab_documents') }}{% endblock %}
+{% block page_title %}{{ t('emp_tab_documents') }} — {{ employee.full_name }}{% endblock %}
 {% block content %}
 
 <div class="record-tabs">
-  <a href="{{ url_for('hr.edit_employee', emp_id=employee.id) }}">Əsas məlumatlar</a>
-  <a href="{{ url_for('hr.work_history', emp_id=employee.id) }}">İş yerləri</a>
-  <a href="{{ url_for('hr.notifications', emp_id=employee.id) }}">Bildirişlər</a>
-  <a href="{{ url_for('hr.insurance_list', emp_id=employee.id) }}">Sığorta məlumatları</a>
-  <a href="{{ url_for('hr.salary_card_list', emp_id=employee.id) }}">Maaş kartları</a>
-  <a href="{{ url_for('hr.vacation_periods', emp_id=employee.id) }}">Məzuniyyət günləri</a>
-  <a href="{{ url_for('hr.leave_requests', emp_id=employee.id) }}">İş buraxmaları</a>
-  <a href="#" class="active">Sənədlər</a>
+  <a href="{{ url_for('hr.edit_employee', emp_id=employee.id) }}">{{ t('emp_tab_main') }}</a>
+  <a href="{{ url_for('hr.work_history', emp_id=employee.id) }}">{{ t('emp_tab_work_history') }}</a>
+  <a href="{{ url_for('hr.notifications', emp_id=employee.id) }}">{{ t('emp_tab_notifications') }}</a>
+  <a href="{{ url_for('hr.insurance_list', emp_id=employee.id) }}">{{ t('emp_tab_insurance') }}</a>
+  <a href="{{ url_for('hr.salary_card_list', emp_id=employee.id) }}">{{ t('emp_tab_salary_cards') }}</a>
+  <a href="{{ url_for('hr.vacation_periods', emp_id=employee.id) }}">{{ t('emp_tab_vacation_periods') }}</a>
+  <a href="{{ url_for('hr.leave_requests', emp_id=employee.id) }}">{{ t('emp_tab_leave_requests') }}</a>
+  <a href="#" class="active">{{ t('emp_tab_documents') }}</a>
 </div>
 
 <div class="toolbar">
   {% if current_user.has_perm('HR', 'can_add') %}
-  <button type="button" class="btn" onclick="openFormModal('{{ url_for('hr.add_document', emp_id=employee.id) }}', function(){ window.currentGridTable.setData(); })">+ Sənəd yüklə</button>
+  <button type="button" class="btn" onclick="openFormModal('{{ url_for('hr.add_document', emp_id=employee.id) }}', function(){ window.currentGridTable.setData(); })">+ {{ t('doc_upload_button') }}</button>
   {% endif %}
 </div>
 
@@ -35,13 +35,13 @@ function initDocumentGrid() {
     ajaxURL: "/hr/" + empId + "/documents/api/records",
     pagination: true,
     paginationSize: 15,
-    placeholder: "Hələ sənəd yoxdur",
+    placeholder: "{{ t('doc_no_data') }}",
     columns: [
-      { title: "ID", field: "id", width: 60, sorter: "number" },
-      { title: "Fayl adı", field: "original_filename", headerFilter: "input" },
-      { title: "Sənəd növü", field: "document_type", headerFilter: "input" },
-      { title: "Qeyd", field: "note", headerFilter: "input" },
-      { title: "Yükləmə tarixi", field: "uploaded_at", sorter: "string" }
+      { title: "{{ t('col_id') }}", field: "id", width: 60, sorter: "number" },
+      { title: "{{ t('doc_col_filename') }}", field: "original_filename", headerFilter: "input" },
+      { title: "{{ t('doc_col_type') }}", field: "document_type", headerFilter: "input" },
+      { title: "{{ t('note_label') }}", field: "note", headerFilter: "input" },
+      { title: "{{ t('doc_col_uploaded_at') }}", field: "uploaded_at", sorter: "string" }
     ]
   }, {
     idField: "id",
@@ -50,8 +50,8 @@ function initDocumentGrid() {
     height: "calc(100vh - 340px)",
     extraRowActions: function (data) {
       return [
-        { label: "👁 Bax", action: function () { window.open("/hr/" + empId + "/documents/" + data.id + "/view", "_blank"); } },
-        { label: "⬇ Yüklə", action: function () { window.location.href = "/hr/" + empId + "/documents/" + data.id + "/download"; } },
+        { label: t("doc_action_view"), action: function () { window.open("/hr/" + empId + "/documents/" + data.id + "/view", "_blank"); } },
+        { label: t("doc_action_download"), action: function () { window.location.href = "/hr/" + empId + "/documents/" + data.id + "/download"; } },
       ];
     },
   });

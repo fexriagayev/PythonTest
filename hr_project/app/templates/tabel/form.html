@@ -1,26 +1,26 @@
 {% extends "modal_form_base.html" %}
-{% set form_title = 'Tabel qeydini dəyiş' if entry else 'Yeni tabel qeydi' %}
+{% set form_title = t('tabel_form_title_edit') if entry else t('tabel_form_title_add') %}
 {% set form_action = url_for('tabel.edit_entry', entry_id=entry.id) if entry else url_for('tabel.add_entry') %}
 {% set cancel_url = url_for('tabel.list_entries') %}
 
 {% block form_fields %}
-  <label>Əməkdaş</label>
+  <label>{{ t('tabel_field_employee') }}</label>
   <select name="employee_id" required>
-    <option value="">— seçin —</option>
+    <option value="">{{ t('select_placeholder') }}</option>
     {% for emp in employees %}
     <option value="{{ emp.id }}" {{ 'selected' if entry and entry.employee_id==emp.id }}>{{ emp.full_name }}</option>
     {% endfor %}
   </select>
-  <label>Tarix</label>
+  <label>{{ t('tabel_field_date') }}</label>
   <input type="date" name="work_date" value="{{ entry.work_date if entry else '' }}" required>
-  <label>Saat</label>
+  <label>{{ t('tabel_field_hours') }}</label>
   <input type="number" step="0.5" name="hours_worked" value="{{ entry.hours_worked if entry else 8 }}">
-  <label>Status</label>
+  <label>{{ t('tabel_field_status') }}</label>
   <select name="status">
-    {% for code, label in [('present','İşdə'), ('absent','Yoxdur'), ('vacation','Məzuniyyət'), ('sick','Xəstəlik')] %}
+    {% for code, label in [('present', t('tabel_status_present')), ('absent', t('tabel_status_absent')), ('vacation', t('tabel_status_vacation')), ('sick', t('tabel_status_sick'))] %}
     <option value="{{ code }}" {{ 'selected' if entry and entry.status==code }}>{{ label }}</option>
     {% endfor %}
   </select>
-  <label>Qeyd</label>
+  <label>{{ t('note_label') }}</label>
   <input type="text" name="note" value="{{ entry.note if entry else '' }}">
 {% endblock %}

@@ -39,6 +39,7 @@ from app.utils.uploads import (
 from app.services.hr_service import (
     recompute_employee_from_history,
     recompute_employee_contract_from_bildiris,
+    close_previous_open_current_record,
 )
 from app.services.leave_service import (
     compute_leave_periods,
@@ -54,6 +55,7 @@ from app.utils.modal import (
     modal_employee_saved,
     is_modal_request,
 )
+from app.i18n import translate, current_lang
 
 hr_bp = Blueprint("hr", __name__)
 MODULE = "HR"
@@ -133,7 +135,14 @@ def list_employees():
 @login_required
 @permission_required(MODULE, "can_view")
 def api_employees():
-    employees = Employee.query.all()
+    # Əməkdaşların siyahısında default olaraq yalnız AKTİV əməkdaşlar
+    # göstərilir (is_active "son iş yeri" qeydindən avtomatik hesablanır,
+    # bax: app/services/hr_service.py:recompute_employee_from_history).
+    # "Passiv əməkdaşları göstər" işarələndikdə isə YALNIZ passivlər
+    # göstərilir (bax: hr/list.html-dəki filter).
+    show_inactive = request.args.get("include_inactive") == "1"
+    query = Employee.query.filter(Employee.is_active.is_(not show_inactive))
+    employees = query.all()
     data = [
         {
             "id": e.id,
@@ -352,11 +361,26 @@ def delete_order(order_id):
 # İş yerləri (əmək kitabçası) — nested under a specific employee.
 # ---------------------------------------------------------------------------
 
+# Static (Azerbaijani) fallback keys — kept for any code that still reads
+# MOVEMENT_LABELS directly. Prefer _movement_labels()/translate() for
+# anything user-facing, since those respect the current user's language.
 MOVEMENT_LABELS = {
     "hire": "İşə qəbul",
     "transfer": "Daxili keçid (struktur/vəzifə dəyişikliyi)",
     "termination": "İşdən çıxma",
 }
+
+_MOVEMENT_LABEL_KEYS = {
+    "hire": "movement_hire",
+    "transfer": "movement_transfer",
+    "termination": "movement_termination",
+}
+
+
+def _movement_labels():
+    """Translated {code: label} dict, in the current user's language."""
+    lang = current_lang()
+    return {code: translate(key, lang) for code, key in _MOVEMENT_LABEL_KEYS.items()}
 
 
 def _work_history_form_choices():
@@ -364,7 +388,7 @@ def _work_history_form_choices():
         "departments": _dict_options("department"),
         "positions": _dict_options("position"),
         "orders": Order.query.order_by(Order.order_date.desc()).all(),
-        "movement_labels": MOVEMENT_LABELS,
+        "movement_labels": _movement_labels(),
     }
 
 
@@ -395,13 +419,17 @@ def api_work_history(emp_id):
         .order_by(EmploymentRecord.date_from.desc())
         .all()
     )
+    lang = current_lang()
+    movement_labels = _movement_labels()
+    ticket_current = translate("wh_ticket_current_short", lang)
+    ticket_external = translate("wh_ticket_external_short", lang)
     data = [
         {
             "id": r.id,
             "is_current_company": r.is_current_company,
-            "ticket": "Cari şirkət" if r.is_current_company else "Kənar iş yeri",
+            "ticket": ticket_current if r.is_current_company else ticket_external,
             "movement_type": (
-                MOVEMENT_LABELS.get(r.movement_type, r.movement_type)
+                movement_labels.get(r.movement_type, r.movement_type)
                 if r.is_current_company
                 else None
             ),
@@ -424,6 +452,16 @@ def api_work_history(emp_id):
 def add_work_history(emp_id):
     employee = Employee.query.get_or_404(emp_id)
     if request.method == "POST":
+        # An employee's "cari şirkət" (current company) timeline is
+        # continuous: hire → transfer(s) → termination. Adding a new
+        # current-company movement implicitly closes whatever record was
+        # previously open-ended, so it doesn't wrongly block this one as
+        # an overlap (and so the employee doesn't stay "Aktiv" just
+        # because the old record was never explicitly closed).
+        if request.form.get("is_current_company") == "1":
+            close_previous_open_current_record(
+                emp_id, _parse_date(request.form.get("date_from"))
+            )
         error = _validate_work_history_form(request.form, employee_id=emp_id)
         if error:
             flash(error, "danger")
@@ -459,6 +497,12 @@ def edit_work_history(emp_id, record_id):
         id=record_id, employee_id=emp_id
     ).first_or_404()
     if request.method == "POST":
+        if request.form.get("is_current_company") == "1":
+            close_previous_open_current_record(
+                emp_id,
+                _parse_date(request.form.get("date_from")),
+                exclude_id=record.id,
+            )
         error = _validate_work_history_form(
             request.form, employee_id=emp_id, exclude_id=record.id
         )

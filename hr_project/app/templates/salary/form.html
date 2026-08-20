@@ -1,24 +1,24 @@
 {% extends "modal_form_base.html" %}
-{% set form_title = 'Əməkhaqqı qeydini dəyiş' if entry else 'Yeni əməkhaqqı qeydi' %}
+{% set form_title = t('salary_form_title_edit') if entry else t('salary_form_title_add') %}
 {% set form_action = url_for('salary.edit_entry', entry_id=entry.id) if entry else url_for('salary.add_entry') %}
 {% set cancel_url = url_for('salary.list_entries') %}
 
 {% block form_fields %}
-  <label>Əməkdaş</label>
+  <label>{{ t('salary_field_employee') }}</label>
   <select name="employee_id" required>
-    <option value="">— seçin —</option>
+    <option value="">{{ t('select_placeholder') }}</option>
     {% for emp in employees %}
     <option value="{{ emp.id }}" {{ 'selected' if entry and entry.employee_id==emp.id }}>{{ emp.full_name }}</option>
     {% endfor %}
   </select>
-  <label>Dövr (YYYY-MM)</label>
+  <label>{{ t('salary_field_period') }}</label>
   <input type="text" name="period" placeholder="2026-08" value="{{ entry.period if entry else '' }}" required>
-  <label>Baza məvacib</label>
+  <label>{{ t('salary_field_base') }}</label>
   <input type="number" step="0.01" name="base_salary" value="{{ entry.base_salary if entry else 0 }}">
-  <label>Bonus</label>
+  <label>{{ t('salary_field_bonus') }}</label>
   <input type="number" step="0.01" name="bonus" value="{{ entry.bonus if entry else 0 }}">
-  <label>Tutulma</label>
+  <label>{{ t('salary_field_deductions') }}</label>
   <input type="number" step="0.01" name="deductions" value="{{ entry.deductions if entry else 0 }}">
-  <label>Qeyd</label>
+  <label>{{ t('note_label') }}</label>
   <input type="text" name="note" value="{{ entry.note if entry else '' }}">
 {% endblock %}

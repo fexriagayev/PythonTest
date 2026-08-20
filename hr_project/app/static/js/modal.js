@@ -193,7 +193,7 @@ function restoreParentModal() {
 
   popup.option(
     "title",
-    state.title || "Əməkdaş"
+    state.title || t("modal_default_title")
   );
 
   // Restore the previous view's Save button state exactly as it was
@@ -477,7 +477,7 @@ function wireModalForm(onSavedCallback) {
     }
 
     const actionUrl = form.getAttribute("action") || window.location.href;
-    setLastAction("Formanı yadda saxlamağa çalışdı: " + actionUrl);
+    setLastAction(t("last_action_form_save_attempt", { url: actionUrl }));
 
     const formData = new FormData(form);
 
@@ -498,7 +498,7 @@ function wireModalForm(onSavedCallback) {
       .then(function (r) {
         if (!r.ok) {
           throw new Error(
-            "Server " + r.status + " qaytardı (" + actionUrl + ")"
+            t("server_returned_status_url", { status: r.status, url: actionUrl })
           );
         }
         return r.json();
@@ -513,7 +513,7 @@ function wireModalForm(onSavedCallback) {
               .then(function (r) {
                 if (!r.ok) {
                   throw new Error(
-                    "Server " + r.status + " qaytardı (" + data.reload_url + ")"
+                    t("server_returned_status_url", { status: r.status, url: data.reload_url })
                   );
                 }
                 return r.text();
@@ -522,7 +522,7 @@ function wireModalForm(onSavedCallback) {
                 body.innerHTML = html;
 
                 const title = getModalTitleFromHtml(html);
-                popup.option("title", title || "Forma");
+                popup.option("title", title || t("js_form_title_default"));
 
                 executeInjectedScripts(body);
                 wireModalForm(onSavedCallback);
@@ -603,13 +603,13 @@ function getModalTitleFromHtml(html) {
   const title = temp.querySelector("[data-form-title]");
   if (title) return title.getAttribute("data-form-title");
   const heading = temp.querySelector("h1, h2, h3");
-  return heading ? heading.textContent.trim() : "Forma";
+  return heading ? heading.textContent.trim() : t("js_form_title_default");
 }
 
 const modalStateStack = [];
 
 function openFormModal(url, onSavedCallback) {
-  setLastAction("Forma açmağa çalışdı: " + url);
+  setLastAction(t("last_action_form_open_attempt", { url: url }));
 
   const popup = getModalPopup();
   const body = getModalBody();
@@ -637,7 +637,7 @@ function openFormModal(url, onSavedCallback) {
     .then(function (r) {
       if (!r.ok) {
         throw new Error(
-          "Server " + r.status + " qaytardı (" + url + ")"
+          t("server_returned_status_url", { status: r.status, url: url })
         );
       }
 
@@ -760,7 +760,7 @@ function loadEmployeeModalTab(link) {
     .then(function (response) {
       if (!response.ok) {
         throw new Error(
-          "Server " + response.status + " qaytardı"
+          t("server_returned_status", { status: response.status })
         );
       }
 
@@ -774,7 +774,7 @@ function loadEmployeeModalTab(link) {
     .catch(function (error) {
       subpage.innerHTML = `
         <div class="flash flash-danger">
-          Bölmə yüklənmədi: ${error.message}
+          ${t("js_tab_load_error")}${error.message}
         </div>
       `;
     });

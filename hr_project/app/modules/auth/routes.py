@@ -3,8 +3,17 @@ from flask_login import login_user, logout_user, login_required, current_user
 
 from app.models import User
 from app.utils.logger import write_log
+from app.i18n import translate
 
 auth_bp = Blueprint("auth", __name__)
+
+
+def _t(key):
+    # Login-a qədər current_user yoxdur, ona görə sessiyadakı (və ya default)
+    # dili istifadə edirik — eyni məntiq app/__init__.py:inject_globals-dadır.
+    from flask import current_app
+    lang = session.get("language", current_app.config["DEFAULT_LANGUAGE"])
+    return translate(key, lang)
 
 
 @auth_bp.route("/login", methods=["GET", "POST"])
@@ -19,11 +28,11 @@ def login():
         user = User.query.filter_by(username=username).first()
 
         if not user or not user.check_password(password):
-            flash("İstifadəçi adı və ya parol yanlışdır.", "danger")
+            flash(_t("err_invalid_credentials"), "danger")
             return render_template("auth/login.html")
 
         if user.is_blocked:
-            flash("Bu hesab bloklanıb. Admin ilə əlaqə saxlayın.", "danger")
+            flash(_t("err_account_blocked"), "danger")
             return render_template("auth/login.html")
 
         login_user(user)

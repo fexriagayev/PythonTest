@@ -22,13 +22,17 @@
    definitions. The converter below translates the common definitions.
    =========================================================================== */
 
+function getCurrentLang() {
+  return (window.CURRENT_LANG || "az");
+}
+
 const AGG_LABELS = {
-  sum: "Cəmi",
-  avg: "Orta",
-  min: "Min",
-  max: "Maks",
-  count: "Say",
-  count_distinct: "Fərqli say"
+  sum: t("grid_agg_sum"),
+  avg: t("grid_agg_avg"),
+  min: t("grid_agg_min"),
+  max: t("grid_agg_max"),
+  count: t("grid_agg_count"),
+  count_distinct: t("grid_agg_count_distinct")
 };
 
 function defaultGridSettings() {
@@ -623,21 +627,21 @@ function bestFitAllColumns(grid) {
      - save grid changes
    --------------------------------------------------------------------------- */
 
-function buildHeaderMenuItems(e, grid, settings, numericFields, persistNow, markDirty) {
+function buildHeaderMenuItems(e, grid, settings, numericFields, persistNow, markDirty, defaultCaptions) {
   const field = e.column && e.column.dataField;
   if (!field) return [];
 
   return [
     {
       beginGroup: true,
-      text: "↔ Bu sütunu ən uyğun ölçüyə gətir",
+      text: t("grid_best_fit_column"),
       onItemClick: function () {
         bestFitOneColumn(grid, field);
         markDirty();
       }
     },
     {
-      text: settings.showFooter === false ? "☐ Footer-i göstər" : "☑ Footer-i göstər",
+      text: settings.showFooter === false ? t("grid_hide_footer") : t("grid_show_footer"),
       onItemClick: function () {
         settings.showFooter = settings.showFooter === false;
         applySummaries(grid, settings);
@@ -645,7 +649,7 @@ function buildHeaderMenuItems(e, grid, settings, numericFields, persistNow, mark
       }
     },
     {
-      text: settings.showGroupFooter === false ? "☐ Group footer-i göstər" : "☑ Group footer-i göstər",
+      text: settings.showGroupFooter === false ? t("grid_hide_group_footer") : t("grid_show_group_footer"),
       onItemClick: function () {
         settings.showGroupFooter = settings.showGroupFooter === false;
         applySummaries(grid, settings);
@@ -654,14 +658,14 @@ function buildHeaderMenuItems(e, grid, settings, numericFields, persistNow, mark
     },
     {
       beginGroup: true,
-      text: "▤ Bu sütun üzrə qruplaşdır",
+      text: t("grid_group_by_column"),
       onItemClick: function () {
         grid.columnOption(field, "groupIndex", 0);
         markDirty();
       }
     },
     {
-      text: "▤ Qruplaşdırmanı sil",
+      text: t("grid_clear_grouping"),
       onItemClick: function () {
         grid.clearGrouping();
         markDirty();
@@ -669,19 +673,35 @@ function buildHeaderMenuItems(e, grid, settings, numericFields, persistNow, mark
     },
     {
       beginGroup: true,
-      text: "✎ Sütunun adını dəyiş",
+      text: t("grid_rename_column"),
       onItemClick: function () {
-        const current = grid.columnOption(field, "caption") || field;
-        const newTitle = prompt("Sütun adı:", current);
-        if (newTitle !== null && newTitle.trim()) {
+        const currentLang = getCurrentLang();
+        const existing = settings.titles[field];
+        const existingForLang =
+          existing && typeof existing === "object" ? existing[currentLang] : (existing || null);
+        const current = existingForLang || grid.columnOption(field, "caption") || field;
+        const newTitle = prompt(t("grid_rename_column_prompt"), current);
+        if (newTitle === null) return;
+
+        settings.titles[field] =
+          settings.titles[field] && typeof settings.titles[field] === "object"
+            ? settings.titles[field]
+            : {};
+
+        if (newTitle.trim()) {
+          settings.titles[field][currentLang] = newTitle.trim();
           grid.columnOption(field, "caption", newTitle.trim());
-          settings.titles[field] = newTitle.trim();
-          markDirty();
+        } else {
+          // Empty input = revert this language back to the default
+          // (server-translated) caption.
+          delete settings.titles[field][currentLang];
+          grid.columnOption(field, "caption", defaultCaptions[field] || field);
         }
+        markDirty();
       }
     },
     {
-      text: "💾 Dəyişiklikləri yadda saxla",
+      text: t("grid_save_changes"),
       onItemClick: persistNow
     }
   ];
@@ -702,7 +722,7 @@ function buildSimpleRowContextItems(data, meta, reloadGrid) {
 
   if (meta.addUrl) {
     items.push({
-      label: "➕ Yeni qeyd",
+      label: t("grid_row_new"),
       action: function () {
 
         if (typeof meta.inlineAdd === "function") {
@@ -719,7 +739,7 @@ function buildSimpleRowContextItems(data, meta, reloadGrid) {
 
   if (meta.editUrlTemplate) {
     items.push({
-      label: "✎ Dəyiş",
+      label: t("grid_row_edit"),
       action: function () {
         if (typeof openFormModal === "function") {
           const id = data[idField];
@@ -752,7 +772,7 @@ function buildSimpleRowContextItems(data, meta, reloadGrid) {
       if (typeof action !== "function") return;
 
       items.push({
-        label: extra.label || extra.text || "Əməliyyat",
+        label: extra.label || extra.text || t("grid_row_action_generic"),
         action: function () {
           action();
         }
@@ -762,9 +782,9 @@ function buildSimpleRowContextItems(data, meta, reloadGrid) {
 
   if (meta.deleteUrlTemplate) {
     items.push({
-      label: "🗑 Sil",
+      label: t("grid_row_delete"),
       action: function () {
-        if (!confirm("Silmək istədiyinizə əminsiniz?")) return;
+        if (!confirm(t("grid_confirm_delete"))) return;
 
         fetch(
           meta.deleteUrlTemplate.replace(
@@ -793,7 +813,7 @@ function buildSimpleRowContextItems(data, meta, reloadGrid) {
               DevExpress.ui.notify
             ) {
               DevExpress.ui.notify(
-                "Silinmə zamanı xəta baş verdi.",
+                t("grid_delete_error"),
                 "error",
                 3000
               );
@@ -808,7 +828,7 @@ function buildSimpleRowContextItems(data, meta, reloadGrid) {
   }
 
   items.push({
-    label: "⟳ Yenilə",
+    label: t("grid_row_refresh"),
     action: reloadGrid
   });
 
@@ -902,7 +922,7 @@ function buildFooterMenuItems(
   items.push({
     text:
       (!targetStore[field] ? "✓ " : "") +
-      "Heç biri",
+      t("grid_agg_none"),
 
     onItemClick: function () {
       delete targetStore[field];
@@ -913,7 +933,7 @@ function buildFooterMenuItems(
 
   items.push({
     beginGroup: true,
-    text: "💾 Dəyişiklikləri yadda saxla",
+    text: t("grid_save_changes"),
     onItemClick: persistNow
   });
 
@@ -948,6 +968,17 @@ function createAdvancedGrid(elementId, baseKey, tabulatorOptions, meta) {
   const columns = convertColumnsToDevExtreme(
     tabulatorOptions.columns || []
   );
+
+  // Snapshot of the server-translated (current-language) default caption
+  // per field, captured BEFORE any saved custom title is restored onto
+  // the grid. Used to revert a column back to its default caption when
+  // the user clears a custom rename for the current language.
+  const defaultCaptions = {};
+  columns.forEach(function (col) {
+    if (col.dataField) {
+      defaultCaptions[col.dataField] = col.caption;
+    }
+  });
 
   /*
    * Preserve the initial grouping used by existing pages.
@@ -1028,7 +1059,7 @@ function createAdvancedGrid(elementId, baseKey, tabulatorOptions, meta) {
     columnChooser: {
       enabled: true,
       mode: "select",
-      title: "Sütunları seç",
+      title: t("grid_column_chooser_title"),
       search: {
         enabled: true
       }
@@ -1061,7 +1092,7 @@ function createAdvancedGrid(elementId, baseKey, tabulatorOptions, meta) {
     groupPanel: {
       visible: true,
       emptyPanelText:
-        "Qruplaşdırmaq üçün sütunu bura sürükləyin"
+        t("grid_group_panel_empty")
     },
 
     grouping: {
@@ -1091,7 +1122,7 @@ function createAdvancedGrid(elementId, baseKey, tabulatorOptions, meta) {
 
     noDataText:
       tabulatorOptions.placeholder ||
-      "Məlumat yoxdur",
+      t("grid_no_data"),
 
     columns: columns,
 
@@ -1114,7 +1145,8 @@ function createAdvancedGrid(elementId, baseKey, tabulatorOptions, meta) {
               settings,
               numericFields,
               persistNow,
-              markDirty
+              markDirty,
+              defaultCaptions
             )
           );
           return;
@@ -1334,23 +1366,19 @@ function createAdvancedGrid(elementId, baseKey, tabulatorOptions, meta) {
     try {
       getCurrentState();
 
-      /*
-       * Capture current titles.
-       */
-      settings.titles =
-        settings.titles || {};
-
-      (grid.option("columns") || []).forEach(
-        function (col) {
-          if (
-            col.dataField &&
-            col.caption != null
-          ) {
-            settings.titles[col.dataField] =
-              col.caption;
-          }
-        }
-      );
+      // NOTE: we deliberately do NOT re-capture every column's current
+      // "caption" into settings.titles here. Captions are built fresh from
+      // the server's t()-translated column titles on every page load, so
+      // they always match the user's current language (app/i18n.py). If we
+      // snapshotted whatever caption happened to be showing at persist
+      // time (e.g. resizing a column, changing a footer option), that
+      // snapshot would get restored on every future load — permanently
+      // freezing the grid's column headers in whichever language was
+      // active the last time anything was persisted, even after the user
+      // switches language. settings.titles is populated ONLY by the
+      // explicit "✎ Sütunun adını dəyiş" (rename column) action below,
+      // which is a genuine, intentional user override that should persist
+      // across languages.
 
       return saveGridSettingsToServer(
         baseKey,
@@ -1455,15 +1483,30 @@ function createAdvancedGrid(elementId, baseKey, tabulatorOptions, meta) {
       }
 
       /*
-       * Restore custom titles.
+       * Restore custom titles — per-language. A title renamed while the
+       * grid was in English only applies when English is active; switching
+       * language falls back to the server's freshly-translated default
+       * caption (already set on the column) unless THIS language also has
+       * its own custom title saved.
+       *
+       * Backward compatible with old data saved before this fix, where
+       * settings.titles[field] was a plain string (not a {lang: title}
+       * object) — those are treated as an "az" title, since "az" was the
+       * only language in use at that time.
        */
+      const currentLang = getCurrentLang();
       Object.keys(settings.titles || {})
         .forEach(function (field) {
-          if (grid.columnOption(field)) {
+          let entry = settings.titles[field];
+          if (typeof entry === "string") {
+            entry = { az: entry };
+          }
+          const customTitle = entry && entry[currentLang];
+          if (customTitle && grid.columnOption(field)) {
             grid.columnOption(
               field,
               "caption",
-              settings.titles[field]
+              customTitle
             );
           }
         });

@@ -1,9 +1,9 @@
 {% extends "base.html" %}
-{% block title %}Daxil ol{% endblock %}
+{% block title %}{{ t('login_page_title') }}{% endblock %}
 {% block guest_content %}
 <div class="login-wrap">
   <div class="login-box">
-    <h1>HR Sistem — Daxil ol</h1>
+    <h1>{{ t('login_heading') }}</h1>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
@@ -17,16 +17,16 @@
 
     <form method="post" class="simple-form">
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <label>İstifadəçi adı</label>
+      <label>{{ t('username') }}</label>
       <input type="text" name="username" required autofocus>
-      <label>Parol</label>
+      <label>{{ t('password') }}</label>
       <input type="password" name="password" required>
       <div class="actions">
-        <button class="btn" type="submit" style="width:100%;">Daxil ol</button>
+        <button class="btn" type="submit" style="width:100%;">{{ t('login_button') }}</button>
       </div>
     </form>
     <p style="font-size:0.8em;color:#888;margin-top:16px;text-align:center;">
-      İlkin admin: <b>admin</b> / <b>admin123</b>
+      {{ t('login_default_admin_hint')|safe }}
     </p>
   </div>
 </div>

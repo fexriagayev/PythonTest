@@ -1,22 +1,21 @@
 {% extends layout|default("base.html") %}
-{% block title %}Məzuniyyət günləri{% endblock %}
-{% block page_title %}Məzuniyyət günləri — {{ employee.full_name }}{% endblock %}
+{% block title %}{{ t('vac_page_title') }}{% endblock %}
+{% block page_title %}{{ t('vac_page_title') }} — {{ employee.full_name }}{% endblock %}
 {% block content %}
 
 <div class="record-tabs">
-  <a href="{{ url_for('hr.edit_employee', emp_id=employee.id) }}">Əsas məlumatlar</a>
-  <a href="{{ url_for('hr.work_history', emp_id=employee.id) }}">İş yerləri</a>
-  <a href="{{ url_for('hr.notifications', emp_id=employee.id) }}">Bildirişlər</a>
-  <a href="{{ url_for('hr.insurance_list', emp_id=employee.id) }}">Sığorta məlumatları</a>
-  <a href="{{ url_for('hr.salary_card_list', emp_id=employee.id) }}">Maaş kartları</a>
-  <a href="#" class="active">Məzuniyyət günləri</a>
-  <a href="{{ url_for('hr.leave_requests', emp_id=employee.id) }}">İş buraxmaları</a>
-  <a href="{{ url_for('hr.document_list', emp_id=employee.id) }}">Sənədlər</a>
+  <a href="{{ url_for('hr.edit_employee', emp_id=employee.id) }}">{{ t('emp_tab_main') }}</a>
+  <a href="{{ url_for('hr.work_history', emp_id=employee.id) }}">{{ t('emp_tab_work_history') }}</a>
+  <a href="{{ url_for('hr.notifications', emp_id=employee.id) }}">{{ t('emp_tab_notifications') }}</a>
+  <a href="{{ url_for('hr.insurance_list', emp_id=employee.id) }}">{{ t('emp_tab_insurance') }}</a>
+  <a href="{{ url_for('hr.salary_card_list', emp_id=employee.id) }}">{{ t('emp_tab_salary_cards') }}</a>
+  <a href="#" class="active">{{ t('emp_tab_vacation_periods') }}</a>
+  <a href="{{ url_for('hr.leave_requests', emp_id=employee.id) }}">{{ t('emp_tab_leave_requests') }}</a>
+  <a href="{{ url_for('hr.document_list', emp_id=employee.id) }}">{{ t('emp_tab_documents') }}</a>
 </div>
 
 <p style="color:#888;font-size:0.82em;margin-top:-6px;">
-  Bu siyahı avtomatik hesablanır (işə qəbul tarixindən başlayaraq hər iş ili üzrə) — birbaşa redaktə
-  edilmir. Yalnız "Kompensasiya" sütununda dəyər qeyd edə bilərsiniz.
+  {{ t('vac_hint') }}
 </p>
 
 <div id="periodsGrid"></div>
@@ -32,26 +31,26 @@ function initVacationPeriodsGrid() {
   const table = createAdvancedGrid("periodsGrid", "hr_vacation_periods", {
     ajaxURL: "/hr/" + empId + "/vacation-periods/api/periods",
     pagination: false,
-    placeholder: "Hələ məzuniyyət dövrü yoxdur (işə qəbul tarixi 'İş yerləri' bölməsindən qeyd olunmalıdır)",
+    placeholder: "{{ t('vac_no_data') }}",
     columns: [
-      { title: "Dövrün başlaması", field: "period_start", sorter: "date" },
-      { title: "Dövrün bitməsi", field: "period_end", sorter: "date" },
-      { title: "Kateqoriya", field: "category", headerFilter: "input" },
-      { title: "Kateqoriya üzrə gün", field: "category_days", sorter: "number" },
-      { title: "Əsas gün (düşən)", field: "entitled_base", sorter: "number", bottomCalc: "sum" },
-      { title: "Əlavə gün (düşən)", field: "entitled_bonus", sorter: "number", bottomCalc: "sum" },
-      { title: "İstifadə (əsas)", field: "used_base", sorter: "number", bottomCalc: "sum" },
-      { title: "İstifadə (əlavə)", field: "used_bonus", sorter: "number", bottomCalc: "sum" },
-      { title: "Kompensasiya (əsas)", field: "compensated_base", sorter: "number", bottomCalc: "sum" },
-      { title: "Kompensasiya (əlavə)", field: "compensated_bonus", sorter: "number", bottomCalc: "sum" },
-      { title: "Qalıq (əsas)", field: "remaining_base", sorter: "number", bottomCalc: "sum" },
-      { title: "Qalıq (əlavə)", field: "remaining_bonus", sorter: "number", bottomCalc: "sum" }
+      { title: "{{ t('vac_col_period_start') }}", field: "period_start", sorter: "date" },
+      { title: "{{ t('vac_col_period_end') }}", field: "period_end", sorter: "date" },
+      { title: "{{ t('vac_col_category') }}", field: "category", headerFilter: "input" },
+      { title: "{{ t('vac_col_category_days') }}", field: "category_days", sorter: "number" },
+      { title: "{{ t('vac_col_entitled_base') }}", field: "entitled_base", sorter: "number", bottomCalc: "sum" },
+      { title: "{{ t('vac_col_entitled_bonus') }}", field: "entitled_bonus", sorter: "number", bottomCalc: "sum" },
+      { title: "{{ t('vac_col_used_base') }}", field: "used_base", sorter: "number", bottomCalc: "sum" },
+      { title: "{{ t('vac_col_used_bonus') }}", field: "used_bonus", sorter: "number", bottomCalc: "sum" },
+      { title: "{{ t('vac_col_compensated_base') }}", field: "compensated_base", sorter: "number", bottomCalc: "sum" },
+      { title: "{{ t('vac_col_compensated_bonus') }}", field: "compensated_bonus", sorter: "number", bottomCalc: "sum" },
+      { title: "{{ t('vac_col_remaining_base') }}", field: "remaining_base", sorter: "number", bottomCalc: "sum" },
+      { title: "{{ t('vac_col_remaining_bonus') }}", field: "remaining_bonus", sorter: "number", bottomCalc: "sum" }
     ]
   }, {
     height: "calc(100vh - 400px)",
     extraRowActions: canEdit ? function (data) {
       return [{
-        label: "💰 Kompensasiya",
+        label: t("vac_action_compensation"),
         action: function () {
           openFormModal(
             "/hr/" + empId + "/vacation-periods/compensation?period_start=" + data.period_start + "&period_end=" + data.period_end,

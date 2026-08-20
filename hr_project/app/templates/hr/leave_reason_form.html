@@ -1,14 +1,14 @@
 {% extends "modal_form_base.html" %}
-{% set form_title = 'Səbəbi dəyiş' if reason else 'Yeni səbəb' %}
+{% set form_title = t('lre_form_title_edit') if reason else t('lre_form_title_add') %}
 {% set form_action = url_for('hr.edit_leave_reason', reason_id=reason.id) if reason else url_for('hr.add_leave_reason') %}
 {% set cancel_url = url_for('hr.list_leave_reasons') %}
 {% set form_max_width = '500px' %}
 
 {% block form_fields %}
-  <label>Ad</label>
-  <input type="text" name="name" placeholder="məs: Xəstəlik, Növbəti məzuniyyət" value="{{ reason.name if reason else '' }}" required>
+  <label>{{ t('lre_field_name') }}</label>
+  <input type="text" name="name" placeholder="{{ t('lre_name_placeholder') }}" value="{{ reason.name if reason else '' }}" required>
 
-  <label>Gün sayma qaydası</label>
+  <label>{{ t('lre_field_counting_method') }}</label>
   <select name="counting_method">
     {% for code, label in methods %}
     <option value="{{ code }}" {{ 'selected' if reason and reason.counting_method==code }}>{{ label }}</option>
@@ -17,10 +17,10 @@
 
   <div class="checkbox-row">
     <input type="checkbox" name="is_annual_leave" id="is_annual_leave" {{ 'checked' if reason and reason.is_annual_leave }}>
-    <label for="is_annual_leave" style="margin:0;">Bu, "növbəti məzuniyyət" səbəbidir (məzuniyyət balansından düşür)</label>
+    <label for="is_annual_leave" style="margin:0;">{{ t('lre_field_is_annual') }}</label>
   </div>
   <div class="checkbox-row">
     <input type="checkbox" name="is_active" id="is_active" {{ 'checked' if (reason and reason.is_active) or not reason }}>
-    <label for="is_active" style="margin:0;">Aktiv</label>
+    <label for="is_active" style="margin:0;">{{ t('lre_field_active') }}</label>
   </div>
 {% endblock %}

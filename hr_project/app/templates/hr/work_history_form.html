@@ -1,5 +1,5 @@
 {% extends "modal_form_base.html" %}
-{% set form_title = ('İş yeri qeydini dəyiş' if record else 'Yeni iş yeri qeydi') ~ ' — ' ~ employee.full_name %}
+{% set form_title = (t('wh_form_title_edit') if record else t('wh_form_title_add')) ~ ' — ' ~ employee.full_name %}
 {% set form_action = url_for('hr.edit_work_history', emp_id=employee.id, record_id=record.id) if record else url_for('hr.add_work_history', emp_id=employee.id) %}
 {% set cancel_url = url_for('hr.work_history', emp_id=employee.id) %}
 {% set form_max_width = '700px' %}
@@ -7,84 +7,84 @@
 {% block form_fields %}
   <input type="hidden" id="workHistoryFormMarker" value="1">
 
-  <label>Qeydin növü</label>
+  <label>{{ t('wh_field_ticket_type') }}</label>
   <div class="ticket-toggle">
     <label id="tabCurrent">
       <input type="radio" name="is_current_company" value="1"
              {{ 'checked' if (not record) or (record and record.is_current_company) }}>
-      <span>Cari şirkət</span>
+      <span>{{ t('wh_ticket_current') }}</span>
     </label>
     <label id="tabExternal">
       <input type="radio" name="is_current_company" value="0"
              {{ 'checked' if record and not record.is_current_company }}>
-      <span>Kənar iş yeri (əvvəlki)</span>
+      <span>{{ t('wh_ticket_external') }}</span>
     </label>
   </div>
 
   <!-- ============== CARİ ŞİRKƏT bölməsi ============== -->
   <div id="currentSection">
-    <label>Hərəkət növü</label>
+    <label>{{ t('wh_field_movement_type') }}</label>
     <select name="movement_type">
       {% for code, label in movement_labels.items() %}
       <option value="{{ code }}" {{ 'selected' if record and record.movement_type==code }}>{{ label }}</option>
       {% endfor %}
     </select>
 
-    <label>Struktur (şöbə)</label>
+    <label>{{ t('wh_field_department') }}</label>
     <div class="dict-select-row">
       <select name="department_id" id="departmentSelect">
-        <option value="">— seçin —</option>
+        <option value="">{{ t('select_placeholder') }}</option>
         {% for d in departments %}
         <option value="{{ d.id }}" {{ 'selected' if record and record.department_id==d.id }}>{{ d.name }}</option>
         {% endfor %}
       </select>
-      <button type="button" class="btn btn-secondary" onclick="quickAddDictionaryItem('HR', 'department', 'departmentSelect', 'struktur')">+</button>
+      <button type="button" class="btn btn-secondary" onclick="quickAddDictionaryItem('HR', 'department', 'departmentSelect', t('dict_label_department'))">+</button>
     </div>
 
-    <label>Vəzifə</label>
+    <label>{{ t('wh_field_position') }}</label>
     <div class="dict-select-row">
       <select name="position_id" id="positionSelect">
-        <option value="">— seçin —</option>
+        <option value="">{{ t('select_placeholder') }}</option>
         {% for p in positions %}
         <option value="{{ p.id }}" {{ 'selected' if record and record.position_id==p.id }}>{{ p.name }}</option>
         {% endfor %}
       </select>
-      <button type="button" class="btn btn-secondary" onclick="quickAddDictionaryItem('HR', 'position', 'positionSelect', 'vəzifə')">+</button>
+      <button type="button" class="btn btn-secondary" onclick="quickAddDictionaryItem('HR', 'position', 'positionSelect', t('dict_label_position'))">+</button>
     </div>
 
-    <label>Əmr</label>
+    <label>{{ t('wh_field_order') }}</label>
     <div class="dict-select-row">
       <select name="order_id" id="orderSelect">
-        <option value="">— seçin —</option>
+        <option value="">{{ t('select_placeholder') }}</option>
         {% for o in orders %}
         <option value="{{ o.id }}" {{ 'selected' if record and record.order_id==o.id }}>{{ o.label() }}</option>
         {% endfor %}
       </select>
-      <button type="button" class="btn btn-secondary" title="Yeni pəncərədə əmr əlavə et"
+      <button type="button" class="btn btn-secondary" title="{{ t('notif_add_order_new_window') }}"
               onclick="window.open('{{ url_for('hr.add_order') }}', '_blank')">+</button>
     </div>
   </div>
 
   <!-- ============== KƏNAR İŞ YERİ bölməsi ============== -->
   <div id="externalSection">
-    <label>Şirkətin adı</label>
+    <label>{{ t('wh_field_external_company') }}</label>
     <input type="text" name="external_company_name" value="{{ record.external_company_name if record else '' }}">
 
-    <label>Struktur (şöbə)</label>
+    <label>{{ t('wh_field_external_department') }}</label>
     <input type="text" name="external_department" value="{{ record.external_department if record else '' }}">
 
-    <label>Vəzifə</label>
+    <label>{{ t('wh_field_external_position') }}</label>
     <input type="text" name="external_position" value="{{ record.external_position if record else '' }}">
   </div>
 
   <!-- ============== Ümumi sahələr ============== -->
-  <label id="dateFromLabel">Başlama tarixi</label>
+  <label id="dateFromLabel">{{ t('wh_field_date_from') }}</label>
   <input type="date" name="date_from" value="{{ record.date_from if record else '' }}" required>
 
-  <label id="dateToLabel">Bitmə tarixi <span id="dateToOptionalHint" style="font-weight:400;color:#888;">(boş = davam edir)</span></label>
+  <label id="dateToLabel">{{ t('wh_field_date_to') }} <span id="dateToOptionalHint" style="font-weight:400;color:#888;">{{ t('wh_date_to_optional_hint') }}</span></label>
   <input type="date" name="date_to" value="{{ record.date_to if record else '' }}">
 
-  <label>Qeyd</label>
+  <label>{{ t('note_label') }}</label>
   <textarea name="note" rows="3" style="width:100%;max-width:100%;">{{ record.note if record else '' }}</textarea>
 {% endblock %}
 

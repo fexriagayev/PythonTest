@@ -1,16 +1,15 @@
 {% extends "base.html" %}
-{% block title %}Məzuniyyət səbəbləri{% endblock %}
-{% block page_title %}İş buraxma səbəbləri{% endblock %}
+{% block title %}{{ t('lre_page_title') }}{% endblock %}
+{% block page_title %}{{ t('lre_page_title') }}{% endblock %}
 {% block content %}
 
 <div class="toolbar">
   {% if current_user.has_perm('HR', 'dict_add') %}
   <button type="button" class="btn" onclick="openFormModal('{{ url_for('hr.add_leave_reason') }}', function(){ window.currentGridTable.setData(); })">+ {{ t('add') }}</button>
-  {% endif %}  <input type="text" id="searchBox" class="form-control" style="max-width:280px;" placeholder="Axtar...">
+  {% endif %}  <input type="text" id="searchBox" class="form-control" style="max-width:280px;" placeholder="{{ t('search_generic') }}">
 </div>
 <p style="color:#888;font-size:0.82em;margin-top:-6px;">
-  Hər səbəb üçün gün sayma qaydası (təqvim/iş günü/bayramsız) təyin olunur — bu, İş buraxmaları
-  bölməsində bitmə tarixinin avtomatik hesablanmasında istifadə olunur.
+  {{ t('lre_counting_hint') }}
 </p>
 
 <div id="reasonGrid"></div>
@@ -28,13 +27,13 @@ document.addEventListener("DOMContentLoaded", function () {
     ajaxURL: "{{ url_for('hr.api_leave_reasons') }}",
     pagination: true,
     paginationSize: 15,
-    placeholder: "Məlumat yoxdur",
+    placeholder: "{{ t('no_data_generic') }}",
     columns: [
-      { title: "ID", field: "id", width: 60, sorter: "number" },
-      { title: "Ad", field: "name", headerFilter: "input" },
-      { title: "Gün sayma qaydası", field: "counting_method", headerFilter: "input" },
-      { title: "Növbəti məzuniyyətdir?", field: "is_annual_leave", width: 160, formatter: "tickCross" },
-      { title: "Aktiv", field: "is_active", width: 90, formatter: "tickCross" }
+      { title: "{{ t('col_id') }}", field: "id", width: 60, sorter: "number" },
+      { title: "{{ t('col_name') }}", field: "name", headerFilter: "input" },
+      { title: "{{ t('lre_col_counting_method') }}", field: "counting_method", headerFilter: "input" },
+      { title: "{{ t('lre_col_is_annual') }}", field: "is_annual_leave", width: 160, formatter: "tickCross" },
+      { title: "{{ t('lre_field_active') }}", field: "is_active", width: 90, formatter: "tickCross" }
     ]
   }, {
     idField: "id",

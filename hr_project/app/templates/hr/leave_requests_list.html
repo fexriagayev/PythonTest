@@ -1,26 +1,26 @@
 {% extends layout|default("base.html") %}
-{% block title %}İş buraxmaları{% endblock %}
-{% block page_title %}İş buraxmaları — {{ employee.full_name }}{% endblock %}
+{% block title %}{{ t('lr_page_title') }}{% endblock %}
+{% block page_title %}{{ t('lr_page_title') }} — {{ employee.full_name }}{% endblock %}
 {% block content %}
 
 <div class="record-tabs">
-  <a href="{{ url_for('hr.edit_employee', emp_id=employee.id) }}">Əsas məlumatlar</a>
-  <a href="{{ url_for('hr.work_history', emp_id=employee.id) }}">İş yerləri</a>
-  <a href="{{ url_for('hr.notifications', emp_id=employee.id) }}">Bildirişlər</a>
-  <a href="{{ url_for('hr.insurance_list', emp_id=employee.id) }}">Sığorta məlumatları</a>
-  <a href="{{ url_for('hr.salary_card_list', emp_id=employee.id) }}">Maaş kartları</a>
-  <a href="{{ url_for('hr.vacation_periods', emp_id=employee.id) }}">Məzuniyyət günləri</a>
-  <a href="#" class="active">İş buraxmaları</a>
-  <a href="{{ url_for('hr.document_list', emp_id=employee.id) }}">Sənədlər</a>
+  <a href="{{ url_for('hr.edit_employee', emp_id=employee.id) }}">{{ t('emp_tab_main') }}</a>
+  <a href="{{ url_for('hr.work_history', emp_id=employee.id) }}">{{ t('emp_tab_work_history') }}</a>
+  <a href="{{ url_for('hr.notifications', emp_id=employee.id) }}">{{ t('emp_tab_notifications') }}</a>
+  <a href="{{ url_for('hr.insurance_list', emp_id=employee.id) }}">{{ t('emp_tab_insurance') }}</a>
+  <a href="{{ url_for('hr.salary_card_list', emp_id=employee.id) }}">{{ t('emp_tab_salary_cards') }}</a>
+  <a href="{{ url_for('hr.vacation_periods', emp_id=employee.id) }}">{{ t('emp_tab_vacation_periods') }}</a>
+  <a href="#" class="active">{{ t('emp_tab_leave_requests') }}</a>
+  <a href="{{ url_for('hr.document_list', emp_id=employee.id) }}">{{ t('emp_tab_documents') }}</a>
 </div>
 
 <div class="toolbar">
   {% if current_user.has_perm('HR', 'can_add') %}
-  <button type="button" class="btn" onclick="openFormModal('{{ url_for('hr.add_leave_request', emp_id=employee.id) }}', function(){ window.currentGridTable.setData(); })">+ Yeni qeyd</button>
+  <button type="button" class="btn" onclick="openFormModal('{{ url_for('hr.add_leave_request', emp_id=employee.id) }}', function(){ window.currentGridTable.setData(); })">+ {{ t('lr_new_record') }}</button>
   {% endif %}
 </div>
 <p style="color:#888;font-size:0.82em;margin-top:-6px;">
-  💡 Tarixlər kəsişə bilməz. Növbəti məzuniyyət seçəndə mövcud balans yoxlanılır.
+  {{ t('lr_overlap_hint') }}
 </p>
 
 <div id="leaveGrid"></div>
@@ -39,15 +39,15 @@ function initLeaveRequestsGrid() {
     ajaxURL: "/hr/" + empId + "/leave-requests/api/records",
     pagination: true,
     paginationSize: 15,
-    placeholder: "Hələ iş buraxması qeydi yoxdur",
+    placeholder: "{{ t('lr_no_data') }}",
     columns: [
-      { title: "ID", field: "id", width: 60, sorter: "number" },
-      { title: "Səbəb", field: "reason", headerFilter: "input" },
-      { title: "Başlama tarixi", field: "start_date", sorter: "date" },
-      { title: "Gün sayı", field: "day_count", sorter: "number" },
-      { title: "Bitmə tarixi", field: "end_date", sorter: "date" },
-      { title: "Əmr", field: "order", headerFilter: "input" },
-      { title: "Qeyd", field: "note", headerFilter: "input" }
+      { title: "{{ t('col_id') }}", field: "id", width: 60, sorter: "number" },
+      { title: "{{ t('lr_col_reason') }}", field: "reason", headerFilter: "input" },
+      { title: "{{ t('lr_col_start_date') }}", field: "start_date", sorter: "date" },
+      { title: "{{ t('lr_col_day_count') }}", field: "day_count", sorter: "number" },
+      { title: "{{ t('lr_col_end_date') }}", field: "end_date", sorter: "date" },
+      { title: "{{ t('lr_col_order') }}", field: "order", headerFilter: "input" },
+      { title: "{{ t('note_label') }}", field: "note", headerFilter: "input" }
     ]
   }, {
     idField: "id",

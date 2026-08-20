@@ -1,38 +1,37 @@
 {% extends layout|default("base.html") %}
-{% block title %}Bildirişlər{% endblock %}
-{% block page_title %}Bildirişlər — {{ employee.full_name }}{% endblock %}
+{% block title %}{{ t('notif_page_title') }}{% endblock %}
+{% block page_title %}{{ t('notif_page_title') }} — {{ employee.full_name }}{% endblock %}
 {% block content %}
 
 <div class="record-tabs">
-  <a href="{{ url_for('hr.edit_employee', emp_id=employee.id) }}">Əsas məlumatlar</a>
-  <a href="{{ url_for('hr.work_history', emp_id=employee.id) }}">İş yerləri</a>
-  <a href="#" class="active">Bildirişlər</a>
-  <a href="{{ url_for('hr.insurance_list', emp_id=employee.id) }}">Sığorta məlumatları</a>
-  <a href="{{ url_for('hr.salary_card_list', emp_id=employee.id) }}">Maaş kartları</a>
-  <a href="{{ url_for('hr.vacation_periods', emp_id=employee.id) }}">Məzuniyyət günləri</a>
-  <a href="{{ url_for('hr.leave_requests', emp_id=employee.id) }}">İş buraxmaları</a>
-  <a href="{{ url_for('hr.document_list', emp_id=employee.id) }}">Sənədlər</a>
+  <a href="{{ url_for('hr.edit_employee', emp_id=employee.id) }}">{{ t('emp_tab_main') }}</a>
+  <a href="{{ url_for('hr.work_history', emp_id=employee.id) }}">{{ t('emp_tab_work_history') }}</a>
+  <a href="#" class="active">{{ t('emp_tab_notifications') }}</a>
+  <a href="{{ url_for('hr.insurance_list', emp_id=employee.id) }}">{{ t('emp_tab_insurance') }}</a>
+  <a href="{{ url_for('hr.salary_card_list', emp_id=employee.id) }}">{{ t('emp_tab_salary_cards') }}</a>
+  <a href="{{ url_for('hr.vacation_periods', emp_id=employee.id) }}">{{ t('emp_tab_vacation_periods') }}</a>
+  <a href="{{ url_for('hr.leave_requests', emp_id=employee.id) }}">{{ t('emp_tab_leave_requests') }}</a>
+  <a href="{{ url_for('hr.document_list', emp_id=employee.id) }}">{{ t('emp_tab_documents') }}</a>
 </div>
 
 <div class="card employee-info-panel" style="margin-bottom:16px;">
   <div class="employee-info-grid employee-info-grid--3col">
-    <div><b>Cari maaş:</b> {{ employee.salary or '—' }}</div>
-    <div><b>Müqavilə başlama:</b> {{ employee.contract_start_date or '—' }}</div>
-    <div><b>Müqavilə bitmə:</b> {{ employee.contract_end_date or '—' }}</div>
+    <div><b>{{ t('notif_current_salary') }}:</b> {{ employee.salary or '—' }}</div>
+    <div><b>{{ t('notif_contract_start') }}:</b> {{ employee.contract_start_date or '—' }}</div>
+    <div><b>{{ t('notif_contract_end') }}:</b> {{ employee.contract_end_date or '—' }}</div>
   </div>
   <p style="color:#888;font-size:0.82em;margin:10px 0 0;">
-    💡 Yalnız dəyişən hissəni doldurmaq kifayətdir — qalan sahələr son bildirişdən avtomatik köçürülür.
-    Hər yeni bildirişdə Hissə 1 (nömrə, tarix, əmr) mütləq yenilənir.
+    {{ t('notif_top_hint') }}
   </p>
 </div>
 
 <div class="toolbar">
   {% if current_user.has_perm('HR', 'can_add') %}
-  <button type="button" class="btn" onclick="openFormModal('{{ url_for('hr.add_notification', emp_id=employee.id) }}', function(){ window.currentGridTable.setData(); })">+ Yeni bildiriş</button>
+  <button type="button" class="btn" onclick="openFormModal('{{ url_for('hr.add_notification', emp_id=employee.id) }}', function(){ window.currentGridTable.setData(); })">+ {{ t('notif_form_title_add') }}</button>
   {% endif %}
 </div>
 <p style="color:#888;font-size:0.82em;margin-top:-6px;">
-  💡 Sütun başlığına sağ-klik: sıralama / footer. Sətirə sağ-klik: yeni / dəyiş / sil.
+  {{ t('grid_row_hint') }}
 </p>
 
 <div id="notificationGrid"></div>
@@ -51,23 +50,23 @@ function initNotificationGrid() {
     ajaxURL: "/hr/" + empId + "/notifications/api/records",
     pagination: true,
     paginationSize: 15,
-    placeholder: "Hələ bildiriş yoxdur",
+    placeholder: "{{ t('notif_no_data') }}",
     columns: [
-      { title: "ID", field: "id", width: 60, sorter: "number" },
-      { title: "Bildiriş №", field: "number", headerFilter: "input" },
-      { title: "Başlama tarixi", field: "start_date", sorter: "date" },
-      { title: "Əmr", field: "order", headerFilter: "input" },
-      { title: "Məşğulluq təsnifatı", field: "employment_classification", headerFilter: "input" },
-      { title: "Məşğulluq vəzifəsi", field: "employment_position", headerFilter: "input" },
-      { title: "Müqavilə №", field: "contract_number", headerFilter: "input" },
-      { title: "Müqavilə tipi", field: "contract_type", headerFilter: "input" },
-      { title: "Müq. başlama", field: "contract_start_date", sorter: "date" },
-      { title: "Müq. bitmə", field: "contract_end_date", sorter: "date" },
-      { title: "İşin tipi", field: "work_type", headerFilter: "input" },
-      { title: "Əməyin növü", field: "labor_type", headerFilter: "input" },
-      { title: "Kateqoriya", field: "leave_category", headerFilter: "input" },
-      { title: "Maaş", field: "salary", sorter: "number" },
-      { title: "Qeyd", field: "note", headerFilter: "input" }
+      { title: "{{ t('col_id') }}", field: "id", width: 60, sorter: "number" },
+      { title: "{{ t('notif_col_number') }}", field: "number", headerFilter: "input" },
+      { title: "{{ t('notif_col_start_date') }}", field: "start_date", sorter: "date" },
+      { title: "{{ t('notif_col_order') }}", field: "order", headerFilter: "input" },
+      { title: "{{ t('notif_col_employment_classification') }}", field: "employment_classification", headerFilter: "input" },
+      { title: "{{ t('notif_col_employment_position') }}", field: "employment_position", headerFilter: "input" },
+      { title: "{{ t('notif_col_contract_number') }}", field: "contract_number", headerFilter: "input" },
+      { title: "{{ t('notif_col_contract_type') }}", field: "contract_type", headerFilter: "input" },
+      { title: "{{ t('notif_col_contract_start') }}", field: "contract_start_date", sorter: "date" },
+      { title: "{{ t('notif_col_contract_end') }}", field: "contract_end_date", sorter: "date" },
+      { title: "{{ t('notif_col_work_type') }}", field: "work_type", headerFilter: "input" },
+      { title: "{{ t('notif_col_labor_type') }}", field: "labor_type", headerFilter: "input" },
+      { title: "{{ t('notif_col_category') }}", field: "leave_category", headerFilter: "input" },
+      { title: "{{ t('notif_col_salary') }}", field: "salary", sorter: "number" },
+      { title: "{{ t('note_label') }}", field: "note", headerFilter: "input" }
     ]
   }, {
     idField: "id",

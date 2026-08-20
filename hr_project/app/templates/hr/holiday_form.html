@@ -1,12 +1,12 @@
 {% extends "modal_form_base.html" %}
-{% set form_title = 'Bayram gününü dəyiş' if holiday else 'Yeni bayram günü' %}
+{% set form_title = t('holiday_form_title_edit') if holiday else t('holiday_form_title_add') %}
 {% set form_action = url_for('hr.edit_holiday', holiday_id=holiday.id) if holiday else url_for('hr.add_holiday') %}
 {% set cancel_url = url_for('hr.list_holidays') %}
 {% set form_max_width = '420px' %}
 
 {% block form_fields %}
-  <label>Tarix</label>
+  <label>{{ t('holiday_field_date') }}</label>
   <input type="date" name="date" value="{{ holiday.date if holiday else '' }}" required>
-  <label>Ad</label>
-  <input type="text" name="name" placeholder="məs: Novruz bayramı" value="{{ holiday.name if holiday else '' }}">
+  <label>{{ t('holiday_field_name') }}</label>
+  <input type="text" name="name" placeholder="{{ t('holiday_name_placeholder') }}" value="{{ holiday.name if holiday else '' }}">
 {% endblock %}

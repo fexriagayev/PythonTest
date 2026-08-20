@@ -1,28 +1,28 @@
 {% extends layout|default("base.html") %}
-{% block title %}İş yerləri{% endblock %}
-{% block page_title %}İş yerləri — {{ employee.full_name }}{% endblock %}
+{% block title %}{{ t('wh_page_title') }}{% endblock %}
+{% block page_title %}{{ t('wh_page_title') }} — {{ employee.full_name }}{% endblock %}
 {% block content %}
 
 <div class="record-tabs">
-  <a href="{{ url_for('hr.edit_employee', emp_id=employee.id) }}">Əsas məlumatlar</a>
-  <a href="#" class="active">İş yerləri</a>
-  <a href="{{ url_for('hr.notifications', emp_id=employee.id) }}">Bildirişlər</a>
-  <a href="{{ url_for('hr.insurance_list', emp_id=employee.id) }}">Sığorta məlumatları</a>
-  <a href="{{ url_for('hr.salary_card_list', emp_id=employee.id) }}">Maaş kartları</a>
-  <a href="{{ url_for('hr.vacation_periods', emp_id=employee.id) }}">Məzuniyyət günləri</a>
-  <a href="{{ url_for('hr.leave_requests', emp_id=employee.id) }}">İş buraxmaları</a>
-  <a href="{{ url_for('hr.document_list', emp_id=employee.id) }}">Sənədlər</a>
+  <a href="{{ url_for('hr.edit_employee', emp_id=employee.id) }}">{{ t('emp_tab_main') }}</a>
+  <a href="#" class="active">{{ t('emp_tab_work_history') }}</a>
+  <a href="{{ url_for('hr.notifications', emp_id=employee.id) }}">{{ t('emp_tab_notifications') }}</a>
+  <a href="{{ url_for('hr.insurance_list', emp_id=employee.id) }}">{{ t('emp_tab_insurance') }}</a>
+  <a href="{{ url_for('hr.salary_card_list', emp_id=employee.id) }}">{{ t('emp_tab_salary_cards') }}</a>
+  <a href="{{ url_for('hr.vacation_periods', emp_id=employee.id) }}">{{ t('emp_tab_vacation_periods') }}</a>
+  <a href="{{ url_for('hr.leave_requests', emp_id=employee.id) }}">{{ t('emp_tab_leave_requests') }}</a>
+  <a href="{{ url_for('hr.document_list', emp_id=employee.id) }}">{{ t('emp_tab_documents') }}</a>
 </div>
 
 <div class="card" style="margin-bottom:16px;">
   <div style="display:flex;flex-wrap:wrap;gap:24px;font-size:0.9em;">
-    <div><b>Cari struktur:</b> {{ employee.department or '—' }}</div>
-    <div><b>Cari vəzifə:</b> {{ employee.position or '—' }}</div>
-    <div><b>İşə qəbul tarixi:</b> {{ employee.hire_date or '—' }}</div>
-    <div><b>Status:</b> {{ 'Aktiv' if employee.is_active else 'İşdən çıxıb' }}</div>
-    <div><b>Ümumi staj:</b> {{ employee.total_experience or '—' }}</div>
-    <div><b>Şirkətdə staj:</b> {{ employee.company_experience or '—' }}</div>
-    <div><b>Digər staj:</b> {{ employee.other_experience or '—' }}</div>
+    <div><b>{{ t('wh_current_department') }}:</b> {{ employee.department or '—' }}</div>
+    <div><b>{{ t('wh_current_position') }}:</b> {{ employee.position or '—' }}</div>
+    <div><b>{{ t('wh_hire_date') }}:</b> {{ employee.hire_date or '—' }}</div>
+    <div><b>{{ t('wh_status') }}:</b> {{ t('emp_status_active') if employee.is_active else t('emp_status_inactive') }}</div>
+    <div><b>{{ t('wh_total_experience') }}:</b> {{ employee.total_experience or '—' }}</div>
+    <div><b>{{ t('wh_company_experience') }}:</b> {{ employee.company_experience or '—' }}</div>
+    <div><b>{{ t('wh_other_experience') }}:</b> {{ employee.other_experience or '—' }}</div>
   </div>
 </div>
 
@@ -31,12 +31,12 @@
   <button type="button"
           class="btn"
           onclick="openWorkHistoryInlineForm('{{ url_for('hr.add_work_history', emp_id=employee.id) }}')">
-    + Yeni qeyd
+    + {{ t('wh_new_record') }}
   </button>
   {% endif %}
 </div>
 <p style="color:#888;font-size:0.82em;margin-top:-6px;">
-  💡 Sütun başlığına sağ-klik: sıralama / footer. Sətirə sağ-klik: yeni / dəyiş / sil.
+  {{ t('wh_hint') }}
 </p>
 
 <div id="workHistoryGridArea">
@@ -61,7 +61,7 @@
     }
 
     formArea.innerHTML =
-      '<div class="card"><div style="padding:20px">Yüklənir...</div></div>';
+      '<div class="card"><div style="padding:20px">' + t("js_loading") + '</div></div>';
 
     gridArea.style.display = "none";
     formArea.style.display = "block";
@@ -81,7 +81,7 @@
       console.error(err);
 
       formArea.innerHTML =
-        '<div class="flash flash-danger">Forma yüklənmədi</div>';
+        '<div class="flash flash-danger">' + t("js_form_load_failed") + '</div>';
     });
   };
 
@@ -110,17 +110,17 @@
         layout: "fitColumns",
         pagination: true,
         paginationSize: 15,
-        placeholder: "Hələ iş yeri qeydi yoxdur",
+        placeholder: "{{ t('wh_no_data') }}",
         columns: [
-          { title: "ID", field: "id", width: 60, sorter: "number" },
-          { title: "Tip", field: "ticket", headerFilter: "input" },
-          { title: "Hərəkət növü", field: "movement_type", headerFilter: "input" },
-          { title: "İş yeri / Şirkət", field: "workplace", headerFilter: "input" },
-          { title: "Vəzifə", field: "position", headerFilter: "input" },
-          { title: "Əmr", field: "order", headerFilter: "input" },
-          { title: "Başlama tarixi", field: "date_from", sorter: "date" },
-          { title: "Bitmə tarixi", field: "date_to", sorter: "date" },
-          { title: "Qeyd", field: "note", headerFilter: "input" }
+          { title: "{{ t('wh_col_id') }}", field: "id", width: 60, sorter: "number" },
+          { title: "{{ t('wh_col_type') }}", field: "ticket", headerFilter: "input" },
+          { title: "{{ t('wh_col_movement_type') }}", field: "movement_type", headerFilter: "input" },
+          { title: "{{ t('wh_col_workplace') }}", field: "workplace", headerFilter: "input" },
+          { title: "{{ t('wh_col_position') }}", field: "position", headerFilter: "input" },
+          { title: "{{ t('wh_col_order') }}", field: "order", headerFilter: "input" },
+          { title: "{{ t('wh_col_date_from') }}", field: "date_from", sorter: "date" },
+          { title: "{{ t('wh_col_date_to') }}", field: "date_to", sorter: "date" },
+          { title: "{{ t('wh_col_note') }}", field: "note", headerFilter: "input" }
         ]
       }, {
         idField: "id",

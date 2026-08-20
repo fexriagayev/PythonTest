@@ -1,40 +1,40 @@
 {% extends "modal_form_base.html" %}
-{% set form_title = ('Sığorta qeydini dəyiş' if record else 'Yeni sığorta qeydi') ~ ' — ' ~ employee.full_name %}
+{% set form_title = (t('ins_form_title_edit') if record else t('ins_form_title_add')) ~ ' — ' ~ employee.full_name %}
 {% set form_action = url_for('hr.edit_insurance', emp_id=employee.id, record_id=record.id) if record else url_for('hr.add_insurance', emp_id=employee.id) %}
 {% set cancel_url = url_for('hr.insurance_list', emp_id=employee.id) %}
 
 {% block form_fields %}
   <div class="form-grid">
-    <div><label>Başlama tarixi</label><input type="date" name="start_date" value="{{ record.start_date if record else '' }}" required></div>
-    <div><label>Bitmə tarixi</label><input type="date" name="end_date" value="{{ record.end_date if record else '' }}" required></div>
-    <div><label>Sığorta nömrəsi</label><input type="text" name="policy_number" value="{{ record.policy_number if record else '' }}"></div>
+    <div><label>{{ t('ins_field_start_date') }}</label><input type="date" name="start_date" value="{{ record.start_date if record else '' }}" required></div>
+    <div><label>{{ t('ins_field_end_date') }}</label><input type="date" name="end_date" value="{{ record.end_date if record else '' }}" required></div>
+    <div><label>{{ t('ins_field_policy_number') }}</label><input type="text" name="policy_number" value="{{ record.policy_number if record else '' }}"></div>
   </div>
 
-  <label>Sığorta şirkəti</label>
+  <label>{{ t('ins_field_company') }}</label>
   <div class="dict-select-row">
     <select name="insurance_company_id" id="insCompanySelect">
-      <option value="">— seçin —</option>
+      <option value="">{{ t('select_placeholder') }}</option>
       {% for c in companies %}
       <option value="{{ c.id }}" {{ 'selected' if record and record.insurance_company_id==c.id }}>{{ c.name }}</option>
       {% endfor %}
     </select>
-    <button type="button" class="btn btn-secondary" onclick="quickAddDictionaryItem('HR', 'insurance_company', 'insCompanySelect', 'sığorta şirkəti')">+</button>
+    <button type="button" class="btn btn-secondary" onclick="quickAddDictionaryItem('HR', 'insurance_company', 'insCompanySelect', t('dict_label_insurance_company'))">+</button>
   </div>
 
-  <label>Sığorta növü</label>
+  <label>{{ t('ins_field_type') }}</label>
   <div class="dict-select-row">
     <select name="insurance_type_id" id="insTypeSelect">
-      <option value="">— seçin —</option>
-      {% for t in types %}
-      <option value="{{ t.id }}" {{ 'selected' if record and record.insurance_type_id==t.id }}>{{ t.name }}</option>
+      <option value="">{{ t('select_placeholder') }}</option>
+      {% for it in types %}
+      <option value="{{ it.id }}" {{ 'selected' if record and record.insurance_type_id==it.id }}>{{ it.name }}</option>
       {% endfor %}
     </select>
-    <button type="button" class="btn btn-secondary" onclick="quickAddDictionaryItem('HR', 'insurance_type', 'insTypeSelect', 'sığorta növü')">+</button>
+    <button type="button" class="btn btn-secondary" onclick="quickAddDictionaryItem('HR', 'insurance_type', 'insTypeSelect', t('dict_label_insurance_type'))">+</button>
   </div>
 
-  <label>Məbləğ</label>
+  <label>{{ t('ins_field_amount') }}</label>
   <input type="number" step="0.01" name="amount" value="{{ record.amount if record else '' }}">
 
-  <label>Qeyd</label>
+  <label>{{ t('note_label') }}</label>
   <textarea name="note" rows="3" style="width:100%;max-width:100%;">{{ record.note if record else '' }}</textarea>
 {% endblock %}

@@ -10,7 +10,7 @@ create/update/delete of an EmploymentRecord belonging to that employee, then
 commit the session.
 """
 
-from datetime import date
+from datetime import date, timedelta
 from app.models import EmploymentRecord, EmploymentContractNotification
 
 
@@ -47,6 +47,43 @@ def _record_days(record, employee_is_active, employee_termination_date):
     return max(delta, 0)
 
 
+def close_previous_open_current_record(employee_id, new_start, exclude_id=None):
+    """
+    Auto-closes any still-open ("date_to is None") CURRENT-COMPANY record
+    for this employee that started before `new_start`, by setting its
+    date_to to the day before `new_start`.
+
+    Why this exists: an employee's "cari şirkət" (current company) history
+    is a single continuous timeline — hire, then transfer(s), then
+    (eventually) termination. Each new movement record implicitly ends the
+    previous one. Without this, adding a new movement (e.g. "İşdən çıxma")
+    while the previous record is still open-ended would be rejected by the
+    overlap check (app/utils/date_overlap.py), because two open-ended
+    ("still ongoing") ranges always overlap — the new record would silently
+    fail validation and the employee would incorrectly remain "Aktiv".
+
+    Only touches OTHER current-company records (never external/"kənar iş
+    yeri" records, which represent a different, independently-tracked
+    employer). Does not commit — caller commits alongside the new record.
+    """
+    if not new_start:
+        return
+
+    open_records = (
+        EmploymentRecord.query.filter_by(
+            employee_id=employee_id,
+            is_current_company=True,
+            date_to=None,
+        )
+        .filter(EmploymentRecord.date_from < new_start)
+    )
+    if exclude_id is not None:
+        open_records = open_records.filter(EmploymentRecord.id != exclude_id)
+
+    for r in open_records.all():
+        r.date_to = new_start - timedelta(days=1)
+
+
 def recompute_employee_from_history(employee):
     """Recomputes and assigns (but does not commit) the derived fields on
     `employee` based on its EmploymentRecord rows."""
@@ -64,22 +101,34 @@ def recompute_employee_from_history(employee):
         employee.hire_date = current_records[0].date_from
 
         latest = current_records[-1]
-        if latest.movement_type == "termination":
+
+        # Əməkdaş passivdir, əgər:
+        #   (a) son qeydin "Hərəkət növü" sahəsi açıq şəkildə "İşdən çıxma"
+        #       seçilibsə (istifadəçinin bilərəkdən verdiyi siqnal), VƏ YA
+        #   (b) son qeydin bitmə tarixi keçmişdədirsə (başlama/bitmə tarixi
+        #       daxil edilib və bu tarix artıq ötübsə, iş yerinin fəaliyyəti
+        #       artıq bitmiş deməkdir — "Hərəkət növü" nü açıq şəkildə
+        #       "İşdən çıxma"ya dəyişmək tələb olunmur).
+        # Əks halda (bitmə tarixi boşdur = davam edir, YA DA gələcəkdədir)
+        # əməkdaş aktivdir.
+        ended_by_movement_type = latest.movement_type == "termination"
+        ended_by_past_date_to = (
+            latest.date_to is not None and latest.date_to < date.today()
+        )
+
+        if ended_by_movement_type or ended_by_past_date_to:
             employee.is_active = False
-            employee.termination_date = latest.date_from
-            # Son bilinən vəzifə/struktur — çıxışdan əvvəlki qeyd
-            prior = current_records[-2] if len(current_records) >= 2 else None
-            employee.department = (
-                prior.department.name if (prior and prior.department) else None
-            )
-            employee.position = (
-                prior.position.name if (prior and prior.position) else None
-            )
+            employee.termination_date = latest.date_to or latest.date_from
         else:
             employee.is_active = True
             employee.termination_date = None
-            employee.department = latest.department.name if latest.department else None
-            employee.position = latest.position.name if latest.position else None
+
+        # Cari struktur/vəzifə həmişə son "cari şirkət" qeydindən götürülür
+        # ("Struktur"/"Vəzifə" bu qeyd üçün mütləqdir — bax:
+        # _validate_work_history_form — ona görə "əvvəlki qeyd"ə ehtiyac yoxdur,
+        # istər aktiv, istər passiv olsun, son qeyd özü etibarlıdır).
+        employee.department = latest.department.name if latest.department else None
+        employee.position = latest.position.name if latest.position else None
     else:
         employee.hire_date = None
         employee.termination_date = None

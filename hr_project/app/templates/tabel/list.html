@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Tabellər{% endblock %}
+{% block title %}{{ t('tabel_page_title') }}{% endblock %}
 {% block page_title %}{{ t('tabel') }}{% endblock %}
 {% block content %}
 
@@ -7,10 +7,10 @@
   {% if current_user.has_perm('TABEL', 'can_add') %}
   <button type="button" class="btn" onclick="openFormModal('{{ url_for('tabel.add_entry') }}', function(){ window.currentGridTable.setData(); })">+ {{ t('add') }}</button>
   {% endif %}
-  <input type="text" id="searchBox" class="form-control" style="max-width:280px;" placeholder="Axtar (bütün sahələr üzrə)...">
+  <input type="text" id="searchBox" class="form-control" style="max-width:280px;" placeholder="{{ t('search_all_fields') }}">
 </div>
 <p style="color:#888;font-size:0.82em;margin-top:-6px;">
-  💡 Sütun başlığına sağ-klik: sıralama / footer / qruplaşdırma. Sətirə sağ-klik: yeni / dəyiş / sil.
+  {{ t('tabel_grid_hint') }}
 </p>
 
 <div id="tabelGrid"></div>
@@ -24,26 +24,26 @@ document.addEventListener("DOMContentLoaded", function () {
   const canDelete = {{ 'true' if current_user.has_perm('TABEL', 'can_delete') else 'false' }};
   const canAdd = {{ 'true' if current_user.has_perm('TABEL', 'can_add') else 'false' }};
 
-  const statusLabels = { present: "İşdə", absent: "Yoxdur", vacation: "Məzuniyyət", sick: "Xəstəlik" };
+  const statusLabels = { present: t("tabel_status_present"), absent: t("tabel_status_absent"), vacation: t("tabel_status_vacation"), sick: t("tabel_status_sick") };
 
   const table = createAdvancedGrid("tabelGrid", "tabel_entries", {
     ajaxURL: "{{ url_for('tabel.api_entries') }}",
     layout: "fitColumns",
     pagination: true,
     paginationSize: 15,
-    placeholder: "Məlumat yoxdur",
+    placeholder: "{{ t('no_data_generic') }}",
     groupBy: "status",
     columns: [
-      { title: "ID", field: "id", width: 60, sorter: "number" },
-      { title: "Əməkdaş", field: "employee", headerFilter: "input" },
-      { title: "Tarix", field: "work_date", sorter: "date", headerFilter: "input" },
-      { title: "Saat", field: "hours_worked", sorter: "number" },
+      { title: "{{ t('col_id') }}", field: "id", width: 60, sorter: "number" },
+      { title: "{{ t('tabel_col_employee') }}", field: "employee", headerFilter: "input" },
+      { title: "{{ t('tabel_col_date') }}", field: "work_date", sorter: "date", headerFilter: "input" },
+      { title: "{{ t('tabel_col_hours') }}", field: "hours_worked", sorter: "number" },
       {
-        title: "Status", field: "status", headerFilter: "list",
+        title: "{{ t('tabel_col_status') }}", field: "status", headerFilter: "list",
         headerFilterParams: { values: statusLabels },
         formatter: function (cell) { return statusLabels[cell.getValue()] || cell.getValue(); }
       },
-      { title: "Qeyd", field: "note", headerFilter: "input" }
+      { title: "{{ t('note_label') }}", field: "note", headerFilter: "input" }
     ]
   }, {
     idField: "id",

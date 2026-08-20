@@ -2,7 +2,7 @@
    DevExtreme error reporting popup.
    =========================================================================== */
 
-window._lastAction = "Səhifə açıldı: " + window.location.pathname;
+window._lastAction = t("err_page_opened", { path: window.location.pathname });
 
 function setLastAction(description) {
   window._lastAction = description + " (" + new Date().toLocaleString() + ")";
@@ -23,7 +23,7 @@ function ensureErrorModalRoot() {
     width: "min(560px, 92vw)",
     maxHeight: "90vh",
     showTitle: true,
-    title: "⚠ Xəta baş verdi",
+    title: t("err_modal_title"),
     showCloseButton: true,
     dragEnabled: true,
     shading: true,
@@ -41,12 +41,12 @@ function ensureErrorModalRoot() {
       container.append(wrap);
 
       $(wrap.querySelector("#errorModalSendBtn")).dxButton({
-        text: "🐞 Developerə göndər",
+        text: t("err_send_to_developer"),
         type: "danger",
         stylingMode: "contained"
       });
       $(wrap.querySelector("#errorModalCloseBtn")).dxButton({
-        text: "Bağla",
+        text: t("err_close"),
         stylingMode: "outlined",
         onClick: hideErrorPopup
       });
@@ -69,7 +69,7 @@ function showErrorPopup(message, stack) {
   const statusEl = document.getElementById("errorModalStatus");
   const sendEl = document.getElementById("errorModalSendBtn");
 
-  if (messageEl) messageEl.textContent = message || "Naməlum xəta baş verdi.";
+  if (messageEl) messageEl.textContent = message || t("err_unknown");
   if (statusEl) statusEl.textContent = "";
 
   const sendButton = sendEl ? $(sendEl).dxButton("instance") : null;
@@ -77,7 +77,7 @@ function showErrorPopup(message, stack) {
     sendButton.option("disabled", false);
     sendButton.option("onClick", function () {
       sendButton.option("disabled", true);
-      if (statusEl) statusEl.textContent = "Ekran şəkli çəkilir və göndərilir...";
+      if (statusEl) statusEl.textContent = t("err_screenshot_sending");
 
       const finish = function (screenshotDataUrl) {
         fetch("/core/report-error", {
@@ -98,13 +98,13 @@ function showErrorPopup(message, stack) {
           .then(function (data) {
             if (statusEl) {
               statusEl.textContent = data.email_sent
-                ? "✓ Göndərildi. Developer məlumatlandırıldı."
-                : "✓ Qeydə alındı (email tənzimlənməyib, amma məlumat sistemdə saxlanıldı).";
+                ? t("err_sent_ok")
+                : t("err_sent_no_email");
             }
           })
           .catch(function () {
             if (statusEl) {
-              statusEl.textContent = "Göndərmək mümkün olmadı. Zəhmət olmasa admin ilə əlaqə saxlayın.";
+              statusEl.textContent = t("err_send_failed");
             }
             sendButton.option("disabled", false);
           });

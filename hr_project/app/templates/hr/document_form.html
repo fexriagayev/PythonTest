@@ -1,25 +1,25 @@
 {% extends "modal_form_base.html" %}
-{% set form_title = 'Yeni sənəd — ' ~ employee.full_name %}
+{% set form_title = t('doc_form_title_add') ~ ' — ' ~ employee.full_name %}
 {% set form_action = url_for('hr.add_document', emp_id=employee.id) %}
 {% set cancel_url = url_for('hr.document_list', emp_id=employee.id) %}
 {% set form_enctype = 'multipart/form-data' %}
 {% set form_max_width = '500px' %}
 
 {% block form_fields %}
-  <label>Fayl</label>
+  <label>{{ t('doc_field_file') }}</label>
   <input type="file" name="file" required>
 
-  <label>Sənəd növü</label>
+  <label>{{ t('doc_field_type') }}</label>
   <div class="dict-select-row">
     <select name="document_type_id" id="docTypeSelect">
-      <option value="">— seçin —</option>
-      {% for t in doc_types %}
-      <option value="{{ t.id }}">{{ t.name }}</option>
+      <option value="">{{ t('select_placeholder') }}</option>
+      {% for t2 in doc_types %}
+      <option value="{{ t2.id }}">{{ t2.name }}</option>
       {% endfor %}
     </select>
-    <button type="button" class="btn btn-secondary" onclick="quickAddDictionaryItem('HR', 'document_type', 'docTypeSelect', 'sənəd növü')">+</button>
+    <button type="button" class="btn btn-secondary" onclick="quickAddDictionaryItem('HR', 'document_type', 'docTypeSelect', t('dict_label_document_type'))">+</button>
   </div>
 
-  <label>Qeyd</label>
+  <label>{{ t('note_label') }}</label>
   <textarea name="note" rows="3" style="width:100%;max-width:100%;"></textarea>
 {% endblock %}

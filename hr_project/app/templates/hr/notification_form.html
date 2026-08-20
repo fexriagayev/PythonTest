@@ -1,6 +1,6 @@
 {% extends "modal_form_base.html" %}
 {% set src = record or latest %}
-{% set form_title = ('Bildirişi dəyiş' if record else 'Yeni bildiriş') ~ ' — ' ~ employee.full_name %}
+{% set form_title = (t('notif_form_title_edit') if record else t('notif_form_title_add')) ~ ' — ' ~ employee.full_name %}
 {% set form_action = url_for('hr.edit_notification', emp_id=employee.id, record_id=record.id) if record else url_for('hr.add_notification', emp_id=employee.id) %}
 {% set cancel_url = url_for('hr.notifications', emp_id=employee.id) %}
 {% set form_max_width = '720px' %}
@@ -8,125 +8,124 @@
 {% block form_fields %}
   {% if not record and latest %}
   <p style="color:#888;font-size:0.85em;margin-top:-6px;">
-    💡 Hissə 2-6 son bildirişdən köçürülüb — yalnız dəyişən sahəni redaktə edin.
-    Hissə 1 (bildiriş nömrəsi, tarix, əmr) mütləq yenidən doldurulmalıdır.
+    {{ t('notif_carry_over_hint') }}
   </p>
   {% endif %}
 
-  <h4>Hissə 1 — Bildiriş</h4>
+  <h4>{{ t('notif_part1_title') }}</h4>
   <div class="form-grid">
-    <div><label>Bildirişin nömrəsi</label><input type="text" name="number" value="{{ record.number if record else '' }}" required></div>
-    <div><label>Başlama tarixi</label><input type="date" name="start_date" value="{{ record.start_date if record else '' }}" required></div>
+    <div><label>{{ t('notif_field_number') }}</label><input type="text" name="number" value="{{ record.number if record else '' }}" required></div>
+    <div><label>{{ t('notif_field_start_date') }}</label><input type="date" name="start_date" value="{{ record.start_date if record else '' }}" required></div>
     <div>
-      <label>Əmr</label>
+      <label>{{ t('notif_field_order') }}</label>
       <div class="dict-select-row">
         <select name="order_id" id="notifOrderSelect" required>
-          <option value="">— seçin —</option>
+          <option value="">{{ t('select_placeholder') }}</option>
           {% for o in orders %}
           <option value="{{ o.id }}" {{ 'selected' if record and record.order_id==o.id }}>{{ o.label() }}</option>
           {% endfor %}
         </select>
-        <button type="button" class="btn btn-secondary" title="Yeni pəncərədə əmr əlavə et" onclick="window.open('{{ url_for('hr.add_order') }}', '_blank')">+</button>
+        <button type="button" class="btn btn-secondary" title="{{ t('notif_add_order_new_window') }}" onclick="window.open('{{ url_for('hr.add_order') }}', '_blank')">+</button>
       </div>
     </div>
   </div>
 
-  <h4>Hissə 2 — Məşğulluq</h4>
+  <h4>{{ t('notif_part2_title') }}</h4>
   <div class="form-grid">
     <div>
-      <label>Məşğulluq təsnifatı</label>
+      <label>{{ t('notif_field_employment_classification') }}</label>
       <div class="dict-select-row">
         <select name="employment_classification_id" id="empClassSelect">
-          <option value="">— seçin —</option>
+          <option value="">{{ t('select_placeholder') }}</option>
           {% for i in employment_classifications %}
           <option value="{{ i.id }}" {{ 'selected' if src and src.employment_classification_id==i.id }}>{{ i.name }}</option>
           {% endfor %}
         </select>
-        <button type="button" class="btn btn-secondary" onclick="quickAddDictionaryItem('HR', 'employment_classification', 'empClassSelect', 'məşğulluq təsnifatı')">+</button>
+        <button type="button" class="btn btn-secondary" onclick="quickAddDictionaryItem('HR', 'employment_classification', 'empClassSelect', t('dict_label_employment_classification'))">+</button>
       </div>
     </div>
     <div>
-      <label>Məşğulluq vəzifəsi</label>
+      <label>{{ t('notif_field_employment_position') }}</label>
       <div class="dict-select-row">
         <select name="employment_position_id" id="empPositionSelect">
-          <option value="">— seçin —</option>
+          <option value="">{{ t('select_placeholder') }}</option>
           {% for i in employment_positions %}
           <option value="{{ i.id }}" {{ 'selected' if src and src.employment_position_id==i.id }}>{{ i.name }}</option>
           {% endfor %}
         </select>
-        <button type="button" class="btn btn-secondary" onclick="quickAddDictionaryItem('HR', 'employment_position', 'empPositionSelect', 'məşğulluq vəzifəsi')">+</button>
+        <button type="button" class="btn btn-secondary" onclick="quickAddDictionaryItem('HR', 'employment_position', 'empPositionSelect', t('dict_label_employment_position'))">+</button>
       </div>
     </div>
-    <div><label>Müqavilənin nömrəsi</label><input type="text" name="contract_number" value="{{ src.contract_number if src else '' }}"></div>
+    <div><label>{{ t('notif_field_contract_number') }}</label><input type="text" name="contract_number" value="{{ src.contract_number if src else '' }}"></div>
     <div>
-      <label>Müqavilənin tipi</label>
+      <label>{{ t('notif_field_contract_type') }}</label>
       <div class="dict-select-row">
         <select name="contract_type_id" id="contractTypeSelect">
-          <option value="">— seçin —</option>
+          <option value="">{{ t('select_placeholder') }}</option>
           {% for i in contract_types %}
           <option value="{{ i.id }}" {{ 'selected' if src and src.contract_type_id==i.id }}>{{ i.name }}</option>
           {% endfor %}
         </select>
-        <button type="button" class="btn btn-secondary" onclick="quickAddDictionaryItem('HR', 'contract_type', 'contractTypeSelect', 'müqavilə tipi')">+</button>
+        <button type="button" class="btn btn-secondary" onclick="quickAddDictionaryItem('HR', 'contract_type', 'contractTypeSelect', t('dict_label_contract_type'))">+</button>
       </div>
     </div>
-    <div><label>Müqavilənin başlama tarixi</label><input type="date" name="contract_start_date" value="{{ src.contract_start_date if src else '' }}"></div>
-    <div><label>Müqavilənin bitmə tarixi</label><input type="date" name="contract_end_date" value="{{ src.contract_end_date if src else '' }}"></div>
+    <div><label>{{ t('notif_field_contract_start_date') }}</label><input type="date" name="contract_start_date" value="{{ src.contract_start_date if src else '' }}"></div>
+    <div><label>{{ t('notif_field_contract_end_date') }}</label><input type="date" name="contract_end_date" value="{{ src.contract_end_date if src else '' }}"></div>
   </div>
 
-  <h4>Hissə 3 — İşin tipi</h4>
+  <h4>{{ t('notif_part3_title') }}</h4>
   <div class="form-grid">
     <div>
-      <label>İşin tipi</label>
+      <label>{{ t('notif_field_work_type') }}</label>
       <div class="dict-select-row">
         <select name="work_type_id" id="workTypeSelect">
-          <option value="">— seçin —</option>
+          <option value="">{{ t('select_placeholder') }}</option>
           {% for i in work_types %}
           <option value="{{ i.id }}" {{ 'selected' if src and src.work_type_id==i.id }}>{{ i.name }}</option>
           {% endfor %}
         </select>
-        <button type="button" class="btn btn-secondary" onclick="quickAddDictionaryItem('HR', 'work_type', 'workTypeSelect', 'işin tipi')">+</button>
+        <button type="button" class="btn btn-secondary" onclick="quickAddDictionaryItem('HR', 'work_type', 'workTypeSelect', t('dict_label_work_type'))">+</button>
       </div>
     </div>
   </div>
 
-  <h4>Hissə 4 — Əməyin növü</h4>
+  <h4>{{ t('notif_part4_title') }}</h4>
   <div class="form-grid">
     <div>
-      <label>Əməyin növü</label>
+      <label>{{ t('notif_field_labor_type') }}</label>
       <div class="dict-select-row">
         <select name="labor_type_id" id="laborTypeSelect">
-          <option value="">— seçin —</option>
+          <option value="">{{ t('select_placeholder') }}</option>
           {% for i in labor_types %}
           <option value="{{ i.id }}" {{ 'selected' if src and src.labor_type_id==i.id }}>{{ i.name }}</option>
           {% endfor %}
         </select>
-        <button type="button" class="btn btn-secondary" onclick="quickAddDictionaryItem('HR', 'labor_type', 'laborTypeSelect', 'əməyin növü')">+</button>
+        <button type="button" class="btn btn-secondary" onclick="quickAddDictionaryItem('HR', 'labor_type', 'laborTypeSelect', t('dict_label_labor_type'))">+</button>
       </div>
     </div>
   </div>
 
-  <h4>Hissə 5 — Kateqoriya</h4>
+  <h4>{{ t('notif_part5_title') }}</h4>
   <div class="form-grid">
     <div>
-      <label>Kateqoriya</label>
+      <label>{{ t('notif_field_category') }}</label>
       <div class="dict-select-row">
         <select name="leave_category_id">
-          <option value="">— seçin —</option>
+          <option value="">{{ t('select_placeholder') }}</option>
           {% for c in leave_categories %}
-          <option value="{{ c.id }}" {{ 'selected' if src and src.leave_category_id==c.id }}>{{ c.name }} ({{ c.base_vacation_days }} gün)</option>
+          <option value="{{ c.id }}" {{ 'selected' if src and src.leave_category_id==c.id }}>{{ c.name }} ({{ c.base_vacation_days }} {{ t('notif_days_suffix') }})</option>
           {% endfor %}
         </select>
-        <button type="button" class="btn btn-secondary" title="Yeni pəncərədə kateqoriya əlavə et" onclick="window.open('{{ url_for('hr.add_leave_category') }}', '_blank')">+</button>
+        <button type="button" class="btn btn-secondary" title="{{ t('notif_add_category_new_window') }}" onclick="window.open('{{ url_for('hr.add_leave_category') }}', '_blank')">+</button>
       </div>
     </div>
   </div>
 
-  <h4>Hissə 6 — Maaş</h4>
+  <h4>{{ t('notif_part6_title') }}</h4>
   <div class="form-grid">
-    <div><label>Maaş</label><input type="number" step="0.01" name="salary" value="{{ src.salary if src else '' }}"></div>
+    <div><label>{{ t('notif_field_salary') }}</label><input type="number" step="0.01" name="salary" value="{{ src.salary if src else '' }}"></div>
   </div>
 
-  <label>Qeyd</label>
+  <label>{{ t('note_label') }}</label>
   <textarea name="note" rows="3" style="width:100%;max-width:100%;">{{ record.note if record else '' }}</textarea>
 {% endblock %}

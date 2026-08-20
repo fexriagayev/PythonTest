@@ -1,20 +1,20 @@
 {% extends "base.html" %}
-{% block title %}Loglar{% endblock %}
-{% block page_title %}Loglar — {{ user.username }}{% endblock %}
+{% block title %}{{ t('logs_page_title') }}{% endblock %}
+{% block page_title %}{{ t('logs_page_title') }} — {{ user.username }}{% endblock %}
 {% block content %}
 
 <div class="toolbar">
-  <a class="btn" href="{{ url_for('admin.download_log_file', user_id=user.id) }}">Log faylını yüklə (.log)</a>
-  <a class="btn btn-secondary" href="{{ url_for('admin.index') }}">← Geri</a>
+  <a class="btn" href="{{ url_for('admin.download_log_file', user_id=user.id) }}">{{ t('logs_download_button') }}</a>
+  <a class="btn btn-secondary" href="{{ url_for('admin.index') }}">{{ t('logs_back_button') }}</a>
 </div>
 
 <p style="color:#888;font-size:0.85em;">
-  Loglama statusu: <b>{{ 'AKTİV' if user.log_flag else 'SÖNDÜRÜLÜB' }}</b>.
-  Yalnız bu flag aktiv olan müddətdə edilən əməliyyatlar qeydə alınır.
+  {{ t('logs_status_label') }}: <b>{{ t('logs_status_on') if user.log_flag else t('logs_status_off') }}</b>.
+  {{ t('logs_status_hint') }}
 </p>
 
 <table class="simple-table">
-  <thead><tr><th>Vaxt</th><th>Modul</th><th>Əməliyyat</th><th>Təsvir</th><th>IP</th></tr></thead>
+  <thead><tr><th>{{ t('logs_col_time') }}</th><th>{{ t('logs_col_module') }}</th><th>{{ t('logs_col_action') }}</th><th>{{ t('logs_col_description') }}</th><th>{{ t('logs_col_ip') }}</th></tr></thead>
   <tbody>
     {% for log in logs %}
     <tr>
@@ -25,7 +25,7 @@
       <td>{{ log.ip_address }}</td>
     </tr>
     {% else %}
-    <tr><td colspan="5">Heç bir log qeydi yoxdur.</td></tr>
+    <tr><td colspan="5">{{ t('logs_no_data') }}</td></tr>
     {% endfor %}
   </tbody>
 </table>

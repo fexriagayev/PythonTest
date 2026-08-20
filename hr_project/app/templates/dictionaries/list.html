@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Kitabça{% endblock %}
+{% block title %}{{ t('dict_page_title') }}{% endblock %}
 {% block page_title %}{{ t('dictionaries') }} — {{ module_code }}{% endblock %}
 {% block content %}
 
@@ -7,11 +7,11 @@
   {% if current_user.has_perm(module_code, 'dict_add') %}
   <button type="button" class="btn" onclick="openFormModal('{{ url_for('dictionaries.add_item', module_code=module_code) }}', function(){ window.currentGridTable.setData(); })">+ {{ t('add') }}</button>
   {% endif %}
-  <a href="{{ url_for('dictionaries.index') }}" class="btn btn-secondary">← Geri</a>
-  <input type="text" id="searchBox" class="form-control" style="max-width:280px;" placeholder="Axtar...">
+  <a href="{{ url_for('dictionaries.index') }}" class="btn btn-secondary">{{ t('back_button') }}</a>
+  <input type="text" id="searchBox" class="form-control" style="max-width:280px;" placeholder="{{ t('search_generic') }}">
 </div>
 <p style="color:#888;font-size:0.82em;margin-top:-6px;">
-  💡 Sütun başlığına sağ-klik: sıralama / footer / qruplaşdırma. Sətirə sağ-klik: yeni / dəyiş / sil.
+  {{ t('grid_row_hint') }}
 </p>
 
 <div id="dictGrid"></div>
@@ -31,15 +31,15 @@ document.addEventListener("DOMContentLoaded", function () {
     layout: "fitColumns",
     pagination: true,
     paginationSize: 15,
-    placeholder: "Məlumat yoxdur",
+    placeholder: "{{ t('dict_no_data') }}",
     groupBy: "category",
     columns: [
-      { title: "ID", field: "id", width: 60, sorter: "number" },
-      { title: "Kateqoriya", field: "category", headerFilter: "input" },
-      { title: "Ad", field: "name", headerFilter: "input" },
-      { title: "Dəyər", field: "value", headerFilter: "input" },
+      { title: "{{ t('col_id') }}", field: "id", width: 60, sorter: "number" },
+      { title: "{{ t('dict_col_category') }}", field: "category", headerFilter: "input" },
+      { title: "{{ t('dict_col_name') }}", field: "name", headerFilter: "input" },
+      { title: "{{ t('dict_col_value') }}", field: "value", headerFilter: "input" },
       {
-        title: "Aktiv", field: "is_active", width: 90, formatter: "tickCross",
+        title: "{{ t('dict_col_active') }}", field: "is_active", width: 90, formatter: "tickCross",
         headerFilter: "tickCross", headerFilterParams: { tristate: true },
       }
     ]

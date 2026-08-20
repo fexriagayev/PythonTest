@@ -1,15 +1,15 @@
 {% extends "base.html" %}
-{% block title %}Bayram günləri{% endblock %}
-{% block page_title %}Bayram / matəm günləri{% endblock %}
+{% block title %}{{ t('holiday_page_title') }}{% endblock %}
+{% block page_title %}{{ t('holiday_page_heading') }}{% endblock %}
 {% block content %}
 
 <div class="toolbar">
   {% if current_user.has_perm('HR', 'dict_add') %}
   <button type="button" class="btn" onclick="openFormModal('{{ url_for('hr.add_holiday') }}', function(){ window.currentGridTable.setData(); })">+ {{ t('add') }}</button>
-  {% endif %}  <input type="text" id="searchBox" class="form-control" style="max-width:280px;" placeholder="Axtar...">
+  {% endif %}  <input type="text" id="searchBox" class="form-control" style="max-width:280px;" placeholder="{{ t('search_generic') }}">
 </div>
 <p style="color:#888;font-size:0.82em;margin-top:-6px;">
-  Bu siyahı "iş günü (bayramsız)" sayma qaydasına malik İş buraxma səbəbləri üçün istifadə olunur.
+  {{ t('holiday_working_day_hint') }}
 </p>
 
 <div id="holidayGrid"></div>
@@ -27,11 +27,11 @@ document.addEventListener("DOMContentLoaded", function () {
     ajaxURL: "{{ url_for('hr.api_holidays') }}",
     pagination: true,
     paginationSize: 20,
-    placeholder: "Məlumat yoxdur",
+    placeholder: "{{ t('no_data_generic') }}",
     columns: [
-      { title: "ID", field: "id", width: 60, sorter: "number" },
-      { title: "Tarix", field: "date", sorter: "date" },
-      { title: "Ad", field: "name", headerFilter: "input" }
+      { title: "{{ t('col_id') }}", field: "id", width: 60, sorter: "number" },
+      { title: "{{ t('col_date') }}", field: "date", sorter: "date" },
+      { title: "{{ t('col_name') }}", field: "name", headerFilter: "input" }
     ]
   }, {
     idField: "id",
@@ -40,7 +40,7 @@ document.addEventListener("DOMContentLoaded", function () {
     deleteUrlTemplate: canDelete ? "/hr/holidays/delete/{id}" : null,
   });
 
-  wireGlobalSearch(table, document.getElementById("searchBox"), ["date", "name"]);
+  wireGlobalSearch(table, document.getElementById("searchBox"), ["name"]);
 });
 </script>
 {% endblock %}

@@ -1,16 +1,16 @@
 {% extends "base.html" %}
-{% block title %}Kateqoriyalar{% endblock %}
-{% block page_title %}Məzuniyyət kateqoriyaları{% endblock %}
+{% block title %}{{ t('lc_page_title') }}{% endblock %}
+{% block page_title %}{{ t('lc_page_title') }}{% endblock %}
 {% block content %}
 
 <div class="toolbar">
   {% if current_user.has_perm('HR', 'dict_add') %}
   <button type="button" class="btn" onclick="openFormModal('{{ url_for('hr.add_leave_category') }}', function(){ window.currentGridTable.setData(); })">+ {{ t('add') }}</button>
-  {% endif %}  <input type="text" id="searchBox" class="form-control" style="max-width:280px;" placeholder="Axtar...">
+  {% endif %}  <input type="text" id="searchBox" class="form-control" style="max-width:280px;" placeholder="{{ t('search_generic') }}">
 </div>
 <p style="color:#888;font-size:0.82em;margin-top:-6px;">
-  Hər kateqoriya əsas məzuniyyət günü sayını və stajа görə əlavə gün qaydasını müəyyən edir.
-  Bu, "Bildirişlər" bölməsində seçilir və "Məzuniyyət günləri" hesablamasında istifadə olunacaq.
+  {{ t('lc_seniority_hint') }}
+  {{ t('lc_notifications_hint') }}
 </p>
 
 <div id="categoryGrid"></div>
@@ -28,16 +28,16 @@ document.addEventListener("DOMContentLoaded", function () {
     ajaxURL: "{{ url_for('hr.api_leave_categories') }}",
     pagination: true,
     paginationSize: 15,
-    placeholder: "Məlumat yoxdur",
+    placeholder: "{{ t('no_data_generic') }}",
     columns: [
-      { title: "ID", field: "id", width: 60, sorter: "number" },
-      { title: "Ad", field: "name", headerFilter: "input" },
-      { title: "Əsas məzuniyyət günü", field: "base_vacation_days", sorter: "number" },
-      { title: "Hər neçə il", field: "seniority_years_per_bonus", sorter: "number" },
-      { title: "Əlavə gün / interval", field: "bonus_days_per_interval", sorter: "number" },
-      { title: "Maks. əlavə gün", field: "max_bonus_days", sorter: "number" },
+      { title: "{{ t('col_id') }}", field: "id", width: 60, sorter: "number" },
+      { title: "{{ t('col_name') }}", field: "name", headerFilter: "input" },
+      { title: "{{ t('lc_col_base_days') }}", field: "base_vacation_days", sorter: "number" },
+      { title: "{{ t('lc_col_years_per_bonus') }}", field: "seniority_years_per_bonus", sorter: "number" },
+      { title: "{{ t('lc_col_bonus_per_interval') }}", field: "bonus_days_per_interval", sorter: "number" },
+      { title: "{{ t('lc_col_max_bonus') }}", field: "max_bonus_days", sorter: "number" },
       {
-        title: "Aktiv", field: "is_active", width: 90, formatter: "tickCross",
+        title: "{{ t('lc_field_active') }}", field: "is_active", width: 90, formatter: "tickCross",
         headerFilter: "tickCross", headerFilterParams: { tristate: true },
       }
     ]

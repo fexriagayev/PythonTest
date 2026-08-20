@@ -130,7 +130,7 @@ function refreshEmployeeFormView(refreshUrl) {
 }
 
 function quickAddDictionaryItem(moduleCode, category, selectElementId, categoryLabel) {
-  const name = prompt("Yeni " + (categoryLabel || category) + " adı:");
+  const name = prompt(t("quick_add_prompt", { label: categoryLabel || category }));
   if (!name || !name.trim()) return;
 
   fetch("/core/dictionary-quick-add", {
@@ -141,7 +141,7 @@ function quickAddDictionaryItem(moduleCode, category, selectElementId, categoryL
     .then(function (r) { return r.json(); })
     .then(function (data) {
       if (!data.success) {
-        showErrorPopup(data.error || "Əlavə etmək mümkün olmadı.");
+        showErrorPopup(data.error || t("quick_add_failed"));
         return;
       }
       const select = document.getElementById(selectElementId);
@@ -153,7 +153,7 @@ function quickAddDictionaryItem(moduleCode, category, selectElementId, categoryL
       select.value = data.item.id;
     })
     .catch(function (err) {
-      showErrorPopup("Əlavə etmək mümkün olmadı: " + err.message, err.stack || "");
+      showErrorPopup(t("quick_add_failed_with_msg", { msg: err.message }), err.stack || "");
     });
 }
 
@@ -163,7 +163,7 @@ function quickAddDictionaryItem(moduleCode, category, selectElementId, categoryL
  * chip instead of a <select> option.
  */
 function quickAddCheckboxDictionaryItem(moduleCode, category, gridElementId, inputName, categoryLabel) {
-  const name = prompt("Yeni " + (categoryLabel || category) + " adı:");
+  const name = prompt(t("quick_add_prompt", { label: categoryLabel || category }));
   if (!name || !name.trim()) return;
 
   fetch("/core/dictionary-quick-add", {
@@ -174,7 +174,7 @@ function quickAddCheckboxDictionaryItem(moduleCode, category, gridElementId, inp
     .then(function (r) { return r.json(); })
     .then(function (data) {
       if (!data.success) {
-        showErrorPopup(data.error || "Əlavə etmək mümkün olmadı.");
+        showErrorPopup(data.error || t("quick_add_failed"));
         return;
       }
       const grid = document.getElementById(gridElementId);
@@ -193,7 +193,7 @@ function quickAddCheckboxDictionaryItem(moduleCode, category, gridElementId, inp
       grid.appendChild(label);
     })
     .catch(function (err) {
-      showErrorPopup("Əlavə etmək mümkün olmadı: " + err.message, err.stack || "");
+      showErrorPopup(t("quick_add_failed_with_msg", { msg: err.message }), err.stack || "");
     });
 }
 
@@ -201,7 +201,7 @@ function quickAddCheckboxDictionaryItem(moduleCode, category, gridElementId, inp
  * (no full page navigation) — used by the row action buttons. */
 function ajaxDeleteAndReload(url) {
   if (!confirm(t("js_confirm_delete"))) return;
-  setLastAction("Silməyə çalışdı: " + url);
+  setLastAction(t("last_action_delete_attempt", { url: url }));
   fetch(url, {
     method: "POST",
     headers: { "X-Requested-With": "XMLHttpRequest" },
@@ -261,7 +261,7 @@ function uploadEmployeePhoto(uploadUrl, reloadUrl, inputEl) {
   const formData = new FormData();
   formData.append("photo", file);
 
-  setLastAction("Şəkil yükləməyə çalışdı: " + uploadUrl);
+  setLastAction(t("last_action_photo_upload_attempt", { url: uploadUrl }));
   fetch(uploadUrl, {
     method: "POST",
     headers: { "X-Requested-With": "XMLHttpRequest" },
@@ -280,7 +280,7 @@ function uploadEmployeePhoto(uploadUrl, reloadUrl, inputEl) {
  * (used by the employee photo "Sil" button). */
 function ajaxDeleteAndReloadPage(deleteUrl, reloadUrl) {
   if (!confirm(t("js_confirm_delete"))) return;
-  setLastAction("Silməyə çalışdı: " + deleteUrl);
+  setLastAction(t("last_action_delete_attempt", { url: deleteUrl }));
   fetch(deleteUrl, {
     method: "POST",
     headers: { "X-Requested-With": "XMLHttpRequest" },

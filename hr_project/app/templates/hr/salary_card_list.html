@@ -1,22 +1,22 @@
 {% extends layout|default("base.html") %}
-{% block title %}Maaş kartları{% endblock %}
-{% block page_title %}Maaş kartları — {{ employee.full_name }}{% endblock %}
+{% block title %}{{ t('card_page_title') }}{% endblock %}
+{% block page_title %}{{ t('card_page_title') }} — {{ employee.full_name }}{% endblock %}
 {% block content %}
 
 <div class="record-tabs">
-  <a href="{{ url_for('hr.edit_employee', emp_id=employee.id) }}">Əsas məlumatlar</a>
-  <a href="{{ url_for('hr.work_history', emp_id=employee.id) }}">İş yerləri</a>
-  <a href="{{ url_for('hr.notifications', emp_id=employee.id) }}">Bildirişlər</a>
-  <a href="{{ url_for('hr.insurance_list', emp_id=employee.id) }}">Sığorta məlumatları</a>
-  <a href="#" class="active">Maaş kartları</a>
-  <a href="{{ url_for('hr.vacation_periods', emp_id=employee.id) }}">Məzuniyyət günləri</a>
-  <a href="{{ url_for('hr.leave_requests', emp_id=employee.id) }}">İş buraxmaları</a>
-  <a href="{{ url_for('hr.document_list', emp_id=employee.id) }}">Sənədlər</a>
+  <a href="{{ url_for('hr.edit_employee', emp_id=employee.id) }}">{{ t('emp_tab_main') }}</a>
+  <a href="{{ url_for('hr.work_history', emp_id=employee.id) }}">{{ t('emp_tab_work_history') }}</a>
+  <a href="{{ url_for('hr.notifications', emp_id=employee.id) }}">{{ t('emp_tab_notifications') }}</a>
+  <a href="{{ url_for('hr.insurance_list', emp_id=employee.id) }}">{{ t('emp_tab_insurance') }}</a>
+  <a href="#" class="active">{{ t('emp_tab_salary_cards') }}</a>
+  <a href="{{ url_for('hr.vacation_periods', emp_id=employee.id) }}">{{ t('emp_tab_vacation_periods') }}</a>
+  <a href="{{ url_for('hr.leave_requests', emp_id=employee.id) }}">{{ t('emp_tab_leave_requests') }}</a>
+  <a href="{{ url_for('hr.document_list', emp_id=employee.id) }}">{{ t('emp_tab_documents') }}</a>
 </div>
 
 <div class="toolbar">
   {% if current_user.has_perm('HR', 'can_add') %}
-  <button type="button" class="btn" onclick="openFormModal('{{ url_for('hr.add_salary_card', emp_id=employee.id) }}', function(){ window.currentGridTable.setData(); })">+ Yeni kart</button>
+  <button type="button" class="btn" onclick="openFormModal('{{ url_for('hr.add_salary_card', emp_id=employee.id) }}', function(){ window.currentGridTable.setData(); })">+ {{ t('card_form_title_add') }}</button>
   {% endif %}
 </div>
 
@@ -31,28 +31,28 @@ function initSalaryCardGrid() {
   const canDelete = {{ 'true' if current_user.has_perm('HR', 'can_delete') else 'false' }};
   const canAdd = {{ 'true' if current_user.has_perm('HR', 'can_add') else 'false' }};
   const empId = {{ employee.id }};
-  const statusLabels = { active: "Aktiv", expiring_soon: "1 aydan az qalıb", expired: "Müddəti bitib" };
+  const statusLabels = { active: t("status_active"), expiring_soon: t("status_expiring_soon"), expired: t("status_expired") };
 
   const table = createAdvancedGrid("cardGrid", "hr_salary_cards", {
     ajaxURL: "/hr/" + empId + "/salary-cards/api/records",
     pagination: true,
     paginationSize: 15,
-    placeholder: "Hələ kart qeydi yoxdur",
+    placeholder: "{{ t('card_no_data') }}",
     columns: [
-      { title: "ID", field: "id", width: 60, sorter: "number" },
-      { title: "Bank", field: "bank", headerFilter: "input" },
-      { title: "Hesab nömrəsi", field: "account_number", headerFilter: "input" },
-      { title: "Etibarlılıq tarixi", field: "valid_until", sorter: "date" },
-      { title: "Kart sahibinin adı", field: "card_holder_name", headerFilter: "input" },
+      { title: "{{ t('col_id') }}", field: "id", width: 60, sorter: "number" },
+      { title: "{{ t('card_col_bank') }}", field: "bank", headerFilter: "input" },
+      { title: "{{ t('card_col_account_number') }}", field: "account_number", headerFilter: "input" },
+      { title: "{{ t('card_col_valid_until') }}", field: "valid_until", sorter: "date" },
+      { title: "{{ t('card_col_holder_name') }}", field: "card_holder_name", headerFilter: "input" },
       {
-        title: "Status", field: "status", width: 140,
+        title: "{{ t('ins_col_status') }}", field: "status", width: 140,
         formatter: function (cell) {
           const v = cell.getValue();
           const cls = v === "expired" ? "flash-danger" : (v === "expiring_soon" ? "flash-warning" : "flash-success");
           return `<span class="flash ${cls}" style="padding:2px 8px;margin:0;display:inline-block;">${statusLabels[v] || v}</span>`;
         }
       },
-      { title: "Qeyd", field: "note", headerFilter: "input" }
+      { title: "{{ t('note_label') }}", field: "note", headerFilter: "input" }
     ]
   }, {
     idField: "id",
