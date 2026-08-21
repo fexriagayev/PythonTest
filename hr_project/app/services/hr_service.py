@@ -47,41 +47,60 @@ def _record_days(record, employee_is_active, employee_termination_date):
     return max(delta, 0)
 
 
-def close_previous_open_current_record(employee_id, new_start, exclude_id=None):
-    """
-    Auto-closes any still-open ("date_to is None") CURRENT-COMPANY record
-    for this employee that started before `new_start`, by setting its
-    date_to to the day before `new_start`.
-
-    Why this exists: an employee's "cari şirkət" (current company) history
-    is a single continuous timeline — hire, then transfer(s), then
-    (eventually) termination. Each new movement record implicitly ends the
-    previous one. Without this, adding a new movement (e.g. "İşdən çıxma")
-    while the previous record is still open-ended would be rejected by the
-    overlap check (app/utils/date_overlap.py), because two open-ended
-    ("still ongoing") ranges always overlap — the new record would silently
-    fail validation and the employee would incorrectly remain "Aktiv".
-
-    Only touches OTHER current-company records (never external/"kənar iş
-    yeri" records, which represent a different, independently-tracked
-    employer). Does not commit — caller commits alongside the new record.
-    """
-    if not new_start:
-        return
-
-    open_records = (
-        EmploymentRecord.query.filter_by(
-            employee_id=employee_id,
-            is_current_company=True,
-            date_to=None,
-        )
-        .filter(EmploymentRecord.date_from < new_start)
+def get_last_current_company_record(employee_id, exclude_id=None):
+    """Returns the most recent (by date_from) CURRENT-COMPANY EmploymentRecord
+    for this employee, or None if there isn't one yet. Used both to validate
+    the allowed "Hərəkət növü" for a new/edited record (see
+    _validate_work_history_form) and to auto-fill the struktur/vəzifə shown
+    for a "İşdən çıxma" record (which has no struktur/vəzifə of its own)."""
+    query = EmploymentRecord.query.filter_by(
+        employee_id=employee_id, is_current_company=True
     )
     if exclude_id is not None:
-        open_records = open_records.filter(EmploymentRecord.id != exclude_id)
+        query = query.filter(EmploymentRecord.id != exclude_id)
+    return query.order_by(
+        EmploymentRecord.date_from.desc(), EmploymentRecord.id.desc()
+    ).first()
 
-    for r in open_records.all():
-        r.date_to = new_start - timedelta(days=1)
+
+def recompute_work_history_dates(employee_id):
+    """
+    Recomputes (but does not commit) `date_to` for EVERY EmploymentRecord of
+    this employee — cari şirkət and kənar iş yeri together, in one single
+    chronological timeline ordered by `date_from`. `date_to` is never entered
+    by hand any more; it is always derived from what comes next:
+
+      - A "İşdən çıxma" record is a point-in-time event: its own date_to is
+        always its own date_from, regardless of what follows (this is what
+        allows a later "İşə qəbul" to start after a gap, instead of being
+        forced to begin the very next day).
+      - Any other record (hire, transfer, kənar iş yeri) ends the day before
+        the NEXT record (by date_from) starts — i.e. it automatically
+        "closes" as soon as the next one begins.
+      - The last record overall, if it isn't itself a termination, is left
+        open-ended (date_to = None -> hazırda davam edir).
+
+    Because every date_to is derived this way, two records can never overlap
+    — the old "paralel iş qadağandır" overlap check (app/utils/date_overlap.py)
+    is no longer needed for EmploymentRecord.
+
+    Call this after any add/edit/delete of an EmploymentRecord (after
+    flushing the change), then call recompute_employee_from_history and
+    commit.
+    """
+    records = (
+        EmploymentRecord.query.filter_by(employee_id=employee_id)
+        .order_by(EmploymentRecord.date_from.asc(), EmploymentRecord.id.asc())
+        .all()
+    )
+
+    for i, record in enumerate(records):
+        if record.is_current_company and record.movement_type == "termination":
+            record.date_to = record.date_from
+        elif i + 1 < len(records):
+            record.date_to = records[i + 1].date_from - timedelta(days=1)
+        else:
+            record.date_to = None
 
 
 def recompute_employee_from_history(employee):

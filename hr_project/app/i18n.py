@@ -316,6 +316,8 @@ TRANSLATIONS = {
     "wh_field_ticket_type": {"az": "Qeydin növü", "en": "Record Type"},
     "wh_ticket_current": {"az": "Cari şirkət", "en": "Current Company"},
     "wh_ticket_external": {"az": "Kənar iş yeri (əvvəlki)", "en": "External Workplace (previous)"},
+    "wh_field_is_current": {"az": "Cari iş yeri", "en": "Current Workplace"},
+    "wh_last_workplace_hint": {"az": "Son iş yeri məlumatı istifadə olunacaq:", "en": "The last workplace details will be used:"},
     "wh_field_movement_type": {"az": "Hərəkət növü", "en": "Movement Type"},
     "wh_field_department": {"az": "Struktur (şöbə)", "en": "Department"},
     "wh_field_position": {"az": "Vəzifə", "en": "Position"},

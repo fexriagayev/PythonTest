@@ -7,26 +7,20 @@
 {% block form_fields %}
   <input type="hidden" id="workHistoryFormMarker" value="1">
 
-  <label>{{ t('wh_field_ticket_type') }}</label>
-  <div class="ticket-toggle">
-    <label id="tabCurrent">
-      <input type="radio" name="is_current_company" value="1"
-             {{ 'checked' if (not record) or (record and record.is_current_company) }}>
-      <span>{{ t('wh_ticket_current') }}</span>
-    </label>
-    <label id="tabExternal">
-      <input type="radio" name="is_current_company" value="0"
-             {{ 'checked' if record and not record.is_current_company }}>
-      <span>{{ t('wh_ticket_external') }}</span>
-    </label>
-  </div>
+  <label class="checkbox-row">
+    <input type="checkbox" name="is_current_company" value="1" id="isCurrentCheckbox"
+           {{ 'checked' if (not record) or (record and record.is_current_company) }}>
+    <span>{{ t('wh_field_is_current') }}</span>
+  </label>
 
   <!-- ============== CARİ ŞİRKƏT bölməsi ============== -->
   <div id="currentSection">
     <label>{{ t('wh_field_movement_type') }}</label>
-    <select name="movement_type">
+    <select name="movement_type" id="movementTypeSelect">
       {% for code, label in movement_labels.items() %}
+      {% if code in allowed_movement_types %}
       <option value="{{ code }}" {{ 'selected' if record and record.movement_type==code }}>{{ label }}</option>
+      {% endif %}
       {% endfor %}
     </select>
 
@@ -38,7 +32,7 @@
         <option value="{{ d.id }}" {{ 'selected' if record and record.department_id==d.id }}>{{ d.name }}</option>
         {% endfor %}
       </select>
-      <button type="button" class="btn btn-secondary" onclick="quickAddDictionaryItem('HR', 'department', 'departmentSelect', t('dict_label_department'))">+</button>
+      <button type="button" class="btn btn-secondary" id="departmentQuickAddBtn" onclick="quickAddDictionaryItem('HR', 'department', 'departmentSelect', t('dict_label_department'))">+</button>
     </div>
 
     <label>{{ t('wh_field_position') }}</label>
@@ -49,8 +43,13 @@
         <option value="{{ p.id }}" {{ 'selected' if record and record.position_id==p.id }}>{{ p.name }}</option>
         {% endfor %}
       </select>
-      <button type="button" class="btn btn-secondary" onclick="quickAddDictionaryItem('HR', 'position', 'positionSelect', t('dict_label_position'))">+</button>
+      <button type="button" class="btn btn-secondary" id="positionQuickAddBtn" onclick="quickAddDictionaryItem('HR', 'position', 'positionSelect', t('dict_label_position'))">+</button>
     </div>
+
+    <p id="lastWorkplaceHint" style="display:none;color:#888;font-size:0.85em;margin-top:-6px;">
+      {{ t('wh_last_workplace_hint') }}
+      <b id="lastWorkplaceValue"></b>
+    </p>
 
     <label>{{ t('wh_field_order') }}</label>
     <div class="dict-select-row">
@@ -78,11 +77,11 @@
   </div>
 
   <!-- ============== Ümumi sahələr ============== -->
+  <!-- Bitmə tarixi (date_to) burada YOXDUR — hər qeydin bitmə tarixi
+       employee-nin bütün iş yeri qeydlərinin xronoloji zəncirindən
+       (növbəti qeydin başlama tarixi əsasında) avtomatik hesablanır. -->
   <label id="dateFromLabel">{{ t('wh_field_date_from') }}</label>
   <input type="date" name="date_from" value="{{ record.date_from if record else '' }}" required>
-
-  <label id="dateToLabel">{{ t('wh_field_date_to') }} <span id="dateToOptionalHint" style="font-weight:400;color:#888;">{{ t('wh_date_to_optional_hint') }}</span></label>
-  <input type="date" name="date_to" value="{{ record.date_to if record else '' }}">
 
   <label>{{ t('note_label') }}</label>
   <textarea name="note" rows="3" style="width:100%;max-width:100%;">{{ record.note if record else '' }}</textarea>
@@ -96,31 +95,43 @@
   const form = marker.closest("form");
   const currentSection = document.getElementById("currentSection");
   const externalSection = document.getElementById("externalSection");
-  const dateToOptionalHint = document.getElementById("dateToOptionalHint");
-  const radios = form.querySelectorAll('input[name="is_current_company"]');
+  const isCurrentCheckbox = document.getElementById("isCurrentCheckbox");
+  const movementSelect = document.getElementById("movementTypeSelect");
+  const departmentSelect = document.getElementById("departmentSelect");
+  const positionSelect = document.getElementById("positionSelect");
+  const departmentQuickAddBtn = document.getElementById("departmentQuickAddBtn");
+  const positionQuickAddBtn = document.getElementById("positionQuickAddBtn");
+  const lastWorkplaceHint = document.getElementById("lastWorkplaceHint");
+  const lastWorkplaceValue = document.getElementById("lastWorkplaceValue");
+
+  const lastDepartmentName = {{ (last_department_name or '') | tojson }};
+  const lastPositionName = {{ (last_position_name or '') | tojson }};
 
   function refresh() {
-    const isCurrent = form.querySelector('input[name="is_current_company"]:checked').value === "1";
+    const isCurrent = isCurrentCheckbox.checked;
 
     currentSection.style.display = isCurrent ? "" : "none";
     externalSection.style.display = isCurrent ? "none" : "";
 
-    document.getElementById("tabCurrent").classList.toggle("selected-ticket", isCurrent);
-    document.getElementById("tabExternal").classList.toggle("selected-ticket", !isCurrent);
-
-    currentSection.querySelectorAll("select").forEach(function (el) { el.disabled = !isCurrent; });
     externalSection.querySelectorAll("input").forEach(function (el) { el.disabled = isCurrent; });
 
-    const dateTo = form.querySelector('input[name="date_to"]');
-    dateTo.required = !isCurrent;
-    dateToOptionalHint.style.display = isCurrent ? "inline" : "none";
+    const isTermination = isCurrent && movementSelect && movementSelect.value === "termination";
+
+    departmentSelect.disabled = !isCurrent || isTermination;
+    positionSelect.disabled = !isCurrent || isTermination;
+    if (departmentQuickAddBtn) departmentQuickAddBtn.disabled = !isCurrent || isTermination;
+    if (positionQuickAddBtn) positionQuickAddBtn.disabled = !isCurrent || isTermination;
+
+    lastWorkplaceHint.style.display = isTermination ? "" : "none";
+    if (isTermination) {
+      lastWorkplaceValue.textContent =
+        (lastDepartmentName || "—") + " / " + (lastPositionName || "—");
+    }
   }
 
-  radios.forEach(function (r) { r.addEventListener("change", refresh); });
+  isCurrentCheckbox.addEventListener("change", refresh);
+  if (movementSelect) movementSelect.addEventListener("change", refresh);
   refresh();
 })();
 </script>
-<style>
-  .ticket-toggle label.selected-ticket { border-color: #2f6fed; background: #eef4ff; }
-</style>
 {% endblock %}
