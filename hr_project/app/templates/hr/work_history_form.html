@@ -9,11 +9,19 @@
   <div class="dx-modal-form-single-col">
   <input type="hidden" id="workHistoryFormMarker" value="1">
 
+<<<<<<< HEAD
   <div class="checkbox-row">
     <input type="checkbox" name="is_current_company" value="1" id="isCurrentCheckbox"
            {{ 'checked' if (not record) or (record and record.is_current_company) }}>
     <label for="isCurrentCheckbox" style="margin:0;">{{ t('wh_field_is_current') }}</label>
   </div>
+=======
+  <label class="checkbox-row">
+    <input type="checkbox" name="is_current_company" value="1" id="isCurrentCheckbox"
+           {{ 'checked' if (not record) or (record and record.is_current_company) }}>
+    <span>{{ t('wh_field_is_current') }}</span>
+  </label>
+>>>>>>> 5d0ba591cfec0db47d4ed4a82f817b23b44a0cc3
 
   <!-- ============== CARİ ŞİRKƏT bölməsi ============== -->
   <div id="currentSection">
@@ -47,6 +55,11 @@
       </select>
       <button type="button" class="btn btn-secondary" id="positionQuickAddBtn" onclick="quickAddDictionaryItem('HR', 'position', 'positionSelect', t('dict_label_position'))">+</button>
     </div>
+
+    <p id="lastWorkplaceHint" style="display:none;color:#888;font-size:0.85em;margin-top:-6px;">
+      {{ t('wh_last_workplace_hint') }}
+      <b id="lastWorkplaceValue"></b>
+    </p>
 
     <label>{{ t('wh_field_order') }}</label>
     <div class="dict-select-row">
@@ -99,6 +112,7 @@
   const positionSelect = document.getElementById("positionSelect");
   const departmentQuickAddBtn = document.getElementById("departmentQuickAddBtn");
   const positionQuickAddBtn = document.getElementById("positionQuickAddBtn");
+<<<<<<< HEAD
 
   // Last known cari-şirkət struktur/vəzifə — written directly INTO the
   // department/position selects (not shown as separate hint text) once
@@ -142,6 +156,13 @@
     }
     btn.disabled = disabled;
   }
+=======
+  const lastWorkplaceHint = document.getElementById("lastWorkplaceHint");
+  const lastWorkplaceValue = document.getElementById("lastWorkplaceValue");
+
+  const lastDepartmentName = {{ (last_department_name or '') | tojson }};
+  const lastPositionName = {{ (last_position_name or '') | tojson }};
+>>>>>>> 5d0ba591cfec0db47d4ed4a82f817b23b44a0cc3
 
   function refresh() {
     const isCurrent = isCurrentCheckbox.checked;
@@ -149,6 +170,7 @@
     currentSection.style.display = isCurrent ? "" : "none";
     externalSection.style.display = isCurrent ? "none" : "";
 
+<<<<<<< HEAD
     externalSection.querySelectorAll("input").forEach(function (el) { setFieldDisabled(el, isCurrent); });
 
     const isTermination = isCurrent && movementSelect && movementSelect.value === "termination";
@@ -162,16 +184,35 @@
     setFieldDisabled(positionSelect, deptPosDisabled);
     setButtonDisabled(departmentQuickAddBtn, deptPosDisabled);
     setButtonDisabled(positionQuickAddBtn, deptPosDisabled);
+=======
+    externalSection.querySelectorAll("input").forEach(function (el) { el.disabled = isCurrent; });
+
+    const isTermination = isCurrent && movementSelect && movementSelect.value === "termination";
+
+    departmentSelect.disabled = !isCurrent || isTermination;
+    positionSelect.disabled = !isCurrent || isTermination;
+    if (departmentQuickAddBtn) departmentQuickAddBtn.disabled = !isCurrent || isTermination;
+    if (positionQuickAddBtn) positionQuickAddBtn.disabled = !isCurrent || isTermination;
+
+    lastWorkplaceHint.style.display = isTermination ? "" : "none";
+    if (isTermination) {
+      lastWorkplaceValue.textContent =
+        (lastDepartmentName || "—") + " / " + (lastPositionName || "—");
+    }
+>>>>>>> 5d0ba591cfec0db47d4ed4a82f817b23b44a0cc3
   }
 
   isCurrentCheckbox.addEventListener("change", refresh);
   if (movementSelect) movementSelect.addEventListener("change", refresh);
+<<<<<<< HEAD
 
   // Run once immediately (fields are still plain HTML at this point —
   // this script runs before modal.js's upgradeModalForm()), then once
   // more on the next tick, by which time modal.js has finished wrapping
   // every field into its DevExtreme widget — this second pass is what
   // actually applies the disabled/value state visually.
+=======
+>>>>>>> 5d0ba591cfec0db47d4ed4a82f817b23b44a0cc3
   refresh();
   setTimeout(refresh, 0);
 })();

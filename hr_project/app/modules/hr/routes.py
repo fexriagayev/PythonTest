@@ -39,6 +39,10 @@ from app.utils.uploads import (
 from app.services.hr_service import (
     recompute_employee_from_history,
     recompute_employee_contract_from_bildiris,
+<<<<<<< HEAD
+=======
+    recompute_work_history_dates,
+>>>>>>> 5d0ba591cfec0db47d4ed4a82f817b23b44a0cc3
     get_last_current_company_record,
 )
 from app.services.leave_service import (
@@ -383,6 +387,7 @@ def _movement_labels():
     return {code: translate(key, lang) for code, key in _MOVEMENT_LABEL_KEYS.items()}
 
 
+<<<<<<< HEAD
 def _allowed_movement_types(employee_id, exclude_id=None, keep_code=None, before_date=None):
     """Which 'Hərəkət növü' codes are allowed for a cari-şirkət record at
     position `before_date` in this employee's chain, per the business rule:
@@ -399,6 +404,18 @@ def _allowed_movement_types(employee_id, exclude_id=None, keep_code=None, before
     last_current = get_last_current_company_record(
         employee_id, exclude_id=exclude_id, before_date=before_date
     )
+=======
+def _allowed_movement_types(employee_id, exclude_id=None, keep_code=None):
+    """Which 'Hərəkət növü' codes are allowed for the NEXT cari-şirkət
+    record in this employee's chain, per the business rule:
+      - boş zəncir           -> yalnız 'hire'
+      - son qeyd 'termination' -> yalnız 'hire' (yeni iş dövrü)
+      - son qeyd 'hire'/'transfer' (hələ çıxmayıb) -> 'transfer' / 'termination'
+    `keep_code` (the record's own current movement_type, when editing) is
+    always included so an existing record can still be saved unchanged.
+    """
+    last_current = get_last_current_company_record(employee_id, exclude_id=exclude_id)
+>>>>>>> 5d0ba591cfec0db47d4ed4a82f817b23b44a0cc3
     if last_current is None or last_current.movement_type == "termination":
         allowed = ["hire"]
     else:
@@ -411,6 +428,7 @@ def _allowed_movement_types(employee_id, exclude_id=None, keep_code=None, before
 def _work_history_form_choices(employee_id=None, record=None):
     exclude_id = record.id if record else None
     keep_code = record.movement_type if record else None
+<<<<<<< HEAD
     # GET-də (yenidən render) mövqe = qeydin ÖZ (hazırkı) date_from-udur;
     # yeni qeyd üçün before_date=None (= "xronoloji cəhətdən son", çünki
     # yeni qeyd adətən zəncirin sonuna əlavə olunur).
@@ -418,13 +436,20 @@ def _work_history_form_choices(employee_id=None, record=None):
     last_current = get_last_current_company_record(
         employee_id, exclude_id=exclude_id, before_date=before_date
     )
+=======
+    last_current = get_last_current_company_record(employee_id, exclude_id=exclude_id)
+>>>>>>> 5d0ba591cfec0db47d4ed4a82f817b23b44a0cc3
     return {
         "departments": _dict_options("department"),
         "positions": _dict_options("position"),
         "orders": Order.query.order_by(Order.order_date.desc()).all(),
         "movement_labels": _movement_labels(),
         "allowed_movement_types": _allowed_movement_types(
+<<<<<<< HEAD
             employee_id, exclude_id=exclude_id, keep_code=keep_code, before_date=before_date
+=======
+            employee_id, exclude_id=exclude_id, keep_code=keep_code
+>>>>>>> 5d0ba591cfec0db47d4ed4a82f817b23b44a0cc3
         ),
         "last_department_id": last_current.department_id if last_current else None,
         "last_department_name": last_current.department.name
@@ -509,6 +534,11 @@ def add_work_history(emp_id):
         _apply_work_history_form(record, request.form, employee_id=emp_id)
         db.session.add(record)
         db.session.flush()
+        # date_to is never entered by hand — every record's date_to is
+        # derived from the whole chronological timeline (see
+        # recompute_work_history_dates), so it's recomputed after every
+        # add/edit/delete.
+        recompute_work_history_dates(emp_id)
         recompute_employee_from_history(employee)
         db.session.commit()
         flash("İş yeri qeydi əlavə olundu.", "success")
@@ -546,6 +576,10 @@ def edit_work_history(emp_id, record_id):
             record, request.form, employee_id=emp_id, exclude_id=record.id
         )
         db.session.flush()
+<<<<<<< HEAD
+=======
+        recompute_work_history_dates(emp_id)
+>>>>>>> 5d0ba591cfec0db47d4ed4a82f817b23b44a0cc3
         recompute_employee_from_history(employee)
         db.session.commit()
         flash("İş yeri qeydi yeniləndi.", "success")
@@ -569,6 +603,7 @@ def delete_work_history(emp_id, record_id):
     ).first_or_404()
     db.session.delete(record)
     db.session.flush()
+    recompute_work_history_dates(emp_id)
     recompute_employee_from_history(employee)
     db.session.commit()
     if is_modal_request():
@@ -578,10 +613,17 @@ def delete_work_history(emp_id, record_id):
 
 
 def _validate_work_history_form(form, employee_id, exclude_id=None):
+<<<<<<< HEAD
     # date_to formda da, databasede də yoxdur — bütün qeydlərin bitmə tarixi
     # hər dəfə xronoloji zəncirdən anlıq hesablanır (bax:
     # app.services.hr_service.compute_chain_end_dates), ona görə tarix
     # kəsişməsi (overlap) yoxlamasına da artıq ehtiyac qalmır.
+=======
+    # date_to artıq bu formda yoxdur — bütün qeydlərin bitmə tarixi
+    # xronoloji zəncirdən avtomatik hesablanır (bax:
+    # recompute_work_history_dates), ona görə tarix kəsişməsi (overlap)
+    # yoxlamasına da artıq ehtiyac qalmır.
+>>>>>>> 5d0ba591cfec0db47d4ed4a82f817b23b44a0cc3
     is_current = form.get("is_current_company") == "1"
     if not form.get("date_from"):
         return "Başlama tarixi mütləq daxil edilməlidir."
@@ -649,9 +691,15 @@ def _apply_work_history_form(record, form, employee_id, exclude_id=None):
         record.external_department = form.get("external_department", "").strip()
         record.external_position = form.get("external_position", "").strip()
 
+<<<<<<< HEAD
     # date_to bu funksiyada VƏ HEÇ BİR YERDƏ təyin OLUNMUR — o, artıq
     # saxlanmır; hər dəfə app.services.hr_service.compute_chain_end_dates()
     # tərəfindən employee-nin bütün xronoloji zəncirindən anlıq hesablanır.
+=======
+    # date_to bu funksiyada təyin OLUNMUR — record əlavə/yenilənəndən sonra
+    # çağırılan recompute_work_history_dates() bütün employee üzrə tam
+    # xronoloji zənciri yenidən hesablayır.
+>>>>>>> 5d0ba591cfec0db47d4ed4a82f817b23b44a0cc3
 
 
 # ---------------------------------------------------------------------------
