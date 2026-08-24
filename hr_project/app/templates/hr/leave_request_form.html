@@ -1,5 +1,6 @@
 {% extends "modal_form_base.html" %}
-{% set form_title = (t('lr_form_title_edit') if record else t('lr_form_title_add')) ~ ' — ' ~ employee.full_name %}
+{% set form_title = (t('lr_form_title_edit') if record else t('lr_form_title_add')) %}
+{% set form_employee_name = employee.full_name %}
 {% set form_action = url_for('hr.edit_leave_request', emp_id=employee.id, record_id=record.id) if record else url_for('hr.add_leave_request', emp_id=employee.id) %}
 {% set cancel_url = url_for('hr.leave_requests', emp_id=employee.id) %}
 

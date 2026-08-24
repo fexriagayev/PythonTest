@@ -156,7 +156,6 @@ TRANSLATIONS = {
     "wh_col_position": {"az": "Vəzifə", "en": "Position"},
     "wh_col_order": {"az": "Əmr", "en": "Order"},
     "wh_col_date_from": {"az": "Başlama tarixi", "en": "Start Date"},
-    "wh_col_date_to": {"az": "Bitmə tarixi", "en": "End Date"},
     "wh_col_note": {"az": "Qeyd", "en": "Note"},
     "js_loading": {"az": "Yüklənir...", "en": "Loading..."},
     "js_form_load_failed": {"az": "Forma yüklənmədi", "en": "Could not load the form"},
@@ -190,8 +189,8 @@ TRANSLATIONS = {
 
     # --- Sığorta (insurance_form.html / insurance_list.html) ----------------
     "ins_page_title": {"az": "Sığorta məlumatları", "en": "Insurance Information"},
-    "ins_form_title_edit": {"az": "Sığorta qeydini dəyiş", "en": "Edit Insurance Record"},
-    "ins_form_title_add": {"az": "Yeni sığorta qeydi", "en": "New Insurance Record"},
+    "ins_form_title_edit": {"az": "Sığortanı dəyiş", "en": "Edit Insurance Record"},
+    "ins_form_title_add": {"az": "Yeni sığorta", "en": "New Insurance Record"},
     "ins_field_start_date": {"az": "Başlama tarixi", "en": "Start Date"},
     "ins_field_end_date": {"az": "Bitmə tarixi", "en": "End Date"},
     "ins_field_policy_number": {"az": "Sığorta nömrəsi", "en": "Policy Number"},
@@ -311,11 +310,12 @@ TRANSLATIONS = {
     "vac_action_compensation": {"az": "💰 Kompensasiya", "en": "💰 Compensation"},
 
     # --- İş yeri qeydi forması (work_history_form.html) ----------------------
-    "wh_form_title_edit": {"az": "İş yeri qeydini dəyiş", "en": "Edit Employment Record"},
-    "wh_form_title_add": {"az": "Yeni iş yeri qeydi", "en": "New Employment Record"},
+    "wh_form_title_edit": {"az": "İş yerini dəyiş", "en": "Edit Employment Record"},
+    "wh_form_title_add": {"az": "Yeni iş yeri", "en": "New Employment Record"},
     "wh_field_ticket_type": {"az": "Qeydin növü", "en": "Record Type"},
     "wh_ticket_current": {"az": "Cari şirkət", "en": "Current Company"},
     "wh_ticket_external": {"az": "Kənar iş yeri (əvvəlki)", "en": "External Workplace (previous)"},
+    "wh_field_is_current": {"az": "Cari iş yeri", "en": "Current Workplace"},
     "wh_field_movement_type": {"az": "Hərəkət növü", "en": "Movement Type"},
     "wh_field_department": {"az": "Struktur (şöbə)", "en": "Department"},
     "wh_field_position": {"az": "Vəzifə", "en": "Position"},

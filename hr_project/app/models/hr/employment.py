@@ -37,9 +37,10 @@ class EmploymentRecord(db.Model):
 
     # --- Ümumi (hər iki halda) -----------------------------------------------
     date_from = db.Column(db.Date, nullable=False)
-    date_to = db.Column(
-        db.Date
-    )  # boş = hazırda davam edir (yalnız cari şirkət üçün mümkündür)
+    # date_to YOXDUR — bitmə tarixi bu qeydlərin heç birində saxlanmır, hər
+    # zaman employee-nin bütün "İş yerləri" qeydlərinin xronoloji zəncirindən
+    # tələb olunan anda hesablanır (bax: app.services.hr_service.
+    # compute_chain_end_dates).
     note = db.Column(db.Text)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)

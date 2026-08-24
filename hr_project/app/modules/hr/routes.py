@@ -39,7 +39,7 @@ from app.utils.uploads import (
 from app.services.hr_service import (
     recompute_employee_from_history,
     recompute_employee_contract_from_bildiris,
-    close_previous_open_current_record,
+    get_last_current_company_record,
 )
 from app.services.leave_service import (
     compute_leave_periods,
@@ -383,12 +383,57 @@ def _movement_labels():
     return {code: translate(key, lang) for code, key in _MOVEMENT_LABEL_KEYS.items()}
 
 
-def _work_history_form_choices():
+def _allowed_movement_types(employee_id, exclude_id=None, keep_code=None, before_date=None):
+    """Which 'Hərəkət növü' codes are allowed for a cari-şirkət record at
+    position `before_date` in this employee's chain, per the business rule:
+      - boş zəncir (və ya bu tarixdən əvvəl heç nə yoxdursa) -> yalnız 'hire'
+      - dərhal əvvəlki qeyd 'termination' -> yalnız 'hire' (yeni iş dövrü)
+      - dərhal əvvəlki qeyd 'hire'/'transfer' -> 'transfer' / 'termination'
+    `before_date` MUST be the record's own date_from when validating/
+    rendering an EDIT — otherwise "the record right before this one" can
+    wrongly resolve to a record that is actually chronologically AFTER it
+    (see get_last_current_company_record). `keep_code` (the record's own
+    current movement_type, when editing) is always included so an existing
+    record can still be saved unchanged.
+    """
+    last_current = get_last_current_company_record(
+        employee_id, exclude_id=exclude_id, before_date=before_date
+    )
+    if last_current is None or last_current.movement_type == "termination":
+        allowed = ["hire"]
+    else:
+        allowed = ["transfer", "termination"]
+    if keep_code and keep_code not in allowed:
+        allowed.append(keep_code)
+    return allowed
+
+
+def _work_history_form_choices(employee_id=None, record=None):
+    exclude_id = record.id if record else None
+    keep_code = record.movement_type if record else None
+    # GET-də (yenidən render) mövqe = qeydin ÖZ (hazırkı) date_from-udur;
+    # yeni qeyd üçün before_date=None (= "xronoloji cəhətdən son", çünki
+    # yeni qeyd adətən zəncirin sonuna əlavə olunur).
+    before_date = record.date_from if record else None
+    last_current = get_last_current_company_record(
+        employee_id, exclude_id=exclude_id, before_date=before_date
+    )
     return {
         "departments": _dict_options("department"),
         "positions": _dict_options("position"),
         "orders": Order.query.order_by(Order.order_date.desc()).all(),
         "movement_labels": _movement_labels(),
+        "allowed_movement_types": _allowed_movement_types(
+            employee_id, exclude_id=exclude_id, keep_code=keep_code, before_date=before_date
+        ),
+        "last_department_id": last_current.department_id if last_current else None,
+        "last_department_name": last_current.department.name
+        if last_current and last_current.department
+        else "",
+        "last_position_id": last_current.position_id if last_current else None,
+        "last_position_name": last_current.position.name
+        if last_current and last_current.position
+        else "",
     }
 
 
@@ -416,7 +461,7 @@ def work_history(emp_id):
 def api_work_history(emp_id):
     records = (
         EmploymentRecord.query.filter_by(employee_id=emp_id)
-        .order_by(EmploymentRecord.date_from.desc())
+        .order_by(EmploymentRecord.date_from.asc())
         .all()
     )
     lang = current_lang()
@@ -437,7 +482,6 @@ def api_work_history(emp_id):
             "position": r.position_label(),
             "order": r.order.label() if r.order else None,
             "date_from": r.date_from.isoformat() if r.date_from else None,
-            "date_to": r.date_to.isoformat() if r.date_to else None,
             "note": r.note,
         }
         for r in records
@@ -452,16 +496,6 @@ def api_work_history(emp_id):
 def add_work_history(emp_id):
     employee = Employee.query.get_or_404(emp_id)
     if request.method == "POST":
-        # An employee's "cari şirkət" (current company) timeline is
-        # continuous: hire → transfer(s) → termination. Adding a new
-        # current-company movement implicitly closes whatever record was
-        # previously open-ended, so it doesn't wrongly block this one as
-        # an overlap (and so the employee doesn't stay "Aktiv" just
-        # because the old record was never explicitly closed).
-        if request.form.get("is_current_company") == "1":
-            close_previous_open_current_record(
-                emp_id, _parse_date(request.form.get("date_from"))
-            )
         error = _validate_work_history_form(request.form, employee_id=emp_id)
         if error:
             flash(error, "danger")
@@ -469,10 +503,10 @@ def add_work_history(emp_id):
                 "hr/work_history_form.html",
                 employee=employee,
                 record=None,
-                **_work_history_form_choices(),
+                **_work_history_form_choices(employee_id=emp_id),
             )
         record = EmploymentRecord(employee_id=employee.id)
-        _apply_work_history_form(record, request.form)
+        _apply_work_history_form(record, request.form, employee_id=emp_id)
         db.session.add(record)
         db.session.flush()
         recompute_employee_from_history(employee)
@@ -483,7 +517,7 @@ def add_work_history(emp_id):
         "hr/work_history_form.html",
         employee=employee,
         record=None,
-        **_work_history_form_choices(),
+        **_work_history_form_choices(employee_id=emp_id),
     )
 
 
@@ -497,12 +531,6 @@ def edit_work_history(emp_id, record_id):
         id=record_id, employee_id=emp_id
     ).first_or_404()
     if request.method == "POST":
-        if request.form.get("is_current_company") == "1":
-            close_previous_open_current_record(
-                emp_id,
-                _parse_date(request.form.get("date_from")),
-                exclude_id=record.id,
-            )
         error = _validate_work_history_form(
             request.form, employee_id=emp_id, exclude_id=record.id
         )
@@ -512,9 +540,12 @@ def edit_work_history(emp_id, record_id):
                 "hr/work_history_form.html",
                 employee=employee,
                 record=record,
-                **_work_history_form_choices(),
+                **_work_history_form_choices(employee_id=emp_id, record=record),
             )
-        _apply_work_history_form(record, request.form)
+        _apply_work_history_form(
+            record, request.form, employee_id=emp_id, exclude_id=record.id
+        )
+        db.session.flush()
         recompute_employee_from_history(employee)
         db.session.commit()
         flash("İş yeri qeydi yeniləndi.", "success")
@@ -523,7 +554,7 @@ def edit_work_history(emp_id, record_id):
         "hr/work_history_form.html",
         employee=employee,
         record=record,
-        **_work_history_form_choices(),
+        **_work_history_form_choices(employee_id=emp_id, record=record),
     )
 
 
@@ -547,55 +578,65 @@ def delete_work_history(emp_id, record_id):
 
 
 def _validate_work_history_form(form, employee_id, exclude_id=None):
+    # date_to formda da, databasede də yoxdur — bütün qeydlərin bitmə tarixi
+    # hər dəfə xronoloji zəncirdən anlıq hesablanır (bax:
+    # app.services.hr_service.compute_chain_end_dates), ona görə tarix
+    # kəsişməsi (overlap) yoxlamasına da artıq ehtiyac qalmır.
     is_current = form.get("is_current_company") == "1"
     if not form.get("date_from"):
         return "Başlama tarixi mütləq daxil edilməlidir."
+
     if is_current:
+        movement = form.get("movement_type") or "hire"
+        allowed = _allowed_movement_types(employee_id, exclude_id=exclude_id)
+        if movement not in allowed:
+            if allowed == ["hire"]:
+                return "Bu, zəncirdəki növbəti qeyddir və yalnız 'İşə qəbul' ola bilər."
+            return (
+                "Son qeyd 'İşdən çıxma' olmadığı üçün növbəti qeyd "
+                "'İşə qəbul' ola bilməz — 'Daxili keçid' və ya 'İşdən çıxma' seçin."
+            )
         if not form.get("order_id"):
             return "Cari şirkət qeydi üçün əmr seçilməlidir."
-        if not form.get("department_id"):
-            return "Struktur (şöbə) seçilməlidir."
-        if not form.get("position_id"):
-            return "Vəzifə seçilməlidir."
+        # 'İşdən çıxma' qeydinin öz struktur/vəzifəsi yoxdur — son cari
+        # şirkət qeydindən avtomatik götürülür, ona görə bu iki sahə
+        # yalnız 'hire'/'transfer' üçün tələb olunur.
+        if movement != "termination":
+            if not form.get("department_id"):
+                return "Struktur (şöbə) seçilməlidir."
+            if not form.get("position_id"):
+                return "Vəzifə seçilməlidir."
+        elif get_last_current_company_record(employee_id, exclude_id=exclude_id) is None:
+            return "İşdən çıxma qeydi üçün əvvəlcə İşə qəbul qeydi olmalıdır."
     else:
-        if not form.get("date_to"):
-            return "Kənar iş yeri qeydi üçün bitmə tarixi mütləq daxil edilməlidir."
         if not form.get("external_company_name", "").strip():
             return "Kənar şirkətin adı daxil edilməlidir."
 
-    new_start = _parse_date(form.get("date_from"))
-    new_end = _parse_date(form.get("date_to"))
-    # Paralel iş qadağandır: işçi eyni tarix aralığında həm cari şirkətdə,
-    # həm də kənar iş yerində ola bilməz — ona görə bütün qeydlər (is_current_
-    # company-dən asılı olmayaraq) bir-biri ilə müqayisə olunur.
-    existing = EmploymentRecord.query.filter_by(employee_id=employee_id).all()
-    conflict = find_overlapping(existing, new_start, new_end, exclude_id=exclude_id)
-    if conflict:
-        scope = "cari şirkət" if conflict.is_current_company else "kənar iş yeri"
-        conflict_end = (
-            conflict.date_to.isoformat() if conflict.date_to else "davam edir"
-        )
-        return (
-            f"Tarix aralığı mövcud {scope} qeydi ilə kəsişir "
-            f"({conflict.date_from} — {conflict_end}). Zəhmət olmasa tarixləri yoxlayın."
-        )
     return None
 
 
-def _apply_work_history_form(record, form):
+def _apply_work_history_form(record, form, employee_id, exclude_id=None):
     is_current = form.get("is_current_company") == "1"
     record.is_current_company = is_current
     record.date_from = _parse_date(form.get("date_from"))
     record.note = form.get("note", "").strip()
 
     if is_current:
-        record.movement_type = form.get("movement_type") or "hire"
-        record.department_id = _parse_int(form.get("department_id"))
-        record.position_id = _parse_int(form.get("position_id"))
+        movement = form.get("movement_type") or "hire"
+        record.movement_type = movement
         record.order_id = _parse_int(form.get("order_id"))
-        # date_to is only set for internal records when explicitly provided
-        # (e.g. termination date); otherwise left open (still current)
-        record.date_to = _parse_date(form.get("date_to"))
+        if movement == "termination":
+            # Öz struktur/vəzifəsi yoxdur — son cari şirkət qeydindən
+            # avtomatik götürülür (form-dan gələn dəyərlər nəzərə alınmır,
+            # çünki həmin sahələr formda disable olunub).
+            last_current = get_last_current_company_record(
+                employee_id, exclude_id=exclude_id
+            )
+            record.department_id = last_current.department_id if last_current else None
+            record.position_id = last_current.position_id if last_current else None
+        else:
+            record.department_id = _parse_int(form.get("department_id"))
+            record.position_id = _parse_int(form.get("position_id"))
         record.external_company_name = None
         record.external_department = None
         record.external_position = None
@@ -604,10 +645,13 @@ def _apply_work_history_form(record, form):
         record.department_id = None
         record.position_id = None
         record.order_id = None
-        record.date_to = _parse_date(form.get("date_to"))
         record.external_company_name = form.get("external_company_name", "").strip()
         record.external_department = form.get("external_department", "").strip()
         record.external_position = form.get("external_position", "").strip()
+
+    # date_to bu funksiyada VƏ HEÇ BİR YERDƏ təyin OLUNMUR — o, artıq
+    # saxlanmır; hər dəfə app.services.hr_service.compute_chain_end_dates()
+    # tərəfindən employee-nin bütün xronoloji zəncirindən anlıq hesablanır.
 
 
 # ---------------------------------------------------------------------------

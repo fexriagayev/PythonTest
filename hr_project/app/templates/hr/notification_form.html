@@ -1,6 +1,7 @@
 {% extends "modal_form_base.html" %}
 {% set src = record or latest %}
-{% set form_title = (t('notif_form_title_edit') if record else t('notif_form_title_add')) ~ ' — ' ~ employee.full_name %}
+{% set form_title = (t('notif_form_title_edit') if record else t('notif_form_title_add')) %}
+{% set form_employee_name = employee.full_name %}
 {% set form_action = url_for('hr.edit_notification', emp_id=employee.id, record_id=record.id) if record else url_for('hr.add_notification', emp_id=employee.id) %}
 {% set cancel_url = url_for('hr.notifications', emp_id=employee.id) %}
 {% set form_max_width = '720px' %}

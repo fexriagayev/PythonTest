@@ -24,15 +24,18 @@ def _format_experience(total_days):
     return f"{years} il {months} ay"
 
 
-def _record_days(record, employee_is_active, employee_termination_date):
+def _record_days(record, end_date, employee_is_active, employee_termination_date):
     """Number of days a single employment record covers (open-ended
     current-company records count up to today, or up to the employee's
     computed termination date if that record itself isn't the terminating
-    one but the employee has since left)."""
+    one but the employee has since left). `end_date` is this record's
+    computed chain end (see compute_chain_end_dates) — date_to is no longer
+    a stored column, so it's always passed in rather than read off the
+    record."""
     if not record.date_from:
         return 0
 
-    end = record.date_to
+    end = end_date
     if end is None:
         if (
             record.is_current_company
@@ -47,41 +50,79 @@ def _record_days(record, employee_is_active, employee_termination_date):
     return max(delta, 0)
 
 
-def close_previous_open_current_record(employee_id, new_start, exclude_id=None):
-    """
-    Auto-closes any still-open ("date_to is None") CURRENT-COMPANY record
-    for this employee that started before `new_start`, by setting its
-    date_to to the day before `new_start`.
+def get_last_current_company_record(employee_id, exclude_id=None, before_date=None):
+    """Returns the most recent (by date_from) CURRENT-COMPANY EmploymentRecord
+    for this employee, or None if there isn't one yet.
 
-    Why this exists: an employee's "cari şirkət" (current company) history
-    is a single continuous timeline — hire, then transfer(s), then
-    (eventually) termination. Each new movement record implicitly ends the
-    previous one. Without this, adding a new movement (e.g. "İşdən çıxma")
-    while the previous record is still open-ended would be rejected by the
-    overlap check (app/utils/date_overlap.py), because two open-ended
-    ("still ongoing") ranges always overlap — the new record would silently
-    fail validation and the employee would incorrectly remain "Aktiv".
+    `before_date`, when given, restricts the search to records that start
+    STRICTLY BEFORE that date — i.e. it finds the record that immediately
+    PRECEDES a given position in the chain, rather than whatever is latest
+    overall. This matters when editing a record that sits in the MIDDLE of
+    the chain: without `before_date`, "last record excluding this one" could
+    wrongly resolve to a record that comes AFTER it chronologically (e.g.
+    editing a 'transfer' that has a 'termination' after it would otherwise
+    see that later termination as its "predecessor"). Always pass the
+    record's own (new) date_from here when validating/auto-filling an edit.
 
-    Only touches OTHER current-company records (never external/"kənar iş
-    yeri" records, which represent a different, independently-tracked
-    employer). Does not commit — caller commits alongside the new record.
-    """
-    if not new_start:
-        return
-
-    open_records = (
-        EmploymentRecord.query.filter_by(
-            employee_id=employee_id,
-            is_current_company=True,
-            date_to=None,
-        )
-        .filter(EmploymentRecord.date_from < new_start)
+    Used both to validate the allowed "Hərəkət növü" for a new/edited record
+    (see _validate_work_history_form) and to auto-fill the struktur/vəzifə
+    shown for a "İşdən çıxma" record (which has no struktur/vəzifə of its
+    own)."""
+    query = EmploymentRecord.query.filter_by(
+        employee_id=employee_id, is_current_company=True
     )
     if exclude_id is not None:
-        open_records = open_records.filter(EmploymentRecord.id != exclude_id)
+        query = query.filter(EmploymentRecord.id != exclude_id)
+    if before_date is not None:
+        query = query.filter(EmploymentRecord.date_from < before_date)
+    return query.order_by(
+        EmploymentRecord.date_from.desc(), EmploymentRecord.id.desc()
+    ).first()
 
-    for r in open_records.all():
-        r.date_to = new_start - timedelta(days=1)
+
+def compute_chain_end_dates(employee_id, records=None):
+    """
+    Returns `{record_id: end_date_or_None}` for EVERY EmploymentRecord of
+    this employee — cari şirkət and kənar iş yeri together, in one single
+    chronological timeline ordered by `date_from`. There is no stored
+    `date_to` column any more — every record's end is always computed on
+    the fly, purely from what comes next in the timeline:
+
+      - A "İşdən çıxma" record is a point-in-time event: its own end is
+        always its own date_from, regardless of what follows (this is what
+        allows a later "İşə qəbul" to start after a gap, instead of being
+        forced to begin the very next day).
+      - Any other record (hire, transfer, kənar iş yeri) ends the day before
+        the NEXT record (by date_from) starts — i.e. it automatically
+        "closes" as soon as the next one begins.
+      - The last record overall, if it isn't itself a termination, is
+        open-ended (end = None -> hazırda davam edir).
+
+    Because every end date is derived this way, two records can never
+    overlap — the old "paralel iş qadağandır" overlap check
+    (app/utils/date_overlap.py) is no longer needed for EmploymentRecord.
+
+    Pass `records` (already loaded for this employee) to avoid a second
+    query when the caller already has them.
+    """
+    if records is None:
+        records = (
+            EmploymentRecord.query.filter_by(employee_id=employee_id)
+            .order_by(EmploymentRecord.date_from.asc(), EmploymentRecord.id.asc())
+            .all()
+        )
+    else:
+        records = sorted(records, key=lambda r: (r.date_from, r.id))
+
+    ends = {}
+    for i, record in enumerate(records):
+        if record.is_current_company and record.movement_type == "termination":
+            ends[record.id] = record.date_from
+        elif i + 1 < len(records):
+            ends[record.id] = records[i + 1].date_from - timedelta(days=1)
+        else:
+            ends[record.id] = None
+    return ends
 
 
 def recompute_employee_from_history(employee):
@@ -93,6 +134,7 @@ def recompute_employee_from_history(employee):
         .order_by(EmploymentRecord.date_from.asc())
         .all()
     )
+    end_dates = compute_chain_end_dates(employee.id, records=all_records)
 
     current_records = [r for r in all_records if r.is_current_company]
 
@@ -101,24 +143,23 @@ def recompute_employee_from_history(employee):
         employee.hire_date = current_records[0].date_from
 
         latest = current_records[-1]
+        latest_end = end_dates.get(latest.id)
 
         # Əməkdaş passivdir, əgər:
         #   (a) son qeydin "Hərəkət növü" sahəsi açıq şəkildə "İşdən çıxma"
         #       seçilibsə (istifadəçinin bilərəkdən verdiyi siqnal), VƏ YA
-        #   (b) son qeydin bitmə tarixi keçmişdədirsə (başlama/bitmə tarixi
-        #       daxil edilib və bu tarix artıq ötübsə, iş yerinin fəaliyyəti
-        #       artıq bitmiş deməkdir — "Hərəkət növü" nü açıq şəkildə
-        #       "İşdən çıxma"ya dəyişmək tələb olunmur).
+        #   (b) son qeydin (hesablanmış) bitmə tarixi keçmişdədirsə (məs.
+        #       ondan sonra başlayan kənar iş yeri qeydi əlavə olunubsa) —
+        #       iş yerinin fəaliyyəti artıq bitmiş deməkdir; "Hərəkət növü"
+        #       nü açıq şəkildə "İşdən çıxma"ya dəyişmək tələb olunmur.
         # Əks halda (bitmə tarixi boşdur = davam edir, YA DA gələcəkdədir)
         # əməkdaş aktivdir.
         ended_by_movement_type = latest.movement_type == "termination"
-        ended_by_past_date_to = (
-            latest.date_to is not None and latest.date_to < date.today()
-        )
+        ended_by_past_end = latest_end is not None and latest_end < date.today()
 
-        if ended_by_movement_type or ended_by_past_date_to:
+        if ended_by_movement_type or ended_by_past_end:
             employee.is_active = False
-            employee.termination_date = latest.date_to or latest.date_from
+            employee.termination_date = latest_end or latest.date_from
         else:
             employee.is_active = True
             employee.termination_date = None
@@ -138,12 +179,12 @@ def recompute_employee_from_history(employee):
 
     # --- Staj hesablamaları (bütün qeydlər üzrə) ----------------------------
     company_days = sum(
-        _record_days(r, employee.is_active, employee.termination_date)
+        _record_days(r, end_dates.get(r.id), employee.is_active, employee.termination_date)
         for r in all_records
         if r.is_current_company
     )
     other_days = sum(
-        _record_days(r, employee.is_active, employee.termination_date)
+        _record_days(r, end_dates.get(r.id), employee.is_active, employee.termination_date)
         for r in all_records
         if not r.is_current_company
     )

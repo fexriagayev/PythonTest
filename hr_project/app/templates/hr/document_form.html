@@ -1,5 +1,6 @@
 {% extends "modal_form_base.html" %}
-{% set form_title = t('doc_form_title_add') ~ ' — ' ~ employee.full_name %}
+{% set form_title = t('doc_form_title_add') %}
+{% set form_employee_name = employee.full_name %}
 {% set form_action = url_for('hr.add_document', emp_id=employee.id) %}
 {% set cancel_url = url_for('hr.document_list', emp_id=employee.id) %}
 {% set form_enctype = 'multipart/form-data' %}

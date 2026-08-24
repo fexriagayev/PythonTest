@@ -1106,6 +1106,7 @@ table.simple-table th {
 .dx-modal-form-fields>.form-grid,
 .dx-modal-form-fields>.emp-profile-header,
 .dx-modal-form-fields>.emp-section,
+.dx-modal-form-fields>.dx-modal-form-single-col,
 .dx-modal-form-fields>h4,
 .dx-modal-form-fields>.card,
 .dx-modal-form-fields>p {
@@ -1118,8 +1119,41 @@ table.simple-table th {
 .dx-modal-form-fields>textarea,
 .dx-modal-form-fields>.form-grid,
 .dx-modal-form-fields>.emp-profile-header,
-.dx-modal-form-fields>.emp-section {
+.dx-modal-form-fields>.emp-section,
+.dx-modal-form-fields>.dx-modal-form-single-col {
   grid-column: 1 / -1;
+}
+
+/* Employee's name, shown as the very first thing inside an employee
+   sub-form (work history, insurance, salary card, etc.) instead of in the
+   modal popup's own title bar — see form_employee_name in
+   modal_form_base.html. */
+.dx-modal-employee-heading {
+  grid-column: 1 / -1;
+  font-weight: 700;
+  font-size: 1.15em;
+}
+
+.dx-modal-employee-divider {
+  grid-column: 1 / -1;
+  width: 100%;
+  border: none;
+  border-top: 1px solid var(--bs-border-color, #ccd3de);
+  margin: 6px 0 14px;
+}
+
+/* A form (or part of a form) that should always be a single left-aligned
+   column — every direct child (label, input, checkbox-row, nested
+   section div, ...) stacks top-to-bottom instead of falling into the
+   surrounding 2-column .dx-modal-form-fields grid. Use this wrapper when a
+   form's fields shouldn't be checker-boarded into two side-by-side
+   columns. */
+.dx-modal-form-single-col {
+  display: block;
+}
+
+.dx-modal-form-single-col>label {
+  display: block;
 }
 
 .dx-modal-form .dx-textbox,
@@ -1232,6 +1266,27 @@ html.modal-scroll-lock body {
 
 .dx-popup-title {
   font-weight: 600;
+}
+
+/* DevExtreme sets an INLINE max-width on the title label at popup-open
+   time (recalculated from available toolbar space), which silently wins
+   over a plain CSS rule — that's why an earlier attempt at this seemed to
+   "work" for some captions (whichever happened to be short enough to fit)
+   but not others. !important is required to reliably beat that inline
+   style for every caption, regardless of its length. */
+.dx-popup-title .dx-toolbar-label,
+.dx-popup-title .dx-toolbar-label .dx-item-content,
+.dx-popup-title .dx-toolbar-label .dx-item-content > div {
+  overflow: visible !important;
+  text-overflow: unset !important;
+  white-space: normal !important;
+  max-width: none !important;
+  line-height: 1.25;
+}
+
+.dx-popup-title .dx-toolbar-items-container {
+  height: auto;
+  min-height: 44px;
 }
 
 /* ---------------------------------------------------------------------------

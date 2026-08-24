@@ -10,6 +10,11 @@
     {% set cancel_url = url_for(...) %}
     {% set form_enctype = "multipart/form-data" %}   (only if uploading a file)
     {% set form_no_wrapper_card = true %}            (only if your form defines its own div.card sections, e.g. a multi-section form)
+    {% set form_employee_name = employee.full_name %} (employee sub-forms only — shows the
+                                                        employee's name as a bold heading INSIDE
+                                                        the form, above a divider, instead of in
+                                                        the modal's own title bar. Don't also
+                                                        append the name to form_title.)
 
     {% block before_form %}...content shown above the <form>, e.g. tabs...{% endblock %}
     {% block form_fields %}...the actual <label>/<input> pairs...{% endblock %}
@@ -38,6 +43,10 @@
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
   <div class="dx-modal-form-fields">
+    {% if form_employee_name %}
+    <div class="dx-modal-employee-heading">{{ form_employee_name }}</div>
+    <hr class="dx-modal-employee-divider">
+    {% endif %}
     {% block form_fields %}{% endblock %}
   </div>
 
