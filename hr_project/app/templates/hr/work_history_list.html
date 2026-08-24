@@ -30,7 +30,7 @@
   {% if current_user.has_perm('HR', 'can_add') %}
   <button type="button"
           class="btn"
-          onclick="openWorkHistoryInlineForm('{{ url_for('hr.add_work_history', emp_id=employee.id) }}')">
+          onclick="openFormModal('{{ url_for('hr.add_work_history', emp_id=employee.id) }}', function () { if (window.workHistoryGrid) window.workHistoryGrid.setData(); })">
     + {{ t('wh_new_record') }}
   </button>
   {% endif %}
@@ -43,62 +43,10 @@
   <div id="workHistoryGrid"></div>
 </div>
 
-<div id="workHistoryFormArea"
-     style="display:none;margin-top:12px;">
-</div>
-
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
-  window.openWorkHistoryInlineForm = function(url) {
-
-    const gridArea = document.getElementById("workHistoryGridArea");
-    const formArea = document.getElementById("workHistoryFormArea");
-
-    if (!gridArea || !formArea) {
-      return;
-    }
-
-    formArea.innerHTML =
-      '<div class="card"><div style="padding:20px">' + t("js_loading") + '</div></div>';
-
-    gridArea.style.display = "none";
-    formArea.style.display = "block";
-
-    const separator = url.includes("?") ? "&" : "?";
-
-    fetch(url + separator + "embedded=1", {
-      headers: {
-        "X-Requested-With": "XMLHttpRequest"
-      }
-    })
-    .then(r => r.text())
-    .then(html => {
-      formArea.innerHTML = html;
-    })
-    .catch(err => {
-      console.error(err);
-
-      formArea.innerHTML =
-        '<div class="flash flash-danger">' + t("js_form_load_failed") + '</div>';
-    });
-  };
-
-  window.closeWorkHistoryInlineForm = function() {
-
-    const gridArea = document.getElementById("workHistoryGridArea");
-    const formArea = document.getElementById("workHistoryFormArea");
-
-    if (!gridArea || !formArea) {
-      return;
-    }
-
-    formArea.innerHTML = "";
-    formArea.style.display = "none";
-
-    gridArea.style.display = "";
-  };
   function initWorkHistoryGrid() {
     const canEdit = {{ 'true' if current_user.has_perm('HR', 'can_edit') else 'false' }};
     const canDelete = {{ 'true' if current_user.has_perm('HR', 'can_delete') else 'false' }};
@@ -123,12 +71,20 @@
         ]
       }, {
         idField: "id",
-        inlineAdd: function(url) {
-            openWorkHistoryInlineForm(url);
+        // Use the standard popup modal (openFormModal) for add/edit — the
+        // same mechanism every other list in the app uses. An ad-hoc
+        // "inline form area" (raw innerHTML injection) was used here
+        // before, but that never actually ran the form's own <script>
+        // (browsers don't execute scripts inserted via innerHTML) and
+        // never converted the fields into their DevExtreme widgets either
+        // — so the "Cari iş yeri" checkbox toggle, the "İşdən çıxma"
+        // struktur/vəzifə auto-disable, and the section show/hide all
+        // silently did nothing.
+        inlineAdd: function (url) {
+          openFormModal(url, function () { table.setData(); });
         },
-
-        inlineEdit: function(url) {
-            openWorkHistoryInlineForm(url);
+        inlineEdit: function (url) {
+          openFormModal(url, function () { table.setData(); });
         },
         addUrl: canAdd ? "/hr/" + empId + "/work-history/add" : null,
         editUrlTemplate: canEdit ? "/hr/" + empId + "/work-history/edit/{id}" : null,

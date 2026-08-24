@@ -22,6 +22,11 @@
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn3.devexpress.com/jslib/24.2.8/js/dx.all.js"></script>
 
+<!-- Excel export for DevExtreme DataGrid (DevExpress.excelExporter.exportDataGrid)
+     needs these two libraries itself — they build/save the actual .xlsx file. -->
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+
 <link rel="stylesheet" href="{{ url_for('static', filename='css/app.css') }}">
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script>window.I18N = {{ ui_i18n_json|tojson }};</script>

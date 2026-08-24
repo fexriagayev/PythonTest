@@ -403,6 +403,10 @@ function upgradeCheckbox(field) {
 
   const label = getFieldLabel(field.form, field);
   const text = label ? label.textContent.trim() : "";
+  // The dxCheckBox widget below renders `text` itself — without hiding the
+  // original <label for="..."> too, its text would show a second time
+  // right next to the widget.
+  if (label) label.style.display = "none";
 
   const host = document.createElement("div");
   host.className = "dx-modal-checkbox";

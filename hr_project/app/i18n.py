@@ -316,10 +316,6 @@ TRANSLATIONS = {
     "wh_ticket_current": {"az": "Cari şirkət", "en": "Current Company"},
     "wh_ticket_external": {"az": "Kənar iş yeri (əvvəlki)", "en": "External Workplace (previous)"},
     "wh_field_is_current": {"az": "Cari iş yeri", "en": "Current Workplace"},
-<<<<<<< HEAD
-=======
-    "wh_last_workplace_hint": {"az": "Son iş yeri məlumatı istifadə olunacaq:", "en": "The last workplace details will be used:"},
->>>>>>> 5d0ba591cfec0db47d4ed4a82f817b23b44a0cc3
     "wh_field_movement_type": {"az": "Hərəkət növü", "en": "Movement Type"},
     "wh_field_department": {"az": "Struktur (şöbə)", "en": "Department"},
     "wh_field_position": {"az": "Vəzifə", "en": "Position"},
@@ -594,6 +590,10 @@ TRANSLATIONS = {
 
     # --- advanced-grid.js (paylaşılan grid komponenti) --------------------------
     "grid_agg_sum": {"az": "Cəmi", "en": "Sum"},
+    "grid_row_number": {"az": "№", "en": "#"},
+    "grid_export_excel": {"az": "Excel-ə ixrac et", "en": "Export to Excel"},
+    "grid_export_error": {"az": "Excel-ə ixrac zamanı xəta baş verdi.", "en": "An error occurred while exporting to Excel."},
+    "grid_export_sheet_name": {"az": "Məlumatlar", "en": "Data"},
     "grid_agg_avg": {"az": "Orta", "en": "Average"},
     "grid_agg_min": {"az": "Min", "en": "Min"},
     "grid_agg_max": {"az": "Maks", "en": "Max"},

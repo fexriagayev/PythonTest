@@ -627,7 +627,65 @@ function bestFitAllColumns(grid) {
      - save grid changes
    --------------------------------------------------------------------------- */
 
-function buildHeaderMenuItems(e, grid, settings, numericFields, persistNow, markDirty, defaultCaptions) {
+/* ---------------------------------------------------------------------------
+   Excel export
+   ---------------------------------------------------------------------------
+   Exports exactly what the grid currently shows: same visible columns (in
+   their current order), same column captions as the header row, and the
+   current sort/filter/grouping applied — via DevExtreme's own
+   DevExpress.excelExporter.exportDataGrid, which reads all of that directly
+   off the live grid instance. The synthetic row-number column added by
+   createAdvancedGrid is skipped automatically (it's marked
+   `allowExporting: false` when it's built).
+   --------------------------------------------------------------------------- */
+
+function exportGridToExcel(grid, baseKey) {
+  if (
+    typeof ExcelJS === "undefined" ||
+    typeof saveAs === "undefined" ||
+    typeof DevExpress === "undefined" ||
+    !DevExpress.excelExporter
+  ) {
+    console.error(
+      "Excel export libraries (ExcelJS/FileSaver) are not loaded."
+    );
+    if (DevExpress && DevExpress.ui && DevExpress.ui.notify) {
+      DevExpress.ui.notify(t("grid_export_error"), "error", 3000);
+    }
+    return;
+  }
+
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet(t("grid_export_sheet_name"));
+
+  DevExpress.excelExporter
+    .exportDataGrid({
+      component: grid,
+      worksheet: worksheet,
+      autoFilterEnabled: true
+    })
+    .then(function () {
+      return workbook.xlsx.writeBuffer();
+    })
+    .then(function (buffer) {
+      saveAs(
+        new Blob([buffer], { type: "application/octet-stream" }),
+        (baseKey || "grid") + ".xlsx"
+      );
+    })
+    .catch(function (err) {
+      console.error("Excel export failed:", err);
+      if (
+        typeof DevExpress !== "undefined" &&
+        DevExpress.ui &&
+        DevExpress.ui.notify
+      ) {
+        DevExpress.ui.notify(t("grid_export_error"), "error", 3000);
+      }
+    });
+}
+
+function buildHeaderMenuItems(e, grid, settings, numericFields, persistNow, markDirty, defaultCaptions, baseKey) {
   const field = e.column && e.column.dataField;
   if (!field) return [];
 
@@ -703,6 +761,13 @@ function buildHeaderMenuItems(e, grid, settings, numericFields, persistNow, mark
     {
       text: t("grid_save_changes"),
       onItemClick: persistNow
+    },
+    {
+      beginGroup: true,
+      text: t("grid_export_excel"),
+      onItemClick: function () {
+        exportGridToExcel(grid, baseKey);
+      }
     }
   ];
 }
@@ -716,7 +781,7 @@ function buildHeaderMenuItems(e, grid, settings, numericFields, persistNow, mark
    Add/Edit/Delete popup actions reliable.
    --------------------------------------------------------------------------- */
 
-function buildSimpleRowContextItems(data, meta, reloadGrid) {
+function buildSimpleRowContextItems(data, meta, reloadGrid, grid, baseKey) {
   const idField = meta.idField || "id";
   const items = [];
 
@@ -832,11 +897,18 @@ function buildSimpleRowContextItems(data, meta, reloadGrid) {
     action: reloadGrid
   });
 
+  items.push({
+    label: t("grid_export_excel"),
+    action: function () {
+      exportGridToExcel(grid, baseKey);
+    }
+  });
+
   return items;
 }
 
 
-function wireDataRowContextMenu(rowElement, data, meta, reloadGrid) {
+function wireDataRowContextMenu(rowElement, data, meta, reloadGrid, grid, baseKey) {
   const el = domElement(rowElement);
   if (!el || el.__advancedRowContextMenuWired) return;
 
@@ -849,7 +921,9 @@ function wireDataRowContextMenu(rowElement, data, meta, reloadGrid) {
     const items = buildSimpleRowContextItems(
       data,
       meta,
-      reloadGrid
+      reloadGrid,
+      grid,
+      baseKey
     );
 
     if (typeof showContextMenu === "function") {
@@ -968,6 +1042,35 @@ function createAdvancedGrid(elementId, baseKey, tabulatorOptions, meta) {
   const columns = convertColumnsToDevExtreme(
     tabulatorOptions.columns || []
   );
+
+  // Every grid gets a leading row-number column by default (independent of
+  // which page/module calls createAdvancedGrid) — plain sequential "1, 2,
+  // 3, ..." across the whole dataset, not just the current page, and not
+  // to be confused with a data "ID" column some grids also show. Opt out
+  // per-grid with `meta.showRowNumber = false`.
+  if (meta.showRowNumber !== false) {
+    columns.unshift({
+      caption: t("grid_row_number"),
+      width: 50,
+      alignment: "center",
+      allowSorting: false,
+      allowFiltering: false,
+      allowGrouping: false,
+      allowReordering: false,
+      allowResizing: false,
+      allowHiding: false,
+      allowExporting: false,
+      showInColumnChooser: false,
+      fixed: true,
+      fixedPosition: "left",
+      cellTemplate: function (container, options) {
+        const grid = options.component;
+        const pageIndex = grid.pageIndex();
+        const pageSize = grid.pageSize();
+        container.text(String(pageIndex * pageSize + options.rowIndex + 1));
+      }
+    });
+  }
 
   // Snapshot of the server-translated (current-language) default caption
   // per field, captured BEFORE any saved custom title is restored onto
@@ -1146,7 +1249,8 @@ function createAdvancedGrid(elementId, baseKey, tabulatorOptions, meta) {
               numericFields,
               persistNow,
               markDirty,
-              defaultCaptions
+              defaultCaptions,
+              baseKey
             )
           );
           return;
@@ -1190,7 +1294,9 @@ function createAdvancedGrid(elementId, baseKey, tabulatorOptions, meta) {
         e.rowElement,
         e.data,
         meta,
-        reloadGrid
+        reloadGrid,
+        e.component,
+        baseKey
       );
     },
 

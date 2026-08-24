@@ -112,6 +112,9 @@
     if (!field || field.__dxGlobalEditor || field.disabled) return;
     const label = field.id ? document.querySelector('label[for="' + CSS.escape(field.id) + '"]') : null;
     const text = label ? label.textContent.trim() : "";
+    // The dxCheckBox widget below renders `text` itself — without hiding
+    // the original <label for="..."> too, its text would show twice.
+    if (label) label.style.display = "none";
     const host = document.createElement("div");
     host.className = "dx-global-checkbox";
     field.parentNode.insertBefore(host, field);
