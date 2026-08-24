@@ -685,6 +685,40 @@ function exportGridToExcel(grid, baseKey) {
     });
 }
 
+/* ---------------------------------------------------------------------------
+   Native DevExtreme menu-item translation
+   ---------------------------------------------------------------------------
+   No DevExtreme locale is loaded for this app's languages (az/en), so
+   DevExtreme's own built-in header-context-menu items (sorting/grouping
+   actions it adds itself, before we append ours) always render in
+   DevExtreme's default English text regardless of the app's selected
+   language. Translate the ones we recognize via our own i18n instead of
+   depending on DevExtreme's locale system.
+   --------------------------------------------------------------------------- */
+
+const NATIVE_MENU_TEXT_KEYS = {
+  "Sort Ascending": "grid_native_sort_asc",
+  "Sort Descending": "grid_native_sort_desc",
+  "Clear Sorting": "grid_native_clear_sorting",
+  "Group by This Column": "grid_native_group_by_column",
+  "Ungroup": "grid_native_ungroup",
+  "Ungroup All": "grid_native_ungroup_all",
+  "Hide Column": "grid_native_hide_column",
+  "Column Chooser": "grid_native_column_chooser"
+};
+
+function translateNativeMenuItems(items) {
+  if (!items) return;
+  items.forEach(function (item) {
+    if (item.text && NATIVE_MENU_TEXT_KEYS[item.text]) {
+      item.text = t(NATIVE_MENU_TEXT_KEYS[item.text]);
+    }
+    if (item.items) {
+      translateNativeMenuItems(item.items);
+    }
+  });
+}
+
 function buildHeaderMenuItems(e, grid, settings, numericFields, persistNow, markDirty, defaultCaptions, baseKey) {
   const field = e.column && e.column.dataField;
   if (!field) return [];
@@ -692,6 +726,7 @@ function buildHeaderMenuItems(e, grid, settings, numericFields, persistNow, mark
   return [
     {
       beginGroup: true,
+      icon: "fit",
       text: t("grid_best_fit_column"),
       onItemClick: function () {
         bestFitOneColumn(grid, field);
@@ -699,6 +734,7 @@ function buildHeaderMenuItems(e, grid, settings, numericFields, persistNow, mark
       }
     },
     {
+      icon: "eyeopen",
       text: settings.showFooter === false ? t("grid_hide_footer") : t("grid_show_footer"),
       onItemClick: function () {
         settings.showFooter = settings.showFooter === false;
@@ -707,6 +743,7 @@ function buildHeaderMenuItems(e, grid, settings, numericFields, persistNow, mark
       }
     },
     {
+      icon: "eyeopen",
       text: settings.showGroupFooter === false ? t("grid_hide_group_footer") : t("grid_show_group_footer"),
       onItemClick: function () {
         settings.showGroupFooter = settings.showGroupFooter === false;
@@ -716,6 +753,7 @@ function buildHeaderMenuItems(e, grid, settings, numericFields, persistNow, mark
     },
     {
       beginGroup: true,
+      icon: "group",
       text: t("grid_group_by_column"),
       onItemClick: function () {
         grid.columnOption(field, "groupIndex", 0);
@@ -723,6 +761,7 @@ function buildHeaderMenuItems(e, grid, settings, numericFields, persistNow, mark
       }
     },
     {
+      icon: "ungroup",
       text: t("grid_clear_grouping"),
       onItemClick: function () {
         grid.clearGrouping();
@@ -731,6 +770,19 @@ function buildHeaderMenuItems(e, grid, settings, numericFields, persistNow, mark
     },
     {
       beginGroup: true,
+      icon: "filter",
+      text: t("grid_clear_filter"),
+      onItemClick: function () {
+        // Clears every active filter on the grid at once: the filter row,
+        // header filters, the filter builder/panel, and any per-column
+        // filterValue — not just this one column's.
+        grid.clearFilter();
+        markDirty();
+      }
+    },
+    {
+      beginGroup: true,
+      icon: "rename",
       text: t("grid_rename_column"),
       onItemClick: function () {
         const currentLang = getCurrentLang();
@@ -759,11 +811,13 @@ function buildHeaderMenuItems(e, grid, settings, numericFields, persistNow, mark
       }
     },
     {
+      icon: "save",
       text: t("grid_save_changes"),
       onItemClick: persistNow
     },
     {
       beginGroup: true,
+      icon: "xlsxfile",
       text: t("grid_export_excel"),
       onItemClick: function () {
         exportGridToExcel(grid, baseKey);
@@ -1240,6 +1294,10 @@ function createAdvancedGrid(elementId, baseKey, tabulatorOptions, meta) {
 
       try {
         if (e.target === "header" && e.column && e.column.dataField) {
+          // Translate whatever native items DevExtreme already put in
+          // e.items (e.g. sorting/grouping actions) BEFORE appending ours,
+          // so the whole menu ends up in the app's current language.
+          translateNativeMenuItems(e.items);
           e.items.push.apply(
             e.items,
             buildHeaderMenuItems(
