@@ -1389,6 +1389,16 @@ html.modal-scroll-lock body {
   text-align: center;
 }
 
+/* Filter row: constrain the operator-selector icon to its intended width.
+   DevExtreme reserves exactly 32px for it (see the matching
+   padding-left: 32px it applies to the filter input), but in this app it
+   was rendering at the full cell width, sitting on top of the text input
+   and swallowing every click meant for typing a filter value. */
+.dx-datagrid .dx-datagrid-filter-row .dx-editor-cell .dx-editor-with-menu .dx-menu {
+  width: 32px !important;
+  overflow: hidden;
+}
+
 /* Footer */
 .dx-datagrid-total-footer td {
   text-align: center !important;

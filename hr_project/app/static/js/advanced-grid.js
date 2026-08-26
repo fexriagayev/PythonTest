@@ -1182,6 +1182,30 @@ function createAdvancedGrid(elementId, baseKey, tabulatorOptions, meta) {
   const pagingEnabled =
     tabulatorOptions.pagination !== false;
 
+  // Compute the initial grid height ONCE as a plain number. DevExtreme's
+  // `height` option accepting a function is deprecated (since v21.2) and
+  // makes the grid treat its own size as "unstable": an internal resize
+  // sensor re-checks dimensions on virtually any DOM change (including the
+  // tiny layout shift caused by focusing an input), which triggers a
+  // re-render of the filter row and silently steals focus right after the
+  // first click — requiring a second click (e.g. via the filter operation
+  // dropdown) to actually land focus in the input.
+  //
+  // Instead we compute a static height up front, and keep it in sync only
+  // on actual window resizes via `resizeHandler` below (using grid.option()),
+  // which does not carry the same repaint-on-any-DOM-change behavior.
+  function computeInitialHeight() {
+    if (meta.height || tabulatorOptions.height) {
+      return meta.height || tabulatorOptions.height;
+    }
+
+    var el = document.getElementById(elementId);
+    if (!el) return Math.max(300, window.innerHeight - 280);
+
+    var top = el.getBoundingClientRect().top;
+    return Math.max(300, Math.floor(window.innerHeight - top - 16));
+  }
+
   const options = {
     dataSource: dataSource,
 
@@ -1193,17 +1217,7 @@ function createAdvancedGrid(elementId, baseKey, tabulatorOptions, meta) {
     // Fit the grid to the available viewport height on every page.
     // Pages with an explicit height still keep their requested height.
     width: "100%",
-    height: function () {
-      if (meta.height || tabulatorOptions.height) {
-        return meta.height || tabulatorOptions.height;
-      }
-
-      var el = document.getElementById(elementId);
-      if (!el) return Math.max(300, window.innerHeight - 280);
-
-      var top = el.getBoundingClientRect().top;
-      return Math.max(300, Math.floor(window.innerHeight - top - 16));
-    },
+    height: computeInitialHeight(),
 
     showBorders: true,
     columnAutoWidth: false,
