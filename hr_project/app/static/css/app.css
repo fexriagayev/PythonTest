@@ -241,6 +241,31 @@ body {
   font-size: 0.85em;
 }
 
+/* VCL/Delphi-style corner column: pinned before the row-number column,
+   header holds only the column-chooser trigger (see advanced-grid.js —
+   "columnChooserCorner"). The grid's own default toolbar is hidden
+   (onToolbarPreparing) since this replaces its column-chooser button. */
+.grid-corner-column.dx-header-row>td {
+  padding: 0 !important;
+}
+
+.grid-column-chooser-corner-btn {
+  width: 100%;
+  height: 100%;
+  min-height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--bs-secondary-color, #666);
+  border-radius: 4px;
+}
+
+.grid-column-chooser-corner-btn:hover {
+  background: var(--bs-tertiary-bg, #eef1f5);
+  color: var(--bs-body-color, #2b2b2b);
+}
+
 /* --- Slightly more compact form controls app-wide (not grids/textareas) --- */
 .simple-form input[type=text],
 .simple-form input[type=password],
@@ -362,6 +387,26 @@ body {
   color: #a33;
 }
 
+/* Grouped read-only summary shown in the employee main tab, above the
+   photo-change button — moved here from the "İş yerləri" tab summary card
+   and the deleted "İş məlumatları" section, grouped into logical rows. */
+.emp-info-groups {
+  margin-top: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.emp-info-groups .employee-info-grid {
+  font-size: 0.85em;
+  color: var(--bs-secondary-color, #666);
+}
+
+.emp-info-groups .employee-info-grid>div>b {
+  font-weight: 600;
+  color: var(--bs-body-color, #2b2b2b);
+}
+
 .emp-photo-actions {
   display: flex;
   align-items: center;
@@ -437,13 +482,6 @@ body {
   display: flex;
   align-items: baseline;
   gap: 10px;
-}
-
-.emp-section-hint {
-  font-weight: 400;
-  font-size: 0.9em;
-  color: #9aa3b0;
-  letter-spacing: normal;
 }
 
 .emp-grid {
@@ -1229,11 +1267,10 @@ html.modal-scroll-lock body {
   overflow: hidden !important;
 }
 
-/* Employee sub-tab summary panel (work history / notifications tabs).
-   Fixed column count + single-line values means this panel's height never
-   changes based on whether the data is short, long, or empty ("—") —
-   it always wraps to the same number of rows, so the grid below it never
-   jumps down when switching between employees or tabs. */
+/* Employee main-tab summary panel, shown above the photo-change button —
+   grouped read-only info moved here from the "İş yerləri" / "Bildirişlər"
+   tabs. Fixed column count + single-line values means this panel's height
+   never changes based on whether the data is short, long, or empty ("—"). */
 .employee-info-grid {
   display: grid;
   gap: 6px 24px;
@@ -1246,19 +1283,11 @@ html.modal-scroll-lock body {
   text-overflow: ellipsis;
 }
 
-.employee-info-grid--7col {
-  grid-template-columns: repeat(4, minmax(140px, 1fr));
-}
-
 .employee-info-grid--3col {
   grid-template-columns: repeat(3, minmax(140px, 1fr));
 }
 
 @media (max-width: 760px) {
-  .employee-info-grid--7col {
-    grid-template-columns: repeat(2, minmax(140px, 1fr));
-  }
-
   .employee-info-grid--3col {
     grid-template-columns: repeat(1, minmax(140px, 1fr));
   }

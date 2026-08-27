@@ -56,13 +56,27 @@
     <label>{{ t('emp_full_name_label') }}</label>
     <input type="text" name="full_name" class="emp-name-input" value="{{ (employee.full_name or '') if employee else '' }}" required placeholder="{{ t('emp_full_name_placeholder') }}">
 
-    <div class="emp-profile-sub">
-      <span class="emp-status-badge {{ 'emp-status-badge--active' if (not employee or employee.is_active) else 'emp-status-badge--inactive' }}">
-        {{ t('emp_status_active') if (not employee or employee.is_active) else t('emp_status_inactive') }}
-      </span>
-      {% if employee and employee.position %}<span>{{ employee.position }}</span>{% endif %}
-      {% if employee and employee.department %}<span>{{ employee.department }}</span>{% endif %}
+    {% if employee %}
+    <div class="emp-info-groups">
+      <div class="employee-info-grid employee-info-grid--3col">
+        <div><b>{{ t('wh_status') }}:</b> {{ t('emp_status_active') if employee.is_active else t('emp_status_inactive') }}</div>
+        <div><b>{{ t('wh_current_department') }}:</b> {{ employee.department or '—' }}</div>
+        <div><b>{{ t('wh_current_position') }}:</b> {{ employee.position or '—' }}</div>
+
+        <div><b>{{ t('wh_hire_date') }}:</b> {{ employee.hire_date or '—' }}</div>
+        <div><b>{{ t('emp_termination_date') }}:</b> {{ employee.termination_date or '—' }}</div>
+        <div><b>{{ t('emp_salary') }}:</b> {{ employee.salary or '—' }}</div>
+
+        <div><b>{{ t('emp_contract_start_date') }}:</b> {{ employee.contract_start_date or '—' }}</div>
+        <div><b>{{ t('emp_contract_end_date') }}:</b> {{ employee.contract_end_date or '—' }}</div>
+        <div><b>{{ t('emp_remaining_vacation_days') }}:</b> {{ employee.remaining_vacation_days if employee.remaining_vacation_days is not none else '—' }}</div>
+
+        <div><b>{{ t('wh_total_experience') }}:</b> {{ employee.total_experience or '—' }}</div>
+        <div><b>{{ t('wh_company_experience') }}:</b> {{ employee.company_experience or '—' }}</div>
+        <div><b>{{ t('wh_other_experience') }}:</b> {{ employee.other_experience or '—' }}</div>
+      </div>
     </div>
+    {% endif %}
 
     {% if employee %}
     <div class="emp-photo-actions">
@@ -141,24 +155,6 @@
     <div><label>{{ t('emp_fin_code') }}</label><input type="text" name="fin_code" value="{{ (employee.fin_code or '') if employee else '' }}"></div>
     <div><label>{{ t('emp_id_card_number') }}</label><input type="text" name="id_card_number" value="{{ (employee.id_card_number or '') if employee else '' }}"></div>
     <div><label>{{ t('emp_social_insurance_number') }}</label><input type="text" name="social_insurance_number" value="{{ (employee.social_insurance_number or '') if employee else '' }}"></div>
-  </div>
-</div>
-
-<div class="emp-section">
-  <div class="emp-section-title">
-    {{ t('emp_section_work') }}
-    <span class="emp-section-hint">🔒 {{ t('emp_section_work_hint') }}</span>
-  </div>
-  <div class="emp-grid emp-grid--3col">
-    <div><label>{{ t('emp_hire_date') }} 🔒</label><input class="field-readonly" type="text" value="{{ (employee.hire_date or '') if employee else '' }}" disabled></div>
-    <div><label>{{ t('emp_termination_date') }} 🔒</label><input class="field-readonly" type="text" value="{{ (employee.termination_date or '') if employee else '' }}" disabled></div>
-    <div><label>{{ t('emp_remaining_vacation_days') }}</label><input type="number" name="remaining_vacation_days" value="{{ (employee.remaining_vacation_days or '') if employee else '' }}"></div>
-    <div><label>{{ t('emp_total_experience') }} 🔒</label><input class="field-readonly" type="text" value="{{ (employee.total_experience or '') if employee else '' }}" disabled></div>
-    <div><label>{{ t('emp_company_experience') }} 🔒</label><input class="field-readonly" type="text" value="{{ (employee.company_experience or '') if employee else '' }}" disabled></div>
-    <div><label>{{ t('emp_other_experience') }} 🔒</label><input class="field-readonly" type="text" value="{{ (employee.other_experience or '') if employee else '' }}" disabled></div>
-    <div><label>{{ t('emp_contract_start_date') }} 🔒</label><input class="field-readonly" type="text" value="{{ (employee.contract_start_date or '') if employee else '' }}" disabled></div>
-    <div><label>{{ t('emp_contract_end_date') }} 🔒</label><input class="field-readonly" type="text" value="{{ (employee.contract_end_date or '') if employee else '' }}" disabled></div>
-    <div><label>{{ t('emp_salary') }} 🔒</label><input class="field-readonly" type="text" value="{{ (employee.salary or '') if employee else '' }}" disabled></div>
   </div>
 </div>
 

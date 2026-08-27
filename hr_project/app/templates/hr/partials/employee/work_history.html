@@ -1,18 +1,5 @@
 <div class="employee-section">
 
-    <div class="card employee-info-panel" style="margin-bottom:16px;">
-        <div class="employee-info-grid employee-info-grid--7col">
-            <div><b>{{ t('wh_current_department') }}:</b> {{ employee.department or '—' }}</div>
-            <div><b>{{ t('wh_current_position') }}:</b> {{ employee.position or '—' }}</div>
-            <div><b>{{ t('wh_hire_date') }}:</b> {{ employee.hire_date or '—' }}</div>
-            <div><b>{{ t('wh_status') }}:</b> {{ t('emp_status_active') if employee.is_active else
-                t('emp_status_inactive') }}</div>
-            <div><b>{{ t('wh_total_experience') }}:</b> {{ employee.total_experience or '—' }}</div>
-            <div><b>{{ t('wh_company_experience') }}:</b> {{ employee.company_experience or '—' }}</div>
-            <div><b>{{ t('wh_other_experience') }}:</b> {{ employee.other_experience or '—' }}</div>
-        </div>
-    </div>
-
     <div class="toolbar">
         {% if current_user.has_perm('HR', 'can_add') %}
         <button type="button" id="addWorkHistoryBtn" class="btn">

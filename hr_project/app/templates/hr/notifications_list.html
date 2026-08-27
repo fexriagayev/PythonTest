@@ -14,14 +14,6 @@
   <a href="{{ url_for('hr.document_list', emp_id=employee.id) }}">{{ t('emp_tab_documents') }}</a>
 </div>
 
-<div class="card employee-info-panel" style="margin-bottom:16px;">
-  <div class="employee-info-grid employee-info-grid--3col">
-    <div><b>{{ t('notif_current_salary') }}:</b> {{ employee.salary or '—' }}</div>
-    <div><b>{{ t('notif_contract_start') }}:</b> {{ employee.contract_start_date or '—' }}</div>
-    <div><b>{{ t('notif_contract_end') }}:</b> {{ employee.contract_end_date or '—' }}</div>
-  </div>
-</div>
-
 <div class="toolbar">
   {% if current_user.has_perm('HR', 'can_add') %}
   <button type="button" id="addNotificationBtn" class="btn">+ {{ t('notif_form_title_add') }}</button>

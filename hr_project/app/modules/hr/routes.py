@@ -104,15 +104,15 @@ def _apply_form_to_employee(employee, form):
     employee.social_insurance_number = form.get("social_insurance_number", "").strip()
 
     # İş məlumatları — department/position/hire_date/termination_date/
-    # is_active/*_experience are NOT read here anymore: they are computed
-    # automatically from the employee's "İş yerləri" (əmək kitabçası)
-    # records. See app/services/hr_service.py.
+    # is_active/*_experience/remaining_vacation_days are NOT read here
+    # anymore: they are computed automatically from the employee's
+    # "İş yerləri" (əmək kitabçası) və "Məzuniyyət günləri" hesablamalarından.
+    # See app/services/hr_service.py.
     # salary / contract_start_date / contract_end_date are NOT read here —
     # they are computed from the employee's "Bildirişlər" records. See
     # app/services/hr_service.py:recompute_employee_contract_from_bildiris().
     if not employee.full_name:
         raise ValueError("Ad Soyad Ata adı mütləqdir")
-    employee.remaining_vacation_days = _parse_int(form.get("remaining_vacation_days"))
 
     # Əlaqə / digər
     employee.phone = form.get("phone", "").strip()
@@ -1445,6 +1445,7 @@ def add_leave_request(emp_id):
             note=request.form.get("note", "").strip(),
         )
         db.session.add(record)
+        recompute_employee_from_history(employee)
         db.session.commit()
         flash("İş buraxması əlavə olundu.", "success")
         return modal_redirect("hr.leave_requests", emp_id=employee.id)
@@ -1508,6 +1509,7 @@ def edit_leave_request(emp_id, record_id):
         record.end_date = end
         record.order_id = _parse_int(request.form.get("order_id"))
         record.note = request.form.get("note", "").strip()
+        recompute_employee_from_history(employee)
         db.session.commit()
         flash("İş buraxması yeniləndi.", "success")
         return modal_redirect("hr.leave_requests", emp_id=employee.id)
@@ -1526,10 +1528,12 @@ def edit_leave_request(emp_id, record_id):
 @permission_required(MODULE, "can_delete")
 @log_action(MODULE, "DELETE_LEAVE_REQUEST")
 def delete_leave_request(emp_id, record_id):
+    employee = Employee.query.get_or_404(emp_id)
     record = LeaveRequest.query.filter_by(
         id=record_id, employee_id=emp_id
     ).first_or_404()
     db.session.delete(record)
+    recompute_employee_from_history(employee)
     db.session.commit()
     if is_modal_request():
         return jsonify({"success": True})

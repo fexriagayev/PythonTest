@@ -201,6 +201,18 @@ def recompute_employee_from_history(employee):
     employee.other_experience = _format_experience(other_days)
     employee.total_experience = _format_experience(company_days + other_days)
 
+    # Qalan məzuniyyət günləri artıq əl ilə redaktə edilmir — "Məzuniyyət
+    # günləri" hesablamasından (əsas + əlavə qalıq) avtomatik götürülür.
+    # Local import to avoid a module-load-order cycle with leave_service,
+    # which itself imports from app.models.
+    from app.services.leave_service import get_leave_balance
+
+    if current_records:
+        balance = get_leave_balance(employee)
+        employee.remaining_vacation_days = balance["total"]
+    else:
+        employee.remaining_vacation_days = None
+
 
 def recompute_employee_contract_from_bildiris(employee):
     """

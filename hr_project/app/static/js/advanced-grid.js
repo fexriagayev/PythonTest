@@ -1143,6 +1143,44 @@ function createAdvancedGrid(elementId, baseKey, tabulatorOptions, meta) {
     });
   }
 
+  // A narrow "indicator" column pinned before everything else (VCL/Delphi
+  // DBGrid style) whose header holds nothing but the column-chooser
+  // trigger — replaces DevExtreme's own default toolbar button for this
+  // purpose (see onToolbarPreparing below, which hides that toolbar
+  // entirely). Body cells are intentionally left blank. Opt out per-grid
+  // with `meta.showColumnChooserCorner = false`.
+  if (meta.showColumnChooserCorner !== false) {
+    columns.unshift({
+      name: "columnChooserCorner",
+      caption: "",
+      width: 32,
+      allowSorting: false,
+      allowFiltering: false,
+      allowGrouping: false,
+      allowReordering: false,
+      allowResizing: false,
+      allowHiding: false,
+      allowExporting: false,
+      showInColumnChooser: false,
+      fixed: true,
+      fixedPosition: "left",
+      cssClass: "grid-corner-column",
+      headerCellTemplate: function (container, options) {
+        const $btn = $("<div>")
+          .addClass("dx-icon-column-chooser grid-column-chooser-corner-btn")
+          .attr("title", t("grid_column_chooser_title"))
+          .on("click", function (e) {
+            e.stopPropagation();
+            options.component.showColumnChooser();
+          });
+        container.append($btn);
+      },
+      cellTemplate: function () {
+        /* intentionally empty — indicator-style column, no per-row content */
+      }
+    });
+  }
+
   // Snapshot of the server-translated (current-language) default caption
   // per field, captured BEFORE any saved custom title is restored onto
   // the grid. Used to revert a column back to its default caption when
@@ -1246,6 +1284,16 @@ function createAdvancedGrid(elementId, baseKey, tabulatorOptions, meta) {
       search: {
         enabled: true
       }
+    },
+
+    // The built-in toolbar exists only to host DevExtreme's own
+    // auto-inserted column-chooser button. That button is replaced by our
+    // own corner button (see the "columnChooserCorner" column above), so
+    // the whole toolbar panel is hidden rather than left as empty space.
+    // `columnChooser.enabled` stays true above — it's what makes
+    // grid.showColumnChooser() work — this only hides the default toolbar.
+    onToolbarPreparing: function (e) {
+      e.toolbarOptions.visible = false;
     },
 
     sorting: {
