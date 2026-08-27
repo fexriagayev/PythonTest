@@ -7,15 +7,13 @@
   {% if current_user.has_perm('HR', 'can_add') %}
   <button type="button" id="addEmployeeBtn" class="btn">+ {{ t('add') }}</button>
   {% endif %}
-  <input type="text" id="searchBox" class="form-control" style="max-width:280px;" placeholder="{{ t('search_placeholder') }}">
+  <input type="text" id="searchBox" class="form-control" style="max-width:280px;"
+    placeholder="{{ t('search_placeholder') }}">
   <label style="display:inline-flex;align-items:center;gap:6px;margin-left:12px;font-size:0.9em;cursor:pointer;">
     <input type="checkbox" id="showInactiveToggle">
     {{ t('emp_show_inactive') }}
   </label>
 </div>
-<p style="color:#888;font-size:0.82em;margin-top:-6px;">
-  {{ t('emp_grid_hint_full') }}
-</p>
 
 <div id="employeeGrid"></div>
 
@@ -23,8 +21,9 @@
 
 {% block extra_scripts %}
 <script>
-document.addEventListener("DOMContentLoaded", function () {
-  const canEdit = {{ 'true' if current_user.has_perm('HR', 'can_edit') else 'false' }};
+  document.addEventListener("DOMContentLoaded", function () {
+    const canEdit = {{ 'true' if current_user.has_perm('HR', 'can_edit') else 'false'
+  }};
   const canDelete = {{ 'true' if current_user.has_perm('HR', 'can_delete') else 'false' }};
   const canAdd = {{ 'true' if current_user.has_perm('HR', 'can_add') else 'false' }};
 

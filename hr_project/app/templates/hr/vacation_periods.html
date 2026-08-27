@@ -14,18 +14,15 @@
   <a href="{{ url_for('hr.document_list', emp_id=employee.id) }}">{{ t('emp_tab_documents') }}</a>
 </div>
 
-<p style="color:#888;font-size:0.82em;margin-top:-6px;">
-  {{ t('vac_hint') }}
-</p>
-
 <div id="periodsGrid"></div>
 
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
-function initVacationPeriodsGrid() {
-  const canEdit = {{ 'true' if current_user.has_perm('HR', 'can_edit') else 'false' }};
+  function initVacationPeriodsGrid() {
+    const canEdit = {{ 'true' if current_user.has_perm('HR', 'can_edit') else 'false'
+  }};
   const empId = {{ employee.id }};
 
   const table = createAdvancedGrid("periodsGrid", "hr_vacation_periods", {
@@ -37,14 +34,13 @@ function initVacationPeriodsGrid() {
       { title: "{{ t('vac_col_period_end') }}", field: "period_end", sorter: "date" },
       { title: "{{ t('vac_col_category') }}", field: "category", headerFilter: "input" },
       { title: "{{ t('vac_col_category_days') }}", field: "category_days", sorter: "number" },
-      { title: "{{ t('vac_col_entitled_base') }}", field: "entitled_base", sorter: "number", bottomCalc: "sum" },
-      { title: "{{ t('vac_col_entitled_bonus') }}", field: "entitled_bonus", sorter: "number", bottomCalc: "sum" },
-      { title: "{{ t('vac_col_used_base') }}", field: "used_base", sorter: "number", bottomCalc: "sum" },
-      { title: "{{ t('vac_col_used_bonus') }}", field: "used_bonus", sorter: "number", bottomCalc: "sum" },
-      { title: "{{ t('vac_col_compensated_base') }}", field: "compensated_base", sorter: "number", bottomCalc: "sum" },
-      { title: "{{ t('vac_col_compensated_bonus') }}", field: "compensated_bonus", sorter: "number", bottomCalc: "sum" },
-      { title: "{{ t('vac_col_remaining_base') }}", field: "remaining_base", sorter: "number", bottomCalc: "sum" },
-      { title: "{{ t('vac_col_remaining_bonus') }}", field: "remaining_bonus", sorter: "number", bottomCalc: "sum" }
+      { title: "{{ t('vac_col_entitled_base') }}", field: "entitled_base", sorter: "number" },
+      { title: "{{ t('vac_col_entitled_bonus') }}", field: "entitled_bonus", sorter: "number" },
+      { title: "{{ t('vac_col_used_base') }}", field: "used_base", sorter: "number" },
+      { title: "{{ t('vac_col_used_bonus') }}", field: "used_bonus", sorter: "number" },
+      { title: "{{ t('vac_col_compensated_base') }}", field: "compensated_base", sorter: "number" },
+      { title: "{{ t('vac_col_remaining_base') }}", field: "remaining_base", sorter: "number" },
+      { title: "{{ t('vac_col_remaining_bonus') }}", field: "remaining_bonus", sorter: "number" }
     ]
   }, {
     height: "calc(100vh - 400px)",
@@ -66,6 +62,6 @@ function initVacationPeriodsGrid() {
     document.addEventListener("DOMContentLoaded", initVacationPeriodsGrid);
   } else {
     initVacationPeriodsGrid();
-}
+  }
 </script>
 {% endblock %}

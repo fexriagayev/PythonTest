@@ -212,7 +212,7 @@ def compute_leave_periods(employee):
       category_days (base_vacation_days of that category),
       entitled_base, entitled_bonus,
       used_base, used_bonus,
-      compensated_base, compensated_bonus,
+      compensated_base, 
       remaining_base, remaining_bonus
     """
     stints = get_employment_stints(employee)
@@ -260,11 +260,10 @@ def compute_leave_periods(employee):
 
                 comp = compensations.get(sub_start)
                 compensated_base = comp.compensated_base_days if comp else 0
-                compensated_bonus = comp.compensated_bonus_days if comp else 0
 
                 remaining_base = max(entitled_base - used_base - compensated_base, 0)
                 remaining_bonus = max(
-                    entitled_bonus - used_bonus - compensated_bonus, 0
+                    entitled_bonus - used_bonus, 0
                 )
 
                 rows.append(
@@ -283,7 +282,6 @@ def compute_leave_periods(employee):
                         "used_base": used_base,
                         "used_bonus": used_bonus,
                         "compensated_base": compensated_base,
-                        "compensated_bonus": compensated_bonus,
                         "remaining_base": remaining_base,
                         "remaining_bonus": remaining_bonus,
                     }

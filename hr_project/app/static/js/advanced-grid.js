@@ -358,9 +358,7 @@ function buildDevExtremeDataSource(options) {
 
   const params = options.ajaxParams || {};
 
-  return new DevExpress.data.CustomStore({
-    key: options.idField || "id",
-
+  const storeConfig = {
     load: function () {
       const query = new URLSearchParams(params).toString();
       const requestUrl = query ? url + "?" + query : url;
@@ -402,7 +400,20 @@ function buildDevExtremeDataSource(options) {
           return [];
         });
     }
-  });
+  };
+
+  // Only give the CustomStore a `key` when the page explicitly says its
+  // rows have one (idField). Some APIs return computed rows with no real
+  // identity at all — e.g. hr/vacation-periods/api/periods, whose rows are
+  // calculated on the fly and have no "id" — and defaulting to "id" there
+  // made DevExtreme require an "id" property that never existed, throwing
+  // E1046 ("The 'id' key field is not found in data objects"). Grids like
+  // that are read-only/non-selectable anyway, so no key is needed.
+  if (options.idField) {
+    storeConfig.key = options.idField;
+  }
+
+  return new DevExpress.data.CustomStore(storeConfig);
 }
 
 
@@ -1215,11 +1226,6 @@ function createAdvancedGrid(elementId, baseKey, tabulatorOptions, meta) {
   const options = {
     dataSource: dataSource,
 
-    keyExpr:
-      meta.idField ||
-      tabulatorOptions.idField ||
-      "id",
-
     // Fit the grid to the available viewport height on every page.
     // Pages with an explicit height still keep their requested height.
     width: "100%",
@@ -1267,9 +1273,7 @@ function createAdvancedGrid(elementId, baseKey, tabulatorOptions, meta) {
     },
 
     groupPanel: {
-      visible: true,
-      emptyPanelText:
-        t("grid_group_panel_empty")
+      visible: false
     },
 
     grouping: {
@@ -1416,6 +1420,15 @@ function createAdvancedGrid(elementId, baseKey, tabulatorOptions, meta) {
     }
 
   };
+
+  // Only tell the grid its rows have a `keyExpr` when the page explicitly
+  // gave us one. Not every grid's rows have a real identity (e.g. computed
+  // rows with no "id", like hr/vacation-periods) — defaulting to "id" there
+  // made DevExtreme demand an "id" property that never existed (E1046).
+  const idField = meta.idField || tabulatorOptions.idField;
+  if (idField) {
+    options.keyExpr = idField;
+  }
 
   const grid =
     $("#" + elementId)

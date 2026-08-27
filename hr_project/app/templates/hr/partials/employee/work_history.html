@@ -1,106 +1,101 @@
 <div class="employee-section">
 
-  <div class="card employee-info-panel" style="margin-bottom:16px;">
-    <div class="employee-info-grid employee-info-grid--7col">
-      <div><b>{{ t('wh_current_department') }}:</b> {{ employee.department or '—' }}</div>
-      <div><b>{{ t('wh_current_position') }}:</b> {{ employee.position or '—' }}</div>
-      <div><b>{{ t('wh_hire_date') }}:</b> {{ employee.hire_date or '—' }}</div>
-      <div><b>{{ t('wh_status') }}:</b> {{ t('emp_status_active') if employee.is_active else t('emp_status_inactive') }}</div>
-      <div><b>{{ t('wh_total_experience') }}:</b> {{ employee.total_experience or '—' }}</div>
-      <div><b>{{ t('wh_company_experience') }}:</b> {{ employee.company_experience or '—' }}</div>
-      <div><b>{{ t('wh_other_experience') }}:</b> {{ employee.other_experience or '—' }}</div>
+    <div class="card employee-info-panel" style="margin-bottom:16px;">
+        <div class="employee-info-grid employee-info-grid--7col">
+            <div><b>{{ t('wh_current_department') }}:</b> {{ employee.department or '—' }}</div>
+            <div><b>{{ t('wh_current_position') }}:</b> {{ employee.position or '—' }}</div>
+            <div><b>{{ t('wh_hire_date') }}:</b> {{ employee.hire_date or '—' }}</div>
+            <div><b>{{ t('wh_status') }}:</b> {{ t('emp_status_active') if employee.is_active else
+                t('emp_status_inactive') }}</div>
+            <div><b>{{ t('wh_total_experience') }}:</b> {{ employee.total_experience or '—' }}</div>
+            <div><b>{{ t('wh_company_experience') }}:</b> {{ employee.company_experience or '—' }}</div>
+            <div><b>{{ t('wh_other_experience') }}:</b> {{ employee.other_experience or '—' }}</div>
+        </div>
     </div>
-  </div>
 
-  <div class="toolbar">
-    {% if current_user.has_perm('HR', 'can_add') %}
-    <button
-      type="button"
-      id="addWorkHistoryBtn"
-      class="btn">
-      + {{ t('wh_new_record') }}
-    </button>
-    {% endif %}
-  </div>
+    <div class="toolbar">
+        {% if current_user.has_perm('HR', 'can_add') %}
+        <button type="button" id="addWorkHistoryBtn" class="btn">
+            + {{ t('wh_new_record') }}
+        </button>
+        {% endif %}
+    </div>
 
-  <p style="color:#888;font-size:0.82em;margin-top:-6px;">
-    {{ t('wh_hint') }}
-  </p>
-
-  <div id="employeeWorkHistoryGrid"></div>
+    <div id="employeeWorkHistoryGrid"></div>
 
 </div>
 
 <script>
-(function () {
-const canEdit =
-    {{ 'true' if current_user.has_perm('HR', 'can_edit') else 'false' }};
+    (function () {
+        const canEdit =
+            {{ 'true' if current_user.has_perm('HR', 'can_edit') else 'false'
+    }};
 
-const canDelete =
-    {{ 'true' if current_user.has_perm('HR', 'can_delete') else 'false' }};
+    const canDelete =
+        {{ 'true' if current_user.has_perm('HR', 'can_delete') else 'false' }};
 
-const canAdd =
-    {{ 'true' if current_user.has_perm('HR', 'can_add') else 'false' }};
+    const canAdd =
+        {{ 'true' if current_user.has_perm('HR', 'can_add') else 'false' }};
 
-const empId = {{ employee.id }};
+    const empId = {{ employee.id }};
 
-if (typeof createAdvancedGrid !== "function") {
-    console.error("{{ t('js_grid_not_found') }}");
-    return;
-}
-
-const table = createAdvancedGrid(
-    "employeeWorkHistoryGrid",
-    "hr_work_history",
-    {
-    ajaxURL: "/hr/" + empId + "/work-history/api/records",
-    layout: "fitColumns",
-    pagination: true,
-    paginationSize: 15,
-    placeholder: "{{ t('wh_no_data') }}",
-
-    columns: [
-        { title: "{{ t('wh_col_id') }}", field: "id", width: 60, sorter: "number" },
-        { title: "{{ t('wh_col_type') }}", field: "ticket", headerFilter: "input" },
-        { title: "{{ t('wh_col_movement_type') }}", field: "movement_type", headerFilter: "input" },
-        { title: "{{ t('wh_col_workplace') }}", field: "workplace", headerFilter: "input" },
-        { title: "{{ t('wh_col_position') }}", field: "position", headerFilter: "input" },
-        { title: "{{ t('wh_col_order') }}", field: "order", headerFilter: "input" },
-        { title: "{{ t('wh_col_date_from') }}", field: "date_from", sorter: "date", sortOrder: "asc", sortIndex: 0 },
-        { title: "{{ t('wh_col_note') }}", field: "note", headerFilter: "input" }
-    ]
-    },
-    {
-    idField: "id",
-
-    addUrl: canAdd
-        ? "/hr/" + empId + "/work-history/add"
-        : null,
-
-    editUrlTemplate: canEdit
-        ? "/hr/" + empId + "/work-history/edit/{id}"
-        : null,
-
-    deleteUrlTemplate: canDelete
-        ? "/hr/" + empId + "/work-history/delete/{id}"
-        : null,
-
-    height: "calc(100vh - 420px)"
+    if (typeof createAdvancedGrid !== "function") {
+        console.error("{{ t('js_grid_not_found') }}");
+        return;
     }
-);
 
-// NOTE: captures `table` directly instead of window.currentGridTable —
-// see the identical comment in hr/list.html for why. Without this, adding
-// a record here after another tab (or the outer employee list) has
-// already reassigned the global would silently refresh the wrong grid.
-const addBtn = document.getElementById("addWorkHistoryBtn");
-if (addBtn) {
-    addBtn.addEventListener("click", function () {
-        openFormModal(
-            "/hr/" + empId + "/work-history/add",
-            function () { table.setData(); }
-        );
-    });
-}
-})();
+    const table = createAdvancedGrid(
+        "employeeWorkHistoryGrid",
+        "hr_work_history",
+        {
+            ajaxURL: "/hr/" + empId + "/work-history/api/records",
+            layout: "fitColumns",
+            pagination: true,
+            paginationSize: 15,
+            placeholder: "{{ t('wh_no_data') }}",
+
+            columns: [
+                { title: "{{ t('wh_col_id') }}", field: "id", width: 60, sorter: "number" },
+                { title: "{{ t('wh_col_type') }}", field: "ticket", headerFilter: "input" },
+                { title: "{{ t('wh_col_movement_type') }}", field: "movement_type", headerFilter: "input" },
+                { title: "{{ t('wh_col_workplace') }}", field: "workplace", headerFilter: "input" },
+                { title: "{{ t('wh_col_position') }}", field: "position", headerFilter: "input" },
+                { title: "{{ t('wh_col_order') }}", field: "order", headerFilter: "input" },
+                { title: "{{ t('wh_col_date_from') }}", field: "date_from", sorter: "date", sortOrder: "asc", sortIndex: 0 },
+                { title: "{{ t('wh_col_note') }}", field: "note", headerFilter: "input" }
+            ]
+        },
+        {
+            idField: "id",
+
+            addUrl: canAdd
+                ? "/hr/" + empId + "/work-history/add"
+                : null,
+
+            editUrlTemplate: canEdit
+                ? "/hr/" + empId + "/work-history/edit/{id}"
+                : null,
+
+            deleteUrlTemplate: canDelete
+                ? "/hr/" + empId + "/work-history/delete/{id}"
+                : null,
+
+            height: "calc(100vh - 420px)"
+        }
+    );
+
+    // NOTE: captures `table` directly instead of window.currentGridTable —
+    // see the identical comment in hr/list.html for why. Without this, adding
+    // a record here after another tab (or the outer employee list) has
+    // already reassigned the global would silently refresh the wrong grid.
+    const addBtn = document.getElementById("addWorkHistoryBtn");
+    if (addBtn) {
+        addBtn.addEventListener("click", function () {
+            openFormModal(
+                "/hr/" + empId + "/work-history/add",
+                function () { table.setData(); }
+            );
+        });
+    }
+}) ();
 </script>

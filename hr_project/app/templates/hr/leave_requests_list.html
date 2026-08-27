@@ -19,9 +19,6 @@
   <button type="button" id="addLeaveRequestBtn" class="btn">+ {{ t('lr_new_record') }}</button>
   {% endif %}
 </div>
-<p style="color:#888;font-size:0.82em;margin-top:-6px;">
-  {{ t('lr_overlap_hint') }}
-</p>
 
 <div id="leaveGrid"></div>
 
@@ -29,8 +26,9 @@
 
 {% block extra_scripts %}
 <script>
-function initLeaveRequestsGrid() {
-  const canEdit = {{ 'true' if current_user.has_perm('HR', 'can_edit') else 'false' }};
+  function initLeaveRequestsGrid() {
+    const canEdit = {{ 'true' if current_user.has_perm('HR', 'can_edit') else 'false'
+  }};
   const canDelete = {{ 'true' if current_user.has_perm('HR', 'can_delete') else 'false' }};
   const canAdd = {{ 'true' if current_user.has_perm('HR', 'can_add') else 'false' }};
   const empId = {{ employee.id }};
@@ -72,6 +70,6 @@ function initLeaveRequestsGrid() {
     document.addEventListener("DOMContentLoaded", initLeaveRequestsGrid);
   } else {
     initLeaveRequestsGrid();
-}
+  }
 </script>
 {% endblock %}

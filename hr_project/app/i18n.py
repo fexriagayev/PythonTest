@@ -186,10 +186,6 @@ TRANSLATIONS = {
     "wh_company_experience": {"az": "Şirkətdə staj", "en": "Company Experience"},
     "wh_other_experience": {"az": "Digər staj", "en": "Other Experience"},
     "wh_new_record": {"az": "Yeni qeyd", "en": "New Record"},
-    "wh_hint": {
-        "az": "💡 Sütun başlığına sağ-klik: sıralama / footer. Sətirə sağ-klik: yeni / dəyiş / sil.",
-        "en": "💡 Right-click a column header: sort / footer. Right-click a row: new / edit / delete.",
-    },
     "wh_no_data": {
         "az": "Hələ iş yeri qeydi yoxdur",
         "en": "No employment records yet",
@@ -215,10 +211,6 @@ TRANSLATIONS = {
     "status_active": {"az": "Aktiv", "en": "Active"},
     "status_expiring_soon": {"az": "1 aydan az qalıb", "en": "Expires within a month"},
     "status_expired": {"az": "Müddəti bitib", "en": "Expired"},
-    "grid_row_hint": {
-        "az": "💡 Sütun başlığına sağ-klik: sıralama / footer. Sətirə sağ-klik: yeni / dəyiş / sil.",
-        "en": "💡 Right-click a column header: sort / footer. Right-click a row: new / edit / delete.",
-    },
     "new_record": {"az": "Yeni qeyd", "en": "New Record"},
     # --- Sənədlər (document_form.html / document_list.html) -----------------
     "doc_form_title_add": {"az": "Yeni sənəd", "en": "New Document"},
@@ -327,12 +319,6 @@ TRANSLATIONS = {
     "notif_current_salary": {"az": "Cari maaş", "en": "Current Salary"},
     "notif_contract_start": {"az": "Müqavilə başlama", "en": "Contract Start"},
     "notif_contract_end": {"az": "Müqavilə bitmə", "en": "Contract End"},
-    "notif_top_hint": {
-        "az": "💡 Yalnız dəyişən hissəni doldurmaq kifayətdir — qalan sahələr son bildirişdən avtomatik köçürülür. "
-        "Hər yeni bildirişdə Hissə 1 (nömrə, tarix, əmr) mütləq yenilənir.",
-        "en": "💡 It is enough to fill in only the part that changed — the remaining fields are carried over "
-        "automatically from the latest notification. Part 1 (number, date, order) is always updated for a new notification.",
-    },
     "notif_no_data": {"az": "Hələ bildiriş yoxdur", "en": "No notifications yet"},
     "notif_col_number": {"az": "Bildiriş №", "en": "Notification No."},
     "notif_col_start_date": {"az": "Başlama tarixi", "en": "Start Date"},
@@ -366,12 +352,6 @@ TRANSLATIONS = {
     "dict_label_labor_type": {"az": "əməyin növü", "en": "labor type"},
     # --- Məzuniyyət günləri (vacation_periods.html) --------------------------
     "vac_page_title": {"az": "Məzuniyyət günləri", "en": "Vacation Periods"},
-    "vac_hint": {
-        "az": "Bu siyahı avtomatik hesablanır (işə qəbul tarixindən başlayaraq hər iş ili üzrə) — birbaşa redaktə "
-        'edilmir. Yalnız "Kompensasiya" sütununda dəyər qeyd edə bilərsiniz.',
-        "en": "This list is calculated automatically (per work year starting from the hire date) — it cannot be "
-        'edited directly. You can only record a value in the "Compensation" column.',
-    },
     "vac_no_data": {
         "az": "Hələ məzuniyyət dövrü yoxdur (işə qəbul tarixi 'İş yerləri' bölməsindən qeyd olunmalıdır)",
         "en": "No vacation periods yet (the hire date must be entered in the 'Employment History' section)",
@@ -390,10 +370,6 @@ TRANSLATIONS = {
     "vac_col_compensated_base": {
         "az": "Kompensasiya (əsas)",
         "en": "Compensated (Base)",
-    },
-    "vac_col_compensated_bonus": {
-        "az": "Kompensasiya (əlavə)",
-        "en": "Compensated (Bonus)",
     },
     "vac_col_remaining_base": {"az": "Qalıq (əsas)", "en": "Remaining (Base)"},
     "vac_col_remaining_bonus": {"az": "Qalıq (əlavə)", "en": "Remaining (Bonus)"},
@@ -434,6 +410,10 @@ TRANSLATIONS = {
     "comp_hint": {
         "az": "💡 Kompensasiya yalnız əsas məzuniyyət günlərinə görə ödənilir.",
         "en": "💡 Compensation is only paid for base vacation days.",
+    },
+    "comp_max_hint": {
+        "az": "İstifadə edilməmiş əsas gün (kompensasiya edilə bilən maksimum)",
+        "en": "Unused base days (maximum compensable)",
     },
     "comp_field_days": {
         "az": "Kompensasiya ödənilmiş əsas gün sayı",
@@ -491,10 +471,6 @@ TRANSLATIONS = {
     # --- İş buraxmaları (leave_requests_list.html / leave_request_form.html) -
     "lr_page_title": {"az": "İş buraxmaları", "en": "Leave Requests"},
     "lr_new_record": {"az": "Yeni qeyd", "en": "New Record"},
-    "lr_overlap_hint": {
-        "az": "💡 Tarixlər kəsişə bilməz. Növbəti məzuniyyət seçəndə mövcud balans yoxlanılır.",
-        "en": "💡 Dates cannot overlap. When choosing annual leave, the available balance is checked.",
-    },
     "lr_no_data": {
         "az": "Hələ iş buraxması qeydi yoxdur",
         "en": "No leave requests yet",
@@ -681,10 +657,6 @@ TRANSLATIONS = {
         "az": "Axtar (bütün sahələr üzrə)...",
         "en": "Search (all fields)...",
     },
-    "salary_grid_hint": {
-        "az": "💡 Sütun başlığına sağ-klik: sıralama / footer (cəmi) / qrup footer / qruplaşdırma. Sətirə sağ-klik: yeni / dəyiş / sil.",
-        "en": "💡 Right-click a column header: sort / footer (total) / group footer / grouping. Right-click a row: new / edit / delete.",
-    },
     "salary_col_employee": {"az": "Əməkdaş", "en": "Employee"},
     "salary_col_period": {"az": "Dövr", "en": "Period"},
     "salary_col_base": {"az": "Baza", "en": "Base"},
@@ -693,10 +665,6 @@ TRANSLATIONS = {
     "salary_col_total": {"az": "Cəmi", "en": "Total"},
     # --- Tabel siyahısı (tabel/list.html) ---------------------------------------
     "tabel_page_title": {"az": "Tabellər", "en": "Timesheets"},
-    "tabel_grid_hint": {
-        "az": "💡 Sütun başlığına sağ-klik: sıralama / footer / qruplaşdırma. Sətirə sağ-klik: yeni / dəyiş / sil.",
-        "en": "💡 Right-click a column header: sort / footer / grouping. Right-click a row: new / edit / delete.",
-    },
     "tabel_col_employee": {"az": "Əməkdaş", "en": "Employee"},
     "tabel_col_date": {"az": "Tarix", "en": "Date"},
     "tabel_col_hours": {"az": "Saat", "en": "Hours"},
@@ -812,10 +780,6 @@ TRANSLATIONS = {
     "grid_row_refresh": {"az": "⟳ Yenilə", "en": "⟳ Refresh"},
     "grid_agg_none": {"az": "Heç biri", "en": "None"},
     "grid_column_chooser_title": {"az": "Sütunları seç", "en": "Select Columns"},
-    "grid_group_panel_empty": {
-        "az": "Qruplaşdırmaq üçün sütunu bura sürükləyin",
-        "en": "Drag a column here to group by it",
-    },
     "grid_no_data": {"az": "Məlumat yoxdur", "en": "No data"},
     # --- app.js (paylaşılan köməkçi funksiyalar) --------------------------------
     "quick_add_prompt": {"az": "Yeni {label} adı:", "en": "New {label} name:"},
@@ -882,13 +846,6 @@ TRANSLATIONS = {
         "en": "Server returned {status}",
     },
     "js_form_title_default": {"az": "Forma", "en": "Form"},
-    # --- Əməkdaşlar siyahısı əlavə hint (hr/list.html) ------------------------
-    "emp_grid_hint_full": {
-        "az": "💡 Sütun başlığına sağ-klik: sıralama / footer / qruplaşdırma. Sətirə sağ-klik: yeni / dəyiş / sil. "
-        "İlk sütundakı ☰ işarəsi — sütunları göstər/gizlət.",
-        "en": "💡 Right-click a column header: sort / footer / grouping. Right-click a row: new / edit / delete. "
-        "The ☰ icon on the first column shows/hides columns.",
-    },
 }
 
 

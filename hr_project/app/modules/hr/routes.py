@@ -1247,7 +1247,6 @@ def api_vacation_periods(emp_id):
             "used_base": p["used_base"],
             "used_bonus": p["used_bonus"],
             "compensated_base": p["compensated_base"],
-            "compensated_bonus": p["compensated_bonus"],
             "remaining_base": p["remaining_base"],
             "remaining_bonus": p["remaining_bonus"],
         }
@@ -1272,17 +1271,49 @@ def set_compensation(emp_id):
         employee_id=emp_id, period_start=period_start
     ).first()
 
+    # Kompensasiya yalnız İSTİFADƏ EDİLMƏMİŞ ƏSAS günlərə görə verilir.
+    # Bu tavan — entitled_base - used_base — hər
+    # dəfə compute_leave_periods-dən təzədən oxunur ki, İş buraxmaları və ya
+    # kateqoriya sonradan dəyişsə belə köhnəlmiş dəyər göstərilməsin/qəbul
+    # olunmasın.
+    period = next(
+        (
+            p
+            for p in compute_leave_periods(employee)
+            if p["period_start"] == period_start
+        ),
+        None,
+    )
+    max_compensable_base = (
+        max(period["entitled_base"] - period["used_base"], 0) if period else 0
+    )
+
     if request.method == "POST":
+        days = _parse_int(request.form.get("compensated_base_days")) or 0
+
+        if days < 0 or days > max_compensable_base:
+            flash(
+                "Kompensasiya günlərinin sayı 0 ilə {0} arasında olmalıdır "
+                "(kompensasiya yalnız istifadə edilməmiş əsas günlərə görə "
+                "verilir).".format(max_compensable_base),
+                "danger",
+            )
+            return render_form(
+                "hr/compensation_form.html",
+                employee=employee,
+                comp=comp,
+                period_start=period_start,
+                period_end=period_end,
+                max_compensable_base=max_compensable_base,
+            )
+
         if not comp:
             comp = VacationCompensation(
                 employee_id=emp_id, period_start=period_start, period_end=period_end
             )
             db.session.add(comp)
         comp.period_end = period_end
-        comp.compensated_base_days = (
-            _parse_int(request.form.get("compensated_base_days")) or 0
-        )
-        comp.compensated_bonus_days = 0  # compensation is only ever paid for base days
+        comp.compensated_base_days = days
         comp.note = request.form.get("note", "").strip()
         db.session.commit()
         flash("Kompensasiya qeyd olundu.", "success")
@@ -1294,6 +1325,7 @@ def set_compensation(emp_id):
         comp=comp,
         period_start=period_start,
         period_end=period_end,
+        max_compensable_base=max_compensable_base,
     )
 
 

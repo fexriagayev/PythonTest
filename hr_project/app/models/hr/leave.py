@@ -124,7 +124,6 @@ class VacationCompensation(db.Model):
     period_start = db.Column(db.Date, nullable=False)
     period_end = db.Column(db.Date, nullable=False)
     compensated_base_days = db.Column(db.Integer, default=0)
-    compensated_bonus_days = db.Column(db.Integer, default=0)
     note = db.Column(db.Text)
 
     employee = db.relationship(

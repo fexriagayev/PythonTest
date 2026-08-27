@@ -1,14 +1,18 @@
 {% extends "modal_form_base.html" %}
 {% set form_title = t('comp_form_title') ~ ' — ' ~ period_start|string ~ ' — ' ~ period_end|string %}
-{% set form_action = url_for('hr.set_compensation', emp_id=employee.id, period_start=period_start, period_end=period_end) %}
+{% set form_action = url_for('hr.set_compensation', emp_id=employee.id, period_start=period_start,
+period_end=period_end) %}
 {% set cancel_url = url_for('hr.vacation_periods', emp_id=employee.id) %}
 {% set form_max_width = '480px' %}
 
 {% block form_fields %}
-  <p style="color:#888;font-size:0.85em;">{{ t('comp_period_label') }}: <b>{{ period_start }}</b> — <b>{{ period_end }}</b></p>
-  <p style="color:#888;font-size:0.82em;">{{ t('comp_hint') }}</p>
-  <label>{{ t('comp_field_days') }}</label>
-  <input type="number" name="compensated_base_days" value="{{ comp.compensated_base_days if comp else 0 }}">
-  <label>{{ t('note_label') }}</label>
-  <textarea name="note" rows="3" style="width:100%;max-width:100%;">{{ comp.note if comp else '' }}</textarea>
+<p style="color:#888;font-size:0.85em;">{{ t('comp_period_label') }}: <b>{{ period_start }}</b> — <b>{{ period_end
+    }}</b></p>
+<p style="color:#888;font-size:0.82em;">{{ t('comp_hint') }}</p>
+<p style="color:#888;font-size:0.82em;">{{ t('comp_max_hint') }}: <b>{{ max_compensable_base }}</b></p>
+<label>{{ t('comp_field_days') }}</label>
+<input type="number" name="compensated_base_days" min="0" max="{{ max_compensable_base }}"
+  value="{{ comp.compensated_base_days if comp else 0 }}">
+<label>{{ t('note_label') }}</label>
+<textarea name="note" rows="3" style="width:100%;max-width:100%;">{{ comp.note if comp else '' }}</textarea>
 {% endblock %}

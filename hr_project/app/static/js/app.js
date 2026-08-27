@@ -1,4 +1,3 @@
-
 /**
  * Client-side translation lookup — mirrors the server's t(key) so JS
  * (modal.js, app.js, ...) doesn't hardcode its own copy of the same
@@ -52,7 +51,7 @@ function t(key, vars) {
           if (!headers.has("X-CSRFToken")) headers.set("X-CSRFToken", csrfToken());
           init.headers = headers;
         }
-      } catch (e) {}
+      } catch (e) { }
     }
     return nativeFetch(input, init);
   };
@@ -245,6 +244,7 @@ function reloadFormInPlace(reloadUrl) {
     })
     .then(function (html) {
       body.innerHTML = html;
+      if (typeof relocateModalFlash === "function") relocateModalFlash(body);
       if (typeof executeInjectedScripts === "function") executeInjectedScripts(body);
       if (typeof wireModalForm === "function") {
         wireModalForm(window.__currentModalSavedCallback);

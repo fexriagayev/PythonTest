@@ -122,6 +122,18 @@ function ensureModalRoot() {
       }
     ],
     contentTemplate: function (contentElement) {
+      // A single, fixed-position flash slot — ABOVE the scrollable modal
+      // body, so it's always in the exact same place regardless of which
+      // tab/subpage happens to be showing. Every place that loads new
+      // server-rendered HTML into the modal (see relocateModalFlash) pulls
+      // any embedded flash message(s) out of that HTML and puts ONLY the
+      // most recent one here, replacing whatever was shown before — this
+      // is what fixes flash messages appearing in a different spot each
+      // time, and more than one showing at once.
+      const flashSlot = document.createElement("div");
+      flashSlot.id = "modalFlashSlot";
+      contentElement.append(flashSlot);
+
       const body = document.createElement("div");
       body.id = "modalBody";
       body.className = "dx-modal-body";
@@ -132,6 +144,11 @@ function ensureModalRoot() {
 
       if (body) {
         body.innerHTML = "";
+      }
+
+      const flashSlot = document.getElementById("modalFlashSlot");
+      if (flashSlot) {
+        flashSlot.innerHTML = "";
       }
     }
   });
@@ -148,6 +165,52 @@ function getModalPopup() {
 function getModalBody() {
   ensureModalRoot();
   return document.getElementById("modalBody");
+}
+
+/* ---------------------------------------------------------------------------
+   Flash messages
+   ---------------------------------------------------------------------------
+   Every add/edit template still renders its own `.flash-wrap` (via
+   modal_layout.html / get_flashed_messages), because Flask's flash queue is
+   consumed by whichever request happens to render next — that could be the
+   main employee form reloading, a different sub-tab loading, etc. Left
+   in place, that meant the message showed up wherever that particular
+   fragment happened to land in the modal (above the tabs, inside a
+   sub-tab's own content, ...), and if more than one message was queued
+   they all rendered together.
+
+   This pulls any `.flash-wrap` back OUT of the just-loaded fragment and
+   shows only the LAST message in it, in the single fixed #modalFlashSlot
+   at the top of the modal — always the same place, never more than one at
+   once. Call this right after setting .innerHTML on any modal content
+   fetched from the server (see call sites in openFormModal, submitModalForm,
+   loadEmployeeModalTab below, and reloadFormInPlace in app.js).
+   --------------------------------------------------------------------------- */
+function relocateModalFlash(container) {
+  if (!container) return;
+
+  const slot = document.getElementById("modalFlashSlot");
+  const wraps = container.querySelectorAll(".flash-wrap");
+
+  let lastFlash = null;
+  wraps.forEach(function (wrap) {
+    const flashes = wrap.querySelectorAll(".flash");
+    if (flashes.length) {
+      lastFlash = flashes[flashes.length - 1];
+    }
+    wrap.remove();
+  });
+
+  if (!slot) return;
+
+  slot.innerHTML = "";
+
+  if (lastFlash) {
+    const newWrap = document.createElement("div");
+    newWrap.className = "flash-wrap";
+    newWrap.appendChild(lastFlash.cloneNode(true));
+    slot.appendChild(newWrap);
+  }
 }
 
 // Finds the Save toolbar button by its stable `name`, not by matching
@@ -185,6 +248,12 @@ function hideModal() {
   if (body) {
     body.innerHTML = "";
   }
+
+  const flashSlot = document.getElementById("modalFlashSlot");
+  if (flashSlot) {
+    flashSlot.innerHTML = "";
+  }
+
   modalStateStack.length = 0;
   window.__currentModalSavedCallback = null;
 }
@@ -538,6 +607,7 @@ function wireModalForm(onSavedCallback) {
               })
               .then(function (html) {
                 body.innerHTML = html;
+                relocateModalFlash(body);
 
                 const title = getModalTitleFromHtml(html);
                 popup.option("title", title || t("js_form_title_default"));
@@ -558,21 +628,22 @@ function wireModalForm(onSavedCallback) {
           }
 
           if (modalStateStack.length) {
-              const restored = restoreParentModal();
+            const restored = restoreParentModal();
 
-              if (restored && onSavedCallback) {
-                  onSavedCallback();
-              }
+            if (restored && onSavedCallback) {
+              onSavedCallback();
+            }
           } else {
-              hideModal();
+            hideModal();
 
-              if (onSavedCallback) {
-                  onSavedCallback();
-              }
-          } 
+            if (onSavedCallback) {
+              onSavedCallback();
+            }
+          }
 
         } else {
           body.innerHTML = data.html;
+          relocateModalFlash(body);
           executeInjectedScripts(body);
           wireModalForm(onSavedCallback);
         }
@@ -676,6 +747,7 @@ function openFormModal(url, onSavedCallback) {
     })
     .then(function (html) {
       body.innerHTML = html;
+      relocateModalFlash(body);
 
       const title = getModalTitleFromHtml(html);
       popup.option("title", title || "Forma");
@@ -799,15 +871,20 @@ function loadEmployeeModalTab(link) {
     })
     .then(function (html) {
       subpage.innerHTML = html;
+      relocateModalFlash(subpage);
 
       executeInjectedScripts(subpage);
     })
     .catch(function (error) {
-      subpage.innerHTML = `
-        <div class="flash flash-danger">
-          ${t("js_tab_load_error")}${error.message}
-        </div>
-      `;
+      subpage.innerHTML = "";
+
+      const slot = document.getElementById("modalFlashSlot");
+      if (slot) {
+        slot.innerHTML =
+          '<div class="flash-wrap"><div class="flash flash-danger">' +
+          t("js_tab_load_error") + error.message +
+          "</div></div>";
+      }
     });
 }
 
