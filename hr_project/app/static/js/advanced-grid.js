@@ -31,8 +31,7 @@ const AGG_LABELS = {
   avg: t("grid_agg_avg"),
   min: t("grid_agg_min"),
   max: t("grid_agg_max"),
-  count: t("grid_agg_count"),
-  count_distinct: t("grid_agg_count_distinct")
+  count: t("grid_agg_count")
 };
 
 function defaultGridSettings() {
@@ -120,9 +119,14 @@ function saveGridSettingsToServer(baseKey, settings) {
 }
 
 function aggregateOptionsForField(isNumericHint) {
+  // Only DevExtreme's own built-in summaryType values are offered here
+  // (sum/avg/min/max/count) — "fərqli say" (count_distinct) used to be
+  // listed too, but DevExtreme has no native distinct-count summary type,
+  // so picking it silently did nothing (see applySummaries, which always
+  // ignored it). Removed rather than faked with custom aggregation.
   return isNumericHint
     ? ["sum", "avg", "min", "max", "count"]
-    : ["count", "count_distinct"];
+    : ["count"];
 }
 
 
@@ -418,14 +422,25 @@ function applySummaries(grid, settings) {
   const totalItems = [];
   const groupItems = [];
 
+  // Sıra nömrəsi sütunu — sabit "name" ilə (dataField-i yoxdur, çünki
+  // hesablanan sırasal dəyərdir, real data sahəsi deyil), bax:
+  // createAdvancedGrid-də columns.unshift({ name: "rowNumber", ... }).
+  const rowNumberColumn = grid
+    .getVisibleColumns()
+    .find(function (c) { return c && c.name === "rowNumber"; });
+
   const firstColumn = grid
     .getVisibleColumns()
-    .find(c => c && c.dataField);
+    .find(function (c) { return c && c.dataField; });
 
   if (settings.showFooter !== false) {
     Object.keys(settings.footerCalc || {}).forEach(function (field) {
       const type = settings.footerCalc[field];
 
+      // "count_distinct" ola bilər ki, köhnə saxlanmış grid tənzimləmə-
+      // lərində hələ də qalıb (bax: aggregateOptionsForField) — artıq
+      // seçim kimi təklif olunmur, amma mövcud saxlanmış dəyər DevExtreme-ə
+      // ötürülməsin deyə bu qoruma saxlanılır.
       if (!type || type === "count_distinct") {
         return;
       }
@@ -458,41 +473,46 @@ function applySummaries(grid, settings) {
     });
   }
 
-  // Footer həmişə görünsün
-  if (settings.showFooter !== false && totalItems.length === 0) {
-    const firstColumn = grid.getVisibleColumns().find(
-      c => c && c.dataField
-    );
-
-    if (firstColumn) {
-      totalItems.push({
-        column: firstColumn.dataField,
-        summaryType: "count",
-        customizeText: function () {
-          return "\u00A0";
-        }
-      });
-    }
+  // Sıra nömrəsi sütununun footer-i həmişə ümumi sətir sayını göstərir —
+  // istifadəçinin seçimindən asılı olmayan, DevExtreme-in öz standart
+  // "count" summary tipi ilə (əlavə seçilmiş aqreqatların yanında).
+  if (settings.showFooter !== false && rowNumberColumn) {
+    totalItems.push({
+      column: rowNumberColumn.name,
+      summaryType: "count",
+      displayFormat: "{0}"
+    });
+  } else if (settings.showFooter !== false && totalItems.length === 0 && firstColumn) {
+    // Sıra nömrəsi sütunu olmayan grid-lərdə (meta.showRowNumber=false)
+    // footer sətrini yenə də görünən saxlamaq üçün boş "yer tutan" —
+    // heç bir aqreqat seçilməyibsə.
+    totalItems.push({
+      column: firstColumn.dataField,
+      summaryType: "count",
+      customizeText: function () {
+        return "\u00A0";
+      }
+    });
   }
 
-  if (settings.showGroupFooter !== false) {
-    const firstColumn = grid.getVisibleColumns().find(
-      function (c) {
-        return c && c.dataField;
+  if (settings.showGroupFooter !== false && rowNumberColumn) {
+    groupItems.push({
+      column: rowNumberColumn.name,
+      summaryType: "count",
+      showInGroupFooter: true,
+      alignByColumn: true,
+      displayFormat: "{0}"
+    });
+  } else if (settings.showGroupFooter !== false && groupItems.length === 0 && firstColumn) {
+    groupItems.push({
+      column: firstColumn.dataField,
+      summaryType: "count",
+      showInGroupFooter: true,
+      alignByColumn: true,
+      customizeText: function () {
+        return "\u00A0";
       }
-    );
-
-    if (firstColumn && groupItems.length === 0) {
-      groupItems.push({
-        column: firstColumn.dataField,
-        summaryType: "count",
-        showInGroupFooter: true,
-        alignByColumn: true,
-        customizeText: function () {
-          return "\u00A0";
-        }
-      });
-    }
+    });
   }
 
   grid.option("summary", {
@@ -501,31 +521,7 @@ function applySummaries(grid, settings) {
     recalculateWhileEditing: false
   });
 
-  const hasFooterItems = totalItems.length > 0;
-  const hasGroupItems = groupItems.length > 0;
-
   grid.option("showColumnLines", true);
-
-  if (!hasFooterItems && firstColumn) {
-    totalItems.push({
-      column: firstColumn.dataField,
-      summaryType: "custom",
-      customizeText: function () {
-        return " ";
-      }
-    });
-  }
-
-  if (!hasGroupItems && firstColumn) {
-    groupItems.push({
-      column: firstColumn.dataField,
-      summaryType: "custom",
-      showInGroupFooter: true,
-      customizeText: function () {
-        return " ";
-      }
-    });
-  }
 }
 
 /* ---------------------------------------------------------------------------
@@ -1104,6 +1100,7 @@ function createAdvancedGrid(elementId, baseKey, tabulatorOptions, meta) {
   // per-grid with `meta.showRowNumber = false`.
   if (meta.showRowNumber !== false) {
     columns.unshift({
+      name: "rowNumber",
       caption: t("grid_row_number"),
       width: 50,
       alignment: "center",

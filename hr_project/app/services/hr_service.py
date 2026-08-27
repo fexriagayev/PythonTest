@@ -50,9 +50,15 @@ def _record_days(record, end_date, employee_is_active, employee_termination_date
     return max(delta, 0)
 
 
-def get_last_current_company_record(employee_id, exclude_id=None, before_date=None):
-    """Returns the most recent (by date_from) CURRENT-COMPANY EmploymentRecord
-    for this employee, or None if there isn't one yet.
+def get_last_current_company_record(
+    employee_id, exclude_id=None, before_date=None, is_current=True
+):
+    """Returns the most recent (by date_from) EmploymentRecord of the given
+    type (CURRENT-COMPANY by default, or KƏNAR/external when
+    `is_current=False`) for this employee, or None if there isn't one yet.
+    The "cari şirkət" and "kənar şirkət" chains are tracked independently —
+    each has its own hire/transfer/termination sequence (see
+    _allowed_movement_types in app.modules.hr.routes).
 
     `before_date`, when given, restricts the search to records that start
     STRICTLY BEFORE that date — i.e. it finds the record that immediately
@@ -66,10 +72,10 @@ def get_last_current_company_record(employee_id, exclude_id=None, before_date=No
 
     Used both to validate the allowed "Hərəkət növü" for a new/edited record
     (see _validate_work_history_form) and to auto-fill the struktur/vəzifə
-    shown for a "İşdən çıxma" record (which has no struktur/vəzifə of its
-    own)."""
+    (or, for kənar records, the şirkət/struktur/vəzifə) shown for a
+    "İşdən çıxma" record (which has no struktur/vəzifə of its own)."""
     query = EmploymentRecord.query.filter_by(
-        employee_id=employee_id, is_current_company=True
+        employee_id=employee_id, is_current_company=is_current
     )
     if exclude_id is not None:
         query = query.filter(EmploymentRecord.id != exclude_id)
@@ -91,7 +97,9 @@ def compute_chain_end_dates(employee_id, records=None):
       - A "İşdən çıxma" record is a point-in-time event: its own end is
         always its own date_from, regardless of what follows (this is what
         allows a later "İşə qəbul" to start after a gap, instead of being
-        forced to begin the very next day).
+        forced to begin the very next day). This applies to BOTH cari
+        şirkət and kənar şirkət terminations — each type's chain closes
+        independently on its own "İşdən çıxma".
       - Any other record (hire, transfer, kənar iş yeri) ends the day before
         the NEXT record (by date_from) starts — i.e. it automatically
         "closes" as soon as the next one begins.
@@ -116,7 +124,7 @@ def compute_chain_end_dates(employee_id, records=None):
 
     ends = {}
     for i, record in enumerate(records):
-        if record.is_current_company and record.movement_type == "termination":
+        if record.movement_type == "termination":
             ends[record.id] = record.date_from
         elif i + 1 < len(records):
             ends[record.id] = records[i + 1].date_from - timedelta(days=1)

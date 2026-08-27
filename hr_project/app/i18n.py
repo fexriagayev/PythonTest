@@ -20,11 +20,11 @@ TRANSLATIONS = {
     "edit": {"az": "Dəyiş", "en": "Edit"},
     "delete": {"az": "Sil", "en": "Delete"},
     "save": {"az": "Yadda saxla", "en": "Save"},
-    "cancel": {"az": "Ləğv et", "en": "Cancel"},
+    "cancel": {"az": "İmtina", "en": "Cancel"},
     "actions": {"az": "Əməliyyatlar", "en": "Actions"},
     # --- Əməkdaş modulu: siyahı (hr/list.html) ------------------------------
     "emp_list_title": {"az": "Əməkdaşların siyahısı", "en": "Employee List"},
-    "emp_col_full_name": {"az": "Ad Soyad Ata adı", "en": "Full Name"},
+    "emp_col_full_name": {"az": "S.A.A.", "en": "Full Name"},
     "emp_col_gender": {"az": "Cinsi", "en": "Gender"},
     "emp_col_department": {"az": "Şöbə", "en": "Department"},
     "emp_col_position": {"az": "Vəzifə", "en": "Position"},
@@ -37,14 +37,14 @@ TRANSLATIONS = {
     # --- Əməkdaş modulu: forma (hr/form.html) -------------------------------
     "emp_form_title_add": {"az": "Yeni əməkdaş", "en": "New Employee"},
     "emp_form_title_edit": {"az": "Əməkdaşı dəyiş", "en": "Edit Employee"},
-    "emp_full_name_label": {"az": "Ad Soyad Ata adı", "en": "Full Name"},
+    "emp_full_name_label": {"az": "S.A.A.", "en": "Full Name"},
     "emp_full_name_placeholder": {
         "az": "Məmmədov Anar Elşad oğlu",
         "en": "John A. Smith",
     },
     "emp_status_active": {"az": "Aktiv", "en": "Active"},
     "emp_status_inactive": {"az": "İşdən çıxıb", "en": "Terminated"},
-    "emp_photo_change": {"az": "Şəkil dəyiş", "en": "Change photo"},
+    "emp_photo_change": {"az": "Şəkli dəyiş", "en": "Change photo"},
     "emp_photo_delete": {"az": "Şəkli sil", "en": "Delete photo"},
     "emp_photo_none": {"az": "Şəkil yoxdur", "en": "No photo"},
     "emp_photo_hint_before_save": {
@@ -775,7 +775,6 @@ TRANSLATIONS = {
     "grid_agg_min": {"az": "Min", "en": "Min"},
     "grid_agg_max": {"az": "Maks", "en": "Max"},
     "grid_agg_count": {"az": "Say", "en": "Count"},
-    "grid_agg_count_distinct": {"az": "Fərqli say", "en": "Distinct Count"},
     "grid_best_fit_column": {
         "az": "Bu sütunu ən uyğun ölçüyə gətir",
         "en": "Best-fit this column",

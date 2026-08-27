@@ -1,3 +1,4 @@
+
 {% extends "modal_form_base.html" %}
 {% set form_title = t('wh_form_title_edit') if record else t('wh_form_title_add') %}
 {% set form_employee_name = employee.full_name %}
@@ -21,7 +22,7 @@
     <select name="movement_type" id="movementTypeSelect">
       {% for code, label in movement_labels.items() %}
       {% if code in allowed_movement_types %}
-      <option value="{{ code }}" {{ 'selected' if record and record.movement_type==code }}>{{ label }}</option>
+      <option value="{{ code }}" {{ 'selected' if record and record.is_current_company and record.movement_type==code }}>{{ label }}</option>
       {% endif %}
       {% endfor %}
     </select>
@@ -63,6 +64,15 @@
 
   <!-- ============== KƏNAR İŞ YERİ bölməsi ============== -->
   <div id="externalSection">
+    <label>{{ t('wh_field_movement_type') }}</label>
+    <select name="movement_type" id="movementTypeSelectExternal">
+      {% for code, label in movement_labels.items() %}
+      {% if code in allowed_movement_types_external %}
+      <option value="{{ code }}" {{ 'selected' if record and not record.is_current_company and record.movement_type==code }}>{{ label }}</option>
+      {% endif %}
+      {% endfor %}
+    </select>
+
     <label>{{ t('wh_field_external_company') }}</label>
     <input type="text" name="external_company_name" value="{{ record.external_company_name if record else '' }}">
 
@@ -95,10 +105,14 @@
   const externalSection = document.getElementById("externalSection");
   const isCurrentCheckbox = document.getElementById("isCurrentCheckbox");
   const movementSelect = document.getElementById("movementTypeSelect");
+  const movementSelectExternal = document.getElementById("movementTypeSelectExternal");
   const departmentSelect = document.getElementById("departmentSelect");
   const positionSelect = document.getElementById("positionSelect");
   const departmentQuickAddBtn = document.getElementById("departmentQuickAddBtn");
   const positionQuickAddBtn = document.getElementById("positionQuickAddBtn");
+  const externalCompanyInput = document.querySelector('input[name="external_company_name"]');
+  const externalDepartmentInput = document.querySelector('input[name="external_department"]');
+  const externalPositionInput = document.querySelector('input[name="external_position"]');
 
   // Last known cari-şirkət struktur/vəzifə — written directly INTO the
   // department/position selects (not shown as separate hint text) once
@@ -108,6 +122,13 @@
   // <option value="..."> strings, so the id must match as a string too.
   const lastDepartmentId = "{{ last_department_id or '' }}";
   const lastPositionId = "{{ last_position_id or '' }}";
+
+  // Same idea for the kənar şirkət chain's "İşdən çıxma" — these are free
+  // text fields (not dictionary-driven), so the last known values are
+  // written straight in as plain strings.
+  const lastExternalCompanyName = {{ (last_external_company_name or '') | tojson }};
+  const lastExternalDepartment = {{ (last_external_department or '') | tojson }};
+  const lastExternalPosition = {{ (last_external_position or '') | tojson }};
 
   // modal.js (and app-wide dx-ui.js) replace every plain <select>/
   // <input type=checkbox>/<button> with its own DevExtreme widget the
@@ -149,12 +170,20 @@
     currentSection.style.display = isCurrent ? "" : "none";
     externalSection.style.display = isCurrent ? "none" : "";
 
-    externalSection.querySelectorAll("input").forEach(function (el) { setFieldDisabled(el, isCurrent); });
+    // Whichever section is hidden must also be fully disabled — both
+    // sections share some field `name`s (e.g. "movement_type"), and a
+    // disabled field is excluded from form submission, so only the
+    // active section's values ever reach the server.
+    currentSection.querySelectorAll("input, select").forEach(function (el) { setFieldDisabled(el, !isCurrent); });
+    externalSection.querySelectorAll("input, select").forEach(function (el) { setFieldDisabled(el, isCurrent); });
 
-    const isTermination = isCurrent && movementSelect && movementSelect.value === "termination";
+    const isTermination = isCurrent
+      ? (movementSelect && movementSelect.value === "termination")
+      : (movementSelectExternal && movementSelectExternal.value === "termination");
+
+    // --- Cari şirkət: struktur/vəzifə "İşdən çıxma"da avtomatik dolur ----
     const deptPosDisabled = !isCurrent || isTermination;
-
-    if (isTermination) {
+    if (isCurrent && isTermination) {
       setFieldValue(departmentSelect, lastDepartmentId);
       setFieldValue(positionSelect, lastPositionId);
     }
@@ -162,10 +191,23 @@
     setFieldDisabled(positionSelect, deptPosDisabled);
     setButtonDisabled(departmentQuickAddBtn, deptPosDisabled);
     setButtonDisabled(positionQuickAddBtn, deptPosDisabled);
+
+    // --- Kənar şirkət: şirkət/struktur/vəzifə "İşdən çıxma"da avtomatik
+    // dolur — eyni qayda, sadəcə sərbəst mətn sahələri üzərində --------
+    const externalFieldsDisabled = isCurrent || isTermination;
+    if (!isCurrent && isTermination) {
+      setFieldValue(externalCompanyInput, lastExternalCompanyName);
+      setFieldValue(externalDepartmentInput, lastExternalDepartment);
+      setFieldValue(externalPositionInput, lastExternalPosition);
+    }
+    setFieldDisabled(externalCompanyInput, externalFieldsDisabled);
+    setFieldDisabled(externalDepartmentInput, externalFieldsDisabled);
+    setFieldDisabled(externalPositionInput, externalFieldsDisabled);
   }
 
   isCurrentCheckbox.addEventListener("change", refresh);
   if (movementSelect) movementSelect.addEventListener("change", refresh);
+  if (movementSelectExternal) movementSelectExternal.addEventListener("change", refresh);
 
   // Run once immediately (fields are still plain HTML at this point —
   // this script runs before modal.js's upgradeModalForm()), then once
