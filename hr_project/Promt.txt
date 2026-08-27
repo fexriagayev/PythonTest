@@ -1,0 +1,23 @@
+-əməkdaş modal formasında aşağıdakı hissələr ləğv olunsun:
+	* İş məlumatları🔒 qıfıllı sahələr "İş yerləri" / "Bildirişlər" bölmələrindən avtomatik hesablanır
+	* İşə başlama tarixi 🔒
+	* İşdən çıxma tarixi 🔒
+	* Qalan məzuniyyət günü
+	* Ümumi staj 🔒
+	* Şirkətdə staj 🔒
+	* Digər iş yerlərində staj 🔒
+	* Müqavilənin başlama tarixi 🔒
+	* Müqavilənin bitmə tarixi 🔒
+	* Maaş 🔒
+	* Şəkli Dəyiş Buton-nun üstündəki sətirdə olan sattus və son iş yeri məlumatları
+
+-iş yerləri tab-da aşağıdakı hissələr ləğv edilsin və köçürülsün əməkdaş tabında Şəkli Dəyiş Buton-nun üstündəki sətrə köçürülsün  (məlumatların qruplaşdırılması şərtilə)
+-əlavə olaraq həmin sətrə aşağıdakı məlumatlar da əlavə olunsun (məlumatların qruplaşdırılması şərtilə):
+ 	* İşdən çıxma tarixi 🔒
+	* Qalan məzuniyyət günü
+	* Müqavilənin başlama tarixi 🔒
+	* Müqavilənin bitmə tarixi 🔒
+	* Maaş 🔒
+-Modal pəncərə yalnız əməkdaşın əsas məlumatı dəyişdikdə flash mesaj verir, digər alt məlumatlar dəyişən zaman vermir - amma olmalıdır.
+-məzunuyyət günləri siyahısında griddə Kompensasiya (əlavə gün) sütunu ləğv olunmalıdır. və hər yerdə bu nəzərə alınmalıdır (son versiyada mən özüm bunu etmişəm, yoxlamaq və ehtiyac varsa düzəliş etmək lazımdır).
+-mən bir çox hint-ləri silmişəm, bunu yoxlamaq və harda səhv varsa bunu düzəlmək lazımdır.
