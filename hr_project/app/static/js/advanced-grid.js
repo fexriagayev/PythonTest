@@ -1020,7 +1020,16 @@ function buildFooterMenuItems(
     targetStore = settings.footerCalc;
   }
 
+  // "Rəqəmdir?" — əvvəlcə sütunun öz DevExtreme dataType-ına baxılır (bu,
+  // `sorter: "number"`-dən avtomatik təyin olunur, bax:
+  // convertColumnsToDevExtreme), sonra köhnə/əlavə `meta.numericFields`
+  // siyahısına. Yalnız numericFields-ə güvənmək səhv idi: səhifə həmin
+  // sahəni orada sadalamağı unudarsa (necə ki vacation_periods.html-də
+  // olub), sütun `sorter: "number"` ilə düzgün konfiqurasiya olunsa belə,
+  // footer context menyusunda "Cəmi/Orta/Min/Max" heç vaxt görünmürdü —
+  // yalnız "Say"/"Yoxdur" göstərilirdi.
   const isNumeric =
+    (e.column && e.column.dataType === "number") ||
     numericFields.indexOf(field) !== -1;
 
   const aggOptions =
@@ -1636,11 +1645,34 @@ function createAdvancedGrid(elementId, baseKey, tabulatorOptions, meta) {
     applyingLoadedSettings = true;
 
     try {
+      // A page's own column-level defaults (e.g. `bottomCalc: "sum"` on a
+      // "gün" column) are pre-populated into settings.footerCalc/groupCalc
+      // above, BEFORE this runs. But defaultGridSettings() resets both back
+      // to `{}`, and this always runs (even the very first time the grid
+      // loads, when the server has no saved preferences yet for this
+      // baseKey) — so without this guard, the page's own sum/avg/etc.
+      // defaults were silently wiped out on every load and never actually
+      // appeared in the footer. Once the user has explicitly saved footer
+      // preferences server-side (even an intentionally-empty {}, e.g.
+      // after clearing every aggregate), THOSE are respected in full and
+      // the page-level defaults are no longer reapplied.
+      const hasSavedFooterCalc = !!(loaded && loaded.footerCalc);
+      const hasSavedGroupCalc = !!(loaded && loaded.groupCalc);
+      const initialFooterCalc = Object.assign({}, settings.footerCalc);
+      const initialGroupCalc = Object.assign({}, settings.groupCalc);
+
       Object.assign(
         settings,
         defaultGridSettings(),
         loaded || {}
       );
+
+      if (!hasSavedFooterCalc) {
+        settings.footerCalc = initialFooterCalc;
+      }
+      if (!hasSavedGroupCalc) {
+        settings.groupCalc = initialGroupCalc;
+      }
 
       if (settings.devExtremeState) {
         grid.state(
