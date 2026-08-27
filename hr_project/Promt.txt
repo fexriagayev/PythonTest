@@ -21,3 +21,6 @@
 -Modal pəncərə yalnız əməkdaşın əsas məlumatı dəyişdikdə flash mesaj verir, digər alt məlumatlar dəyişən zaman vermir - amma olmalıdır.
 -məzunuyyət günləri siyahısında griddə Kompensasiya (əlavə gün) sütunu ləğv olunmalıdır. və hər yerdə bu nəzərə alınmalıdır (son versiyada mən özüm bunu etmişəm, yoxlamaq və ehtiyac varsa düzəliş etmək lazımdır).
 -mən bir çox hint-ləri silmişəm, bunu yoxlamaq və harda səhv varsa bunu düzəlmək lazımdır.
+-növbəti məzuniyyət daxil edərkən gün sayı xanasında məhdudiyyət olmalıdır (istifadə olunmamış əsas və əlavə günlərin sayı üzrə, əgər əməkdaşın toplam 10 gün istifadə olunmamış günü varsa max 10 olmalıdır). 
+Növbəti məzuniyyət daxil edildikdə əgər istifadəçinin köhnə dövrlər üzrə istifadə edilməmiş günləri varsa dövr köhnədən təzəyə doğru olmaqla və hər dövr üzrə əvvəlcə əlavə günlər, 
+sora əsas günlər istifadə olunmaqla məzuniyyət günləri siyahısı yenilənməlidir. 
