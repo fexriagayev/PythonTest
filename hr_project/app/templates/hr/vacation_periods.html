@@ -27,7 +27,8 @@
 
   const table = createAdvancedGrid("periodsGrid", "hr_vacation_periods", {
     ajaxURL: "/hr/" + empId + "/vacation-periods/api/periods",
-    pagination: false,
+    pagination: true,
+    paginationSize: 15,
     placeholder: "{{ t('vac_no_data') }}",
     columns: [
       { title: "{{ t('vac_col_period_start') }}", field: "period_start", sorter: "date" },

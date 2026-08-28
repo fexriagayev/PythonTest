@@ -1208,6 +1208,15 @@ table.simple-table th {
   max-width: 420px;
 }
 
+/* Unlike .dx-modal-editor-wrapper (selects/dropdowns, intentionally
+   capped narrower), a textarea's host wrapper must stretch the full
+   width of whatever grid cell/section it's in — e.g. the employee form's
+   "Qeyd" field spans the full modal width. */
+.dx-modal-textarea-wrapper,
+.dx-global-textarea-wrapper {
+  width: 100%;
+}
+
 .dx-modal-form .dx-textarea {
   margin-bottom: 8px;
 }

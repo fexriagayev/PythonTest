@@ -546,8 +546,38 @@ function upgradeDate(field) {
 function upgradeTextArea(field) {
   if (field.__dxEditor) return;
 
-  $(field).dxTextArea({
+  // NOT `$(field).dxTextArea(...)` directly on the real <textarea> — see
+  // the identical comment on upgradeSelect's wrapper/host pattern above.
+  // A <textarea>'s content model is text-only (RCDATA): the HTML parser
+  // stops at the very first literal "</textarea>" it sees, with no
+  // concept of nested tags. DevExtreme's widget structure (a
+  // ".dx-texteditor-container" wrapping its OWN inner <textarea>) was
+  // being built as real DOM children of the ORIGINAL <textarea> node —
+  // fine as long as nothing ever re-parses it from a string, but this
+  // app's modal-tab navigation caches/restores `body.innerHTML` on
+  // exactly this DOM (see modalStateStack.push/openEmployeeModalTab).
+  // Serializing that structure back to a string, then reparsing it via
+  // `innerHTML = ...`, hits the RCDATA rule above: the parser treats the
+  // *inner* widget's own "</textarea>" as the OUTER textarea's closing
+  // tag, so everything in between (including further nested markup) gets
+  // swallowed as literal text into the outer textarea's value — and each
+  // further tab switch re-serializes and re-escapes that text one layer
+  // deeper, producing runaway nested "&lt;div..." content in the saved
+  // note. Keeping the widget in a separate host <div> — never inside the
+  // <textarea> itself — makes this structurally impossible.
+  const wrapper = document.createElement("div");
+  wrapper.className = "dx-modal-textarea-wrapper";
+  field.parentNode.insertBefore(wrapper, field);
+  wrapper.appendChild(field);
+
+  field.style.display = "none";
+
+  const editorHost = document.createElement("div");
+  wrapper.appendChild(editorHost);
+
+  $(editorHost).dxTextArea({
     value: field.value || "",
+    width: "100%",
     minHeight: Math.max(80, Number(field.rows || 3) * 26),
     autoResizeEnabled: true,
     stylingMode: "outlined",
@@ -556,7 +586,7 @@ function upgradeTextArea(field) {
     }
   });
 
-  field.__dxEditor = $(field).dxTextArea("instance");
+  field.__dxEditor = $(editorHost).dxTextArea("instance");
 }
 
 function upgradeRadioGroup(form) {

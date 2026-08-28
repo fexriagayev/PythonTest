@@ -43,6 +43,7 @@
 {% endblock %}
 
 {% block form_fields %}
+<div class="dx-modal-form-single-col">
 <div class="emp-profile-header">
   <div class="emp-photo-box emp-photo-box--sm">
     {% if employee and employee.photo_path %}
@@ -165,6 +166,7 @@
 <div class="emp-section">
   <div class="emp-section-title">{{ t('emp_section_note') }}</div>
   <textarea name="note" rows="3" class="emp-note">{{ (employee.note or '') if employee else '' }}</textarea>
+</div>
 </div>
 {% endblock %}
 
