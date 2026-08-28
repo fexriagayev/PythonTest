@@ -59,7 +59,6 @@ function initSalaryCardGrid() {
     addUrl: canAdd ? "/hr/" + empId + "/salary-cards/add" : null,
     editUrlTemplate: canEdit ? "/hr/" + empId + "/salary-cards/edit/{id}" : null,
     deleteUrlTemplate: canDelete ? "/hr/" + empId + "/salary-cards/delete/{id}" : null,
-    height: "calc(100vh - 340px)",
   });
 
   // NOTE: captures `table` directly instead of window.currentGridTable

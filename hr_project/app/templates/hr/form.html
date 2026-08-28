@@ -95,7 +95,6 @@
 </div>
 
 <div class="emp-section">
-  <div class="emp-section-title">{{ t('emp_section_personal') }}</div>
   <div class="emp-grid emp-grid--3col">
     <div><label>{{ t('emp_birth_date') }}</label><input type="date" name="birth_date" value="{{ (employee.birth_date or '') if employee else '' }}"></div>
     <div>
@@ -122,6 +121,9 @@
         <button type="button" class="btn btn-secondary" onclick="quickAddDictionaryItem('HR', 'family_status', 'familyStatusSelect', '{{ t('dict_label_family_status') }}')">+</button>
       </div>
     </div>
+  </div>
+
+  <div class="emp-grid emp-grid--3col">
     <div>
       <label>{{ t('emp_benefit') }}</label>
       <div class="dict-select-row">
@@ -147,19 +149,13 @@
       </div>
     </div>
   </div>
-</div>
 
-<div class="emp-section">
-  <div class="emp-section-title">{{ t('emp_section_document') }}</div>
   <div class="emp-grid emp-grid--3col">
     <div><label>{{ t('emp_fin_code') }}</label><input type="text" name="fin_code" value="{{ (employee.fin_code or '') if employee else '' }}"></div>
     <div><label>{{ t('emp_id_card_number') }}</label><input type="text" name="id_card_number" value="{{ (employee.id_card_number or '') if employee else '' }}"></div>
     <div><label>{{ t('emp_social_insurance_number') }}</label><input type="text" name="social_insurance_number" value="{{ (employee.social_insurance_number or '') if employee else '' }}"></div>
   </div>
-</div>
 
-<div class="emp-section">
-  <div class="emp-section-title">{{ t('emp_section_contact') }}</div>
   <div class="emp-grid emp-grid--3col">
     <div><label>{{ t('emp_phone') }}</label><input type="text" name="phone" value="{{ (employee.phone or '') if employee else '' }}"></div>
     <div><label>{{ t('emp_email') }}</label><input type="email" name="email" value="{{ (employee.email or '') if employee else '' }}"></div>

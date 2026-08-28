@@ -51,9 +51,6 @@ TRANSLATIONS = {
         "az": "Şəkil əməkdaşı yadda saxladıqdan sonra əlavə edilə bilər",
         "en": "The photo can be added after the employee is first saved",
     },
-    "emp_section_personal": {"az": "Şəxsi məlumatlar", "en": "Personal Information"},
-    "emp_section_document": {"az": "Sənəd məlumatları", "en": "Document Information"},
-    "emp_section_contact": {"az": "Əlaqə", "en": "Contact"},
     "emp_section_note": {"az": "Qeyd", "en": "Note"},
     "emp_birth_date": {"az": "Doğum tarixi", "en": "Date of Birth"},
     "emp_gender": {"az": "Cinsi", "en": "Gender"},
@@ -89,6 +86,8 @@ TRANSLATIONS = {
     # --- JS: modal sistemi (modal.js) ---------------------------------------
     "js_close": {"az": "Bağla", "en": "Close"},
     "js_save": {"az": "Yadda saxla", "en": "Save"},
+    "js_maximize": {"az": "Böyüt", "en": "Maximize"},
+    "js_restore": {"az": "Bərpa et", "en": "Restore"},
     "js_saving": {"az": "Yadda saxlanılır...", "en": "Saving..."},
     "js_form_load_error": {
         "az": "Formanı yadda saxlamaq mümkün olmadı: ",

@@ -62,7 +62,6 @@ function initInsuranceGrid() {
     editUrlTemplate: canEdit ? "/hr/" + empId + "/insurance/edit/{id}" : null,
     deleteUrlTemplate: canDelete ? "/hr/" + empId + "/insurance/delete/{id}" : null,
     numericFields: ["amount"],
-    height: "calc(100vh - 340px)",
   });
 
   // NOTE: captures `table` directly instead of window.currentGridTable

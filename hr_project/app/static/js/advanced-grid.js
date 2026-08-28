@@ -1088,6 +1088,31 @@ function buildFooterMenuItems(
    Main grid factory
    =========================================================================== */
 
+// Structural columns createAdvancedGrid always adds itself (row number,
+// column-chooser corner) — not real data fields, not user-reorderable
+// (allowReordering: false), and always meant to sit at fixed positions 0
+// and 1. A grid's PERSISTED devExtremeState (saved before one of these
+// columns existed, or before the other was added) can still carry a
+// visibleIndex for one of them but not the other, which — once restored —
+// puts them in whatever order the stale saved data implies instead of
+// their intended fixed order. Stripping their entries out of any state
+// before it's applied leaves them exactly where their column definition
+// already puts them (see the two `columns.unshift(...)` calls below),
+// regardless of what was saved in the past.
+var SYSTEM_COLUMN_NAMES = ["rowNumber", "columnChooserCorner"];
+
+function stripSystemColumnsFromState(state) {
+  if (!state || !Array.isArray(state.columns)) {
+    return state;
+  }
+
+  state.columns = state.columns.filter(function (col) {
+    return !col || !col.name || SYSTEM_COLUMN_NAMES.indexOf(col.name) === -1;
+  });
+
+  return state;
+}
+
 function createAdvancedGrid(elementId, baseKey, tabulatorOptions, meta) {
   meta = meta || {};
   tabulatorOptions = tabulatorOptions || {};
@@ -1737,7 +1762,7 @@ function createAdvancedGrid(elementId, baseKey, tabulatorOptions, meta) {
 
       if (settings.devExtremeState) {
         grid.state(
-          settings.devExtremeState
+          stripSystemColumnsFromState(settings.devExtremeState)
         );
       } else if (
         Object.keys(settings.columnWidths || {}).length ||
