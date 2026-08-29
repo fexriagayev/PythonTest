@@ -118,6 +118,7 @@
 
     $(host).dxTextArea({
       value: field.value || "",
+      width: "100%",
       minHeight: Math.max(80, Number(field.rows || 3) * 26),
       autoResizeEnabled: true,
       stylingMode: "outlined",
