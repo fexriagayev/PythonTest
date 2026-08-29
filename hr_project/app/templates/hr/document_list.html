@@ -47,7 +47,6 @@ function initDocumentGrid() {
     idField: "id",
     addUrl: canAdd ? "/hr/" + empId + "/documents/add" : null,
     deleteUrlTemplate: canDelete ? "/hr/" + empId + "/documents/delete/{id}" : null,
-    height: "calc(100vh - 340px)",
     extraRowActions: function (data) {
       return [
         { label: t("doc_action_view"), action: function () { window.open("/hr/" + empId + "/documents/" + data.id + "/view", "_blank"); } },

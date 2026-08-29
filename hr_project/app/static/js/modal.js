@@ -8,6 +8,28 @@
    - Forms use a shared responsive layout defined by modal_form_base.html.
    =========================================================================== */
 
+// Plain "\u25A1" / "\u2750" glyph characters render blank in some fonts —
+// most reliably reproducible on narrower viewports / specific OS font
+// substitution, which is exactly where it went unnoticed during testing.
+// Inline SVG data URIs render identically everywhere, independent of
+// whatever font happens to be active.
+function svgDataUri(svg) {
+  return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+}
+
+const MODAL_MAXIMIZE_ICON = svgDataUri(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16">' +
+    '<rect x="4" y="4" width="16" height="16" fill="none" stroke="#5b6472" stroke-width="2"/>' +
+    "</svg>"
+);
+
+const MODAL_RESTORE_ICON = svgDataUri(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="16" height="16">' +
+    '<rect x="7" y="3" width="14" height="14" fill="none" stroke="#5b6472" stroke-width="2"/>' +
+    '<rect x="3" y="7" width="14" height="14" fill="#fff" stroke="#5b6472" stroke-width="2"/>' +
+    "</svg>"
+);
+
 function ensureModalRoot() {
   let root = document.getElementById("appModal");
   if (root && root.__dxPopup) return root;
@@ -20,6 +42,36 @@ function ensureModalRoot() {
   root.id = "appModal";
   document.body.appendChild(root);
 
+  // Normal-size geometry, kept here (not just inline in the dxPopup config
+  // below) so toggleModalMaximize() can restore back to these exact values.
+  const NORMAL_GEOMETRY = {
+    width: "min(960px, 94vw)",
+    height: "auto",
+    maxHeight: "92vh",
+    position: {
+      my: "top",
+      at: "top",
+      of: window,
+      offset: "0 32"
+    }
+  };
+
+  const MAXIMIZED_GEOMETRY = {
+    width: "100vw",
+    height: "100vh",
+    maxHeight: "100vh",
+    position: {
+      my: "top",
+      at: "top",
+      of: window,
+      offset: "0 0"
+    }
+  };
+
+  root.__modalNormalGeometry = NORMAL_GEOMETRY;
+  root.__modalMaximizedGeometry = MAXIMIZED_GEOMETRY;
+  root.__isMaximized = false;
+
   $(root).dxPopup({
     visible: false,
     deferRendering: false,
@@ -28,19 +80,14 @@ function ensureModalRoot() {
     showCloseButton: false,
     resizeEnabled: true,
     shading: true,
-    width: "min(960px, 94vw)",
-    height: "auto",
-    maxHeight: "92vh",
+    width: NORMAL_GEOMETRY.width,
+    height: NORMAL_GEOMETRY.height,
+    maxHeight: NORMAL_GEOMETRY.maxHeight,
     // Anchored near the top instead of the default vertical centering.
     // Centering recalculates (and visibly jumps) every time the content
     // height changes — e.g. switching employee tabs. Anchoring the top
     // edge keeps it fixed; only the bottom edge grows/shrinks.
-    position: {
-      my: "top",
-      at: "top",
-      of: window,
-      offset: "0 32"
-    },
+    position: NORMAL_GEOMETRY.position,
     showTitle: true,
     title: "Forma",
     // The dark "shading" only visually blocks the background — it does
@@ -55,6 +102,26 @@ function ensureModalRoot() {
       document.documentElement.classList.remove("modal-scroll-lock");
     },
     toolbarItems: [
+      // Maximize / restore toggle. Defined before "titleClose" below so it
+      // renders to its left (top-toolbar "after" items lay out in the
+      // order they're declared, ending flush with the right edge).
+      {
+        name: "maximizeToggle",
+        toolbar: "top",
+        location: "after",
+        widget: "dxButton",
+        options: {
+          icon: MODAL_MAXIMIZE_ICON,
+          stylingMode: "text",
+          hint: t("js_maximize"),
+          onInitialized: function (e) {
+            root.__maximizeButton = e.component;
+          },
+          onClick: function () {
+            toggleModalMaximize();
+          }
+        }
+      },
       // Custom title-bar close ("X"). DevExtreme's own built-in
       // showCloseButton icon always hides the popup outright and its
       // onHiding event is NOT cancelable for dxPopup, so there was no
@@ -158,6 +225,53 @@ function ensureModalRoot() {
   return root;
 }
 
+// Toggles the shared modal between its normal size (see NORMAL_GEOMETRY in
+// ensureModalRoot) and a full-viewport size (MAXIMIZED_GEOMETRY). Called
+// from the corner toolbar button (see MODAL_MAXIMIZE_ICON /
+// MODAL_RESTORE_ICON above), but exposed on window so it could also be
+// triggered elsewhere (e.g. a keyboard shortcut) later.
+function toggleModalMaximize() {
+  const root = document.getElementById("appModal");
+  if (!root || !root.__dxPopup) return;
+
+  const goingToMaximized = !root.__isMaximized;
+  const geometry = goingToMaximized
+    ? root.__modalMaximizedGeometry
+    : root.__modalNormalGeometry;
+
+  root.__dxPopup.option({
+    width: geometry.width,
+    height: geometry.height,
+    maxHeight: geometry.maxHeight,
+    position: geometry.position
+  });
+
+  root.__isMaximized = goingToMaximized;
+
+  if (root.__maximizeButton) {
+    root.__maximizeButton.option({
+      icon: goingToMaximized ? MODAL_RESTORE_ICON : MODAL_MAXIMIZE_ICON,
+      hint: goingToMaximized ? t("js_restore") : t("js_maximize")
+    });
+  }
+
+  // Any DevExtreme grid inside the modal (work history, vacation periods,
+  // leave requests, ...) sizes its own height once, up front, from
+  // `window.innerHeight - <grid's top offset> - 16` (see advanced-grid.js,
+  // computeInitialHeight/resizeHandler) — it does NOT know the popup
+  // itself just changed size, because nothing about the browser window
+  // changed. Firing a synthetic "resize" re-runs that same calculation
+  // (grid's top offset is different now that the popup is maximized/
+  // restored), which is what makes the grid fill the popup's new height
+  // instead of leaving empty space below it ("Align = client"). The
+  // popup's geometry change above is applied synchronously (no
+  // animation), but a tick's delay lets the browser finish reflowing the
+  // new layout before the grid measures its new top offset.
+  window.setTimeout(function () {
+    window.dispatchEvent(new Event("resize"));
+  }, 50);
+}
+
 function getModalPopup() {
   return ensureModalRoot().__dxPopup;
 }
@@ -235,6 +349,15 @@ function hideModal() {
   const root = document.getElementById("appModal");
   if (root && root.__dxPopup) {
     root.__dxPopup.hide();
+
+    // Always leave the shared popup at its normal size for the *next*
+    // completely fresh openFormModal() call — maximize/restore is only
+    // meant to persist for the lifetime of the current modal session
+    // (including any nested sub-forms pushed onto modalStateStack while
+    // it's open), not carry over once the whole thing has been closed.
+    if (root.__isMaximized) {
+      toggleModalMaximize();
+    }
   }
 
   // Full close (not "back to parent tab/form"): clear out this session's
@@ -423,7 +546,36 @@ function upgradeDate(field) {
 function upgradeTextArea(field) {
   if (field.__dxEditor) return;
 
-  $(field).dxTextArea({
+  // NOT `$(field).dxTextArea(...)` directly on the real <textarea> — see
+  // the identical comment on upgradeSelect's wrapper/host pattern above.
+  // A <textarea>'s content model is text-only (RCDATA): the HTML parser
+  // stops at the very first literal "</textarea>" it sees, with no
+  // concept of nested tags. DevExtreme's widget structure (a
+  // ".dx-texteditor-container" wrapping its OWN inner <textarea>) was
+  // being built as real DOM children of the ORIGINAL <textarea> node —
+  // fine as long as nothing ever re-parses it from a string, but this
+  // app's modal-tab navigation caches/restores `body.innerHTML` on
+  // exactly this DOM (see modalStateStack.push/openEmployeeModalTab).
+  // Serializing that structure back to a string, then reparsing it via
+  // `innerHTML = ...`, hits the RCDATA rule above: the parser treats the
+  // *inner* widget's own "</textarea>" as the OUTER textarea's closing
+  // tag, so everything in between (including further nested markup) gets
+  // swallowed as literal text into the outer textarea's value — and each
+  // further tab switch re-serializes and re-escapes that text one layer
+  // deeper, producing runaway nested "&lt;div..." content in the saved
+  // note. Keeping the widget in a separate host <div> — never inside the
+  // <textarea> itself — makes this structurally impossible.
+  const wrapper = document.createElement("div");
+  wrapper.className = "dx-modal-textarea-wrapper";
+  field.parentNode.insertBefore(wrapper, field);
+  wrapper.appendChild(field);
+
+  field.style.display = "none";
+
+  const editorHost = document.createElement("div");
+  wrapper.appendChild(editorHost);
+
+  $(editorHost).dxTextArea({
     value: field.value || "",
     minHeight: Math.max(80, Number(field.rows || 3) * 26),
     autoResizeEnabled: true,
@@ -433,7 +585,7 @@ function upgradeTextArea(field) {
     }
   });
 
-  field.__dxEditor = $(field).dxTextArea("instance");
+  field.__dxEditor = $(editorHost).dxTextArea("instance");
 }
 
 function upgradeRadioGroup(form) {

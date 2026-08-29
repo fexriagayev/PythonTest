@@ -98,7 +98,25 @@
 
   function upgradeTextArea(field) {
     if (!field || field.__dxGlobalEditor || field.disabled) return;
-    $(field).dxTextArea({
+
+    // See the matching, more detailed comment in modal.js's upgradeTextArea
+    // — DevExtreme's widget markup must live in a separate host <div>,
+    // never inside the real <textarea> itself, or any later
+    // innerHTML round-trip of this DOM corrupts the field's value (a
+    // <textarea>'s content model is text-only, so a nested "</textarea>"
+    // from the widget's own internal structure gets misread as the
+    // outer one's closing tag).
+    const wrapper = document.createElement("div");
+    wrapper.className = "dx-global-textarea-wrapper";
+    field.parentNode.insertBefore(wrapper, field);
+    wrapper.appendChild(field);
+
+    field.style.display = "none";
+
+    const host = document.createElement("div");
+    wrapper.appendChild(host);
+
+    $(host).dxTextArea({
       value: field.value || "",
       minHeight: Math.max(80, Number(field.rows || 3) * 26),
       autoResizeEnabled: true,

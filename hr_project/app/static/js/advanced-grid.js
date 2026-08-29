@@ -1088,6 +1088,31 @@ function buildFooterMenuItems(
    Main grid factory
    =========================================================================== */
 
+// Structural columns createAdvancedGrid always adds itself (row number,
+// column-chooser corner) — not real data fields, not user-reorderable
+// (allowReordering: false), and always meant to sit at fixed positions 0
+// and 1. A grid's PERSISTED devExtremeState (saved before one of these
+// columns existed, or before the other was added) can still carry a
+// visibleIndex for one of them but not the other, which — once restored —
+// puts them in whatever order the stale saved data implies instead of
+// their intended fixed order. Stripping their entries out of any state
+// before it's applied leaves them exactly where their column definition
+// already puts them (see the two `columns.unshift(...)` calls below),
+// regardless of what was saved in the past.
+var SYSTEM_COLUMN_NAMES = ["rowNumber", "columnChooserCorner"];
+
+function stripSystemColumnsFromState(state) {
+  if (!state || !Array.isArray(state.columns)) {
+    return state;
+  }
+
+  state.columns = state.columns.filter(function (col) {
+    return !col || !col.name || SYSTEM_COLUMN_NAMES.indexOf(col.name) === -1;
+  });
+
+  return state;
+}
+
 function createAdvancedGrid(elementId, baseKey, tabulatorOptions, meta) {
   meta = meta || {};
   tabulatorOptions = tabulatorOptions || {};
@@ -1249,6 +1274,25 @@ function createAdvancedGrid(elementId, baseKey, tabulatorOptions, meta) {
   // Instead we compute a static height up front, and keep it in sync only
   // on actual window resizes via `resizeHandler` below (using grid.option()),
   // which does not carry the same repaint-on-any-DOM-change behavior.
+  //
+  // "Available bottom" is NOT always the browser window's bottom edge: a
+  // grid rendered inside one of the employee sub-tabs lives inside the
+  // shared modal's `.dx-popup-content` (scrollable area above the
+  // popup's own fixed "Yadda saxla / Ləğv et" bottom toolbar). Sizing
+  // against `window.innerHeight` there ignores that toolbar entirely and
+  // lets the grid grow tall enough to render underneath it. When the grid
+  // element has a `.dx-popup-content` ancestor, that ancestor's own
+  // bottom edge — which DevExtreme already keeps clear of its bottom
+  // toolbar — is the real limit; otherwise (a standalone, non-modal page)
+  // the browser window's bottom edge is correct, as before.
+  function availableBottom(el) {
+    var popupContent = el.closest ? el.closest(".dx-popup-content") : null;
+    if (popupContent) {
+      return popupContent.getBoundingClientRect().bottom;
+    }
+    return window.innerHeight;
+  }
+
   function computeInitialHeight() {
     if (meta.height || tabulatorOptions.height) {
       return meta.height || tabulatorOptions.height;
@@ -1258,7 +1302,7 @@ function createAdvancedGrid(elementId, baseKey, tabulatorOptions, meta) {
     if (!el) return Math.max(300, window.innerHeight - 280);
 
     var top = el.getBoundingClientRect().top;
-    return Math.max(300, Math.floor(window.innerHeight - top - 16));
+    return Math.max(300, Math.floor(availableBottom(el) - top - 16));
   }
 
   const options = {
@@ -1737,7 +1781,7 @@ function createAdvancedGrid(elementId, baseKey, tabulatorOptions, meta) {
 
       if (settings.devExtremeState) {
         grid.state(
-          settings.devExtremeState
+          stripSystemColumnsFromState(settings.devExtremeState)
         );
       } else if (
         Object.keys(settings.columnWidths || {}).length ||
@@ -1852,7 +1896,7 @@ function createAdvancedGrid(elementId, baseKey, tabulatorOptions, meta) {
       if (!el) return;
 
       var top = el.getBoundingClientRect().top;
-      var newHeight = Math.max(300, Math.floor(window.innerHeight - top - 16));
+      var newHeight = Math.max(300, Math.floor(availableBottom(el) - top - 16));
       grid.option("height", newHeight);
       grid.updateDimensions();
     } catch (err) {

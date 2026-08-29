@@ -1208,6 +1208,15 @@ table.simple-table th {
   max-width: 420px;
 }
 
+/* Unlike .dx-modal-editor-wrapper (selects/dropdowns, intentionally
+   capped narrower), a textarea's host wrapper must stretch the full
+   width of whatever grid cell/section it's in — e.g. the employee form's
+   "Qeyd" field spans the full modal width. */
+.dx-modal-textarea-wrapper,
+.dx-global-textarea-wrapper {
+  width: 100%;
+}
+
 .dx-modal-form .dx-textarea {
   margin-bottom: 8px;
 }
@@ -1347,6 +1356,21 @@ html.modal-scroll-lock body {
 .simple-form .dx-selectbox,
 .simple-form .dx-textarea {
   max-width: 420px;
+}
+
+/* The employee edit form's <form> carries BOTH "simple-form" (generic
+   compact-input styling, above) AND "dx-modal-form" classes at once.
+   Same specificity, so normally whichever rule comes later in the file
+   would silently win — which was this 420px cap, quietly overriding the
+   modal form's own "make my textarea full width" rule further up
+   (.dx-modal-form .dx-textarea { width: 100% }) and capping the "Qeyd"
+   field's DevExtreme widget at 420px regardless. A textarea, unlike a
+   single-line input/select, should stretch to the full row it's given —
+   so within a modal form specifically, this explicitly wins back over
+   the generic cap above. */
+.dx-modal-form .dx-textarea {
+  max-width: none;
+  width: 100%;
 }
 
 .simple-form .dx-selectbox {
