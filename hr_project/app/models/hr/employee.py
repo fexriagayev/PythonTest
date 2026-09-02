@@ -57,11 +57,17 @@ class Employee(db.Model):
 
     is_active = db.Column(db.Boolean, default=True)
 
-    documents = db.relationship(
-        "Document",
-        back_populates="employee",
-        cascade="all, delete-orphan",
-    )
+    @property
+    def documents(self):
+        """'Sənədlər' attached to this employee — Document is no longer a
+        plain FK relationship (it's the generic, polymorphic system shared
+        with other modules like Tabel), so this is a plain query instead of
+        db.relationship(). See app/models/system/document.py."""
+        from app.models.system.document import Document
+
+        return Document.query.filter_by(
+            owner_type="employee", owner_id=self.id
+        ).all()
 
     educations = db.relationship(
         "EmployeeEducation", back_populates="employee", cascade="all, delete-orphan"

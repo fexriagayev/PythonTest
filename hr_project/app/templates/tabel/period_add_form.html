@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}{{ t('tabel_period_form_title') }}{% endblock %}
+{% block page_title %}{{ t('tabel_period_form_title') }}{% endblock %}
+{% block content %}
+
+<form method="post" action="{{ url_for('tabel.add_period') }}" class="simple-form" style="max-width:360px;">
+  <label>{{ t('tabel_field_month') }}</label>
+  <select name="month" required>
+    {% for i in range(1, 13) %}
+    <option value="{{ i }}" {{ 'selected' if i == default_month }}>{{ month_names[i - 1] }}</option>
+    {% endfor %}
+  </select>
+
+  <label>{{ t('tabel_field_year') }}</label>
+  <input type="number" name="year" value="{{ default_year }}" min="2000" max="2100" required>
+
+  <div class="actions" style="margin-top:16px;">
+    <button type="submit" class="btn">{{ t('save') }}</button>
+    <a href="{{ url_for('tabel.list_periods') }}" class="btn btn-secondary">{{ t('cancel') }}</a>
+  </div>
+</form>
+
+{% endblock %}

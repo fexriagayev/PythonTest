@@ -1,0 +1,42 @@
+{#
+  Generic 'Sənədlər' panel — embed this in ANY page that needs a documents
+  tab, e.g.:
+
+    {% include "partials/documents_panel.html" with context %}
+
+  Required variables in scope before the include:
+    owner_type    - e.g. "employee", "tabel_period"
+    owner_id      - the owning row's id
+    owner_module  - permission module code, e.g. "HR", "TABEL"
+    panel_id      - unique DOM id for this instance (unique per PAGE, so two
+                    panels can coexist if ever needed), e.g. "empDocuments"
+#}
+<div class="toolbar">
+  {% if current_user.has_perm(owner_module, 'can_add') %}
+  <button type="button" id="{{ panel_id }}AddBtn" class="btn">+ {{ t('doc_upload_button') }}</button>
+  {% endif %}
+</div>
+
+<div id="{{ panel_id }}Grid"></div>
+
+<script>
+(function () {
+  function init() {
+    initDocumentsPanel(
+      "{{ panel_id }}Grid",
+      "{{ owner_type }}",
+      {{ owner_id }},
+      {
+        canDelete: {{ 'true' if current_user.has_perm(owner_module, 'can_delete') else 'false' }},
+        canAdd: {{ 'true' if current_user.has_perm(owner_module, 'can_add') else 'false' }},
+        addBtnId: "{{ panel_id }}AddBtn",
+      }
+    );
+  }
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
+})();
+</script>

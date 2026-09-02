@@ -29,6 +29,12 @@ class LeaveReason(db.Model):
     is_annual_leave = db.Column(db.Boolean, default=False)
     is_active = db.Column(db.Boolean, default=True)
 
+    # 'Tabel kodu' — short code (e.g. "X", "NM", "ÖM") stamped onto the
+    # Tabel (timesheet) matrix for any day covered by an İş buraxması of
+    # this reason. See app/services/tabel_service.py. Free text, defined
+    # by the user per-reason (no fixed/hardcoded list of codes).
+    tabel_code = db.Column(db.String(10))
+
     def counting_method_label(self):
         return dict(self.COUNTING_METHODS).get(
             self.counting_method, self.counting_method

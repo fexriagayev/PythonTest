@@ -102,6 +102,7 @@ def create_app(config_class="config.Config"):
     from app.modules.dictionaries.routes import dict_bp
     from app.modules.reports.routes import reports_bp
     from app.modules.tools.routes import tools_bp
+    from app.modules.documents.routes import documents_bp
     from app.core.routes import core_bp
 
     app.register_blueprint(auth_bp)
@@ -112,6 +113,7 @@ def create_app(config_class="config.Config"):
     app.register_blueprint(dict_bp, url_prefix="/dictionaries")
     app.register_blueprint(reports_bp, url_prefix="/reports")
     app.register_blueprint(tools_bp, url_prefix="/tools")
+    app.register_blueprint(documents_bp, url_prefix="/documents")
     app.register_blueprint(core_bp, url_prefix="/core")
 
     from app.dashboard import dashboard_bp

@@ -118,9 +118,8 @@
 
     $(host).dxTextArea({
       value: field.value || "",
-      width: "100%",
-      minHeight: Math.max(80, Number(field.rows || 3) * 26),
-      autoResizeEnabled: true,
+      height: Math.max(80, Number(field.rows || 3) * 26),
+      autoResizeEnabled: false,
       stylingMode: "outlined",
       onValueChanged: function (e) { sync(field, e.value); }
     });

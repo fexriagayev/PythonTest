@@ -3,7 +3,7 @@ from flask_login import login_required, current_user
 import csv
 import io
 
-from app.models import Employee, TabelEntry, SalaryEntry
+from app.models import Employee, TabelEmployeeRow, SalaryEntry
 from app.utils.decorators import log_action
 
 reports_bp = Blueprint("reports", __name__)
@@ -24,9 +24,10 @@ def _rows_for(module_code):
         rows = [[e.id, e.full_name, e.department, e.position,
                   e.hire_date, e.is_active] for e in Employee.query.all()]
     elif module_code == "TABEL":
-        header = ["ID", "Əməkdaş", "Tarix", "Saat", "Status", "Qeyd"]
-        rows = [[t.id, t.employee.full_name if t.employee else "", t.work_date,
-                  t.hours_worked, t.status, t.note] for t in TabelEntry.query.all()]
+        header = ["ID", "Dövr", "Əməkdaş", "M/n", "Vəzifə", "İş günlərinin sayı"]
+        rows = [[r.id, r.period.label if r.period else "", r.full_name_snapshot,
+                  r.contract_number_snapshot, r.position_snapshot, r.work_days_count()]
+                 for r in TabelEmployeeRow.query.all()]
     elif module_code == "SALARY":
         header = ["ID", "Əməkdaş", "Dövr", "Baza", "Bonus", "Tutulma", "Cəmi"]
         rows = [[s.id, s.employee.full_name if s.employee else "", s.period,

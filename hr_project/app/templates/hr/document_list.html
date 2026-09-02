@@ -14,61 +14,10 @@
   <a href="#" class="active">{{ t('emp_tab_documents') }}</a>
 </div>
 
-<div class="toolbar">
-  {% if current_user.has_perm('HR', 'can_add') %}
-  <button type="button" id="addDocumentBtn" class="btn">+ {{ t('doc_upload_button') }}</button>
-  {% endif %}
-</div>
+{% set owner_type = "employee" %}
+{% set owner_id = employee.id %}
+{% set owner_module = "HR" %}
+{% set panel_id = "empDocuments" %}
+{% include "partials/documents_panel.html" with context %}
 
-<div id="documentGrid"></div>
-
-{% endblock %}
-
-{% block extra_scripts %}
-<script>
-function initDocumentGrid() {
-  const canDelete = {{ 'true' if current_user.has_perm('HR', 'can_delete') else 'false' }};
-  const canAdd = {{ 'true' if current_user.has_perm('HR', 'can_add') else 'false' }};
-  const empId = {{ employee.id }};
-
-  const table = createAdvancedGrid("documentGrid", "hr_documents", {
-    ajaxURL: "/hr/" + empId + "/documents/api/records",
-    pagination: true,
-    paginationSize: 15,
-    placeholder: "{{ t('doc_no_data') }}",
-    columns: [
-      { title: "{{ t('col_id') }}", field: "id", width: 60, sorter: "number" },
-      { title: "{{ t('doc_col_filename') }}", field: "original_filename", headerFilter: "input" },
-      { title: "{{ t('doc_col_type') }}", field: "document_type", headerFilter: "input" },
-      { title: "{{ t('note_label') }}", field: "note", headerFilter: "input" },
-      { title: "{{ t('doc_col_uploaded_at') }}", field: "uploaded_at", sorter: "string" }
-    ]
-  }, {
-    idField: "id",
-    addUrl: canAdd ? "/hr/" + empId + "/documents/add" : null,
-    deleteUrlTemplate: canDelete ? "/hr/" + empId + "/documents/delete/{id}" : null,
-    extraRowActions: function (data) {
-      return [
-        { label: t("doc_action_view"), action: function () { window.open("/hr/" + empId + "/documents/" + data.id + "/view", "_blank"); } },
-        { label: t("doc_action_download"), action: function () { window.location.href = "/hr/" + empId + "/documents/" + data.id + "/download"; } },
-      ];
-    },
-  });
-
-  // NOTE: captures `table` directly instead of window.currentGridTable
-  // -- see the identical comment in hr/list.html for why.
-  const addBtn = document.getElementById("addDocumentBtn");
-  if (addBtn) {
-    addBtn.addEventListener("click", function () {
-      openFormModal("{{ url_for('hr.add_document', emp_id=employee.id) }}", function () { table.setData(); });
-    });
-  }
-  }
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initDocumentGrid);
-  } else {
-    initDocumentGrid();
-}
-</script>
 {% endblock %}

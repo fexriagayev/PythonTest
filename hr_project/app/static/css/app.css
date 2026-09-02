@@ -1114,10 +1114,31 @@ table.simple-table th {
 /* ===========================================================================
    DevExtreme application forms / modal layouts
    =========================================================================== */
+/* Previously a magic-number calc() guessing the popup's title-bar height
+   (and — the actual bug — completely forgetting to subtract the BOTTOM
+   "Yadda saxla / Ləğv et" toolbar's height too, so content still got cut
+   off just above it with no way to scroll to it). DevExtreme's popup is
+   already a flex column internally — title (fixed), .dx-popup-content
+   (flex: 1, exactly the remaining space), bottom toolbar (fixed) — so
+   .dx-popup-content's own height is already precisely "popup height minus
+   both toolbars", automatically, with zero guessing.
+   .dx-popup-content's own two children (#modalFlashSlot, then
+   .dx-modal-body — see contentTemplate in modal.js) are made a flex
+   column here too, so the flash slot (only sometimes visible, and never a
+   fixed height) takes exactly what it needs, and .dx-modal-body (flex: 1)
+   gets the rest to scroll internally — not a plain height:100%, which
+   would ignore the flash slot's own space and push .dx-modal-body's
+   bottom past the popup's actual box whenever a flash message is shown. */
+.dx-popup-content {
+  display: flex;
+  flex-direction: column;
+}
+
 .dx-modal-body {
   padding: 0;
   overflow: auto;
-  max-height: calc(92vh - 110px);
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .dx-modal-form-shell {
@@ -1215,6 +1236,15 @@ table.simple-table th {
 .dx-modal-textarea-wrapper,
 .dx-global-textarea-wrapper {
   width: 100%;
+}
+
+/* autoResizeEnabled: false (see upgradeTextArea in modal.js/dx-ui.js) is
+   what keeps the "Qeyd" box a fixed height instead of growing with its
+   content — this just makes sure overflowing text scrolls inside that
+   fixed box rather than being silently clipped. */
+.dx-modal-textarea-wrapper .dx-texteditor-input,
+.dx-global-textarea-wrapper .dx-texteditor-input {
+  overflow-y: auto !important;
 }
 
 .dx-modal-form .dx-textarea {
@@ -1356,6 +1386,21 @@ html.modal-scroll-lock body {
 .simple-form .dx-selectbox,
 .simple-form .dx-textarea {
   max-width: 420px;
+}
+
+/* The employee edit form's <form> carries BOTH "simple-form" (generic
+   compact-input styling, above) AND "dx-modal-form" classes at once.
+   Same specificity, so normally whichever rule comes later in the file
+   would silently win — which was this 420px cap, quietly overriding the
+   modal form's own "make my textarea full width" rule further up
+   (.dx-modal-form .dx-textarea { width: 100% }) and capping the "Qeyd"
+   field's DevExtreme widget at 420px regardless. A textarea, unlike a
+   single-line input/select, should stretch to the full row it's given —
+   so within a modal form specifically, this explicitly wins back over
+   the generic cap above. */
+.dx-modal-form .dx-textarea {
+  max-width: none;
+  width: 100%;
 }
 
 .simple-form .dx-selectbox {

@@ -44,9 +44,20 @@ function ensureModalRoot() {
 
   // Normal-size geometry, kept here (not just inline in the dxPopup config
   // below) so toggleModalMaximize() can restore back to these exact values.
+  //
+  // `height` is a fixed value (NOT "auto"): the popup is shared across all
+  // of an employee's tabs (main form, work history, vacation periods, ...),
+  // each with very different amounts of content. "auto" height meant the
+  // popup visibly grew or shrank on every tab switch — jarring, and made
+  // the modal's position/size feel unpredictable. A fixed height with the
+  // popup's own internal scroll area (`.dx-popup-content` /
+  // `.dx-modal-body`, already the single scroll container — see its own
+  // comment further down) keeps the popup's outer size constant no matter
+  // which tab is showing; a tab with little content just leaves blank
+  // space below it instead of shrinking the whole popup.
   const NORMAL_GEOMETRY = {
     width: "min(960px, 94vw)",
-    height: "auto",
+    height: "min(80vh, 720px)",
     maxHeight: "92vh",
     position: {
       my: "top",
@@ -577,9 +588,8 @@ function upgradeTextArea(field) {
 
   $(editorHost).dxTextArea({
     value: field.value || "",
-    width: "100%",
-    minHeight: Math.max(80, Number(field.rows || 3) * 26),
-    autoResizeEnabled: true,
+    height: Math.max(80, Number(field.rows || 3) * 26),
+    autoResizeEnabled: false,
     stylingMode: "outlined",
     onValueChanged: function (e) {
       syncNativeValue(field, e.value);

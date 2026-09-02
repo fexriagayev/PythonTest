@@ -296,3 +296,26 @@ def get_leave_balance(employee):
     base = sum(p["remaining_base"] for p in periods)
     bonus = sum(p["remaining_bonus"] for p in periods)
     return {"base": base, "bonus": bonus, "total": base + bonus}
+
+
+def get_remaining_vacation_days_live(employee):
+    """"Qalan məzuniyyət günləri" dəyəri HƏR ÇAĞIRIŞDA "Məzuniyyət günləri"
+    cədvəlindən (compute_leave_periods/get_leave_balance) canlı hesablanır —
+    saxlanılan (cached) Employee.remaining_vacation_days sütunundan ASILI
+    DEYİL. Bu vacibdir, çünki son sətir bugünkü tarixə qədər proqressiv
+    hesablanır (məs. cari ilin qalıq günləri) və tarix dəyişdikcə (hər gün)
+    nəticə də dəyişə bilər — statik/keşlənmiş dəyər tez köhnəlmiş olardı.
+
+    Əməkdaşın heç bir "cari şirkət" iş yeri qeydi yoxdursa (hələ heç bir
+    əmək kitabçası qeydi daxil edilməyibsə), None qaytarılır ('—' göstərilsin
+    deyə) — bax: hr_service.recompute_employee_from_history-dəki eyni şərt.
+    """
+    has_current_history = (
+        EmploymentRecord.query.filter_by(
+            employee_id=employee.id, is_current_company=True
+        ).first()
+        is not None
+    )
+    if not has_current_history:
+        return None
+    return get_leave_balance(employee)["total"]

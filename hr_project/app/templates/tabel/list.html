@@ -1,69 +1,42 @@
 {% extends "base.html" %}
 {% block title %}{{ t('tabel_page_title') }}{% endblock %}
-{% block page_title %}{{ t('tabel') }}{% endblock %}
+{% block page_title %}{{ t('tabel_page_title') }}{% endblock %}
 {% block content %}
 
 <div class="toolbar">
   {% if current_user.has_perm('TABEL', 'can_add') %}
-  <button type="button" id="addTabelEntryBtn" class="btn">+ {{ t('add') }}</button>
+  <a href="{{ url_for('tabel.add_period') }}" class="btn">+ {{ t('tabel_add_period_btn') }}</a>
   {% endif %}
-  <input type="text" id="searchBox" class="form-control" style="max-width:280px;" placeholder="{{ t('search_all_fields') }}">
 </div>
-<p style="color:#888;font-size:0.82em;margin-top:-6px;">
-  {{ t('tabel_grid_hint') }}
-</p>
 
-<div id="tabelGrid"></div>
+<div id="tabelPeriodGrid"></div>
 
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-  const canEdit = {{ 'true' if current_user.has_perm('TABEL', 'can_edit') else 'false' }};
   const canDelete = {{ 'true' if current_user.has_perm('TABEL', 'can_delete') else 'false' }};
-  const canAdd = {{ 'true' if current_user.has_perm('TABEL', 'can_add') else 'false' }};
 
-  const statusLabels = { present: t("tabel_status_present"), absent: t("tabel_status_absent"), vacation: t("tabel_status_vacation"), sick: t("tabel_status_sick") };
-
-  const table = createAdvancedGrid("tabelGrid", "tabel_entries", {
-    ajaxURL: "{{ url_for('tabel.api_entries') }}",
-    layout: "fitColumns",
+  const table = createAdvancedGrid("tabelPeriodGrid", "tabel_periods", {
+    ajaxURL: "{{ url_for('tabel.api_periods') }}",
     pagination: true,
     paginationSize: 15,
     placeholder: "{{ t('no_data_generic') }}",
-    groupBy: "status",
     columns: [
-      { title: "{{ t('col_id') }}", field: "id", width: 60, sorter: "number" },
-      { title: "{{ t('tabel_col_employee') }}", field: "employee", headerFilter: "input" },
-      { title: "{{ t('tabel_col_date') }}", field: "work_date", sorter: "date", headerFilter: "input" },
-      { title: "{{ t('tabel_col_hours') }}", field: "hours_worked", sorter: "number" },
-      {
-        title: "{{ t('tabel_col_status') }}", field: "status", headerFilter: "list",
-        headerFilterParams: { values: statusLabels },
-        formatter: function (cell) { return statusLabels[cell.getValue()] || cell.getValue(); }
-      },
-      { title: "{{ t('note_label') }}", field: "note", headerFilter: "input" }
+      { title: "{{ t('tabel_col_no') }}", field: "row_no", width: 60, sorter: "number" },
+      { title: "{{ t('tabel_col_period') }}", field: "label", headerFilter: "input" },
+      { title: "{{ t('tabel_col_confirmed') }}", field: "is_approved", width: 110, formatter: "tickCross" }
     ]
   }, {
     idField: "id",
-    addUrl: canAdd ? "{{ url_for('tabel.add_entry') }}" : null,
-    editUrlTemplate: canEdit ? "/tabel/edit/{id}" : null,
-    deleteUrlTemplate: canDelete ? "/tabel/delete/{id}" : null,
-    numericFields: ["hours_worked"],
+    deleteUrlTemplate: canDelete ? "/tabel/{id}/delete" : null,
+    extraRowActions: function (data) {
+      return [
+        { label: t("tabel_action_open"), action: function () { window.location.href = "/tabel/" + data.id; } },
+      ];
+    },
   });
-
-  wireGlobalSearch(table, document.getElementById("searchBox"), ["employee", "work_date", "status", "note"]);
-
-  // NOTE: captures `table` directly instead of window.currentGridTable
-  // -- see the identical comment in hr/list.html for why.
-  const addBtn = document.getElementById("addTabelEntryBtn");
-  if (addBtn) {
-    addBtn.addEventListener("click", function () {
-      openFormModal("{{ url_for('tabel.add_entry') }}", function () { table.setData(); });
-    });
-  }
-
 });
 </script>
 {% endblock %}

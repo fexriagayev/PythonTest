@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block title %}{{ period.label }} — {{ t('tabel_page_title') }}{% endblock %}
+{% block page_title %}{{ period.label }}{% endblock %}
+
+{% block extra_head %}
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<style>
+  .tabel-tabs { display:flex; gap:4px; margin-bottom:10px; }
+  .tabel-tabs button {
+    padding:6px 18px; border:1px solid #ccc; background:#eee; cursor:pointer;
+    border-bottom:none; border-radius:4px 4px 0 0;
+  }
+  .tabel-tabs button.active { background:#fff; font-weight:600; border-bottom:2px solid #fff; }
+  .tabel-panel { display:none; }
+  .tabel-panel.active { display:block; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="toolbar" style="flex-wrap:wrap; gap:10px;">
+  <span><b>{{ t('tabel_field_month') }}:</b> {{ period.MONTH_NAMES_AZ[period.month - 1] }}</span>
+  <span><b>{{ t('tabel_field_year') }}:</b> {{ period.year }}</span>
+
+  {% if current_user.has_perm('TABEL', 'can_edit') %}
+  <button type="button" id="generateBtn" class="btn" {{ 'disabled' if period.is_generated }}>
+    {{ t('tabel_generate_btn') }}
+  </button>
+  {% endif %}
+
+  <button type="button" id="exportExcelBtn" class="btn btn-secondary" {{ 'disabled' if not period.is_generated }}>
+    {{ t('tabel_export_xlsx') }}
+  </button>
+  <button type="button" id="exportPdfBtn" class="btn btn-secondary" {{ 'disabled' if not period.is_generated }}>
+    {{ t('tabel_export_pdf') }}
+  </button>
+
+  {% if current_user.has_perm('TABEL', 'can_edit') %}
+  <button type="button" id="approveBtn" class="btn btn-secondary">
+    {{ t('tabel_unapprove_btn') if period.is_approved else t('tabel_approve_btn') }}
+  </button>
+  {% endif %}
+
+  <a href="{{ url_for('tabel.list_periods') }}" class="btn btn-secondary">{{ t('cancel') }}</a>
+</div>
+
+<div class="tabel-tabs">
+  <button type="button" class="tabel-tab-btn active" data-tab="main">{{ t('tabel_tab_main') }}</button>
+  <button type="button" class="tabel-tab-btn" data-tab="documents">{{ t('tabel_tab_documents') }}</button>
+</div>
+
+<div id="tabelPanelMain" class="tabel-panel active">
+  <div id="tabelMatrixGrid"></div>
+</div>
+
+<div id="tabelPanelDocuments" class="tabel-panel">
+  {% set owner_type = "tabel_period" %}
+  {% set owner_id = period.id %}
+  {% set owner_module = "TABEL" %}
+  {% set panel_id = "tabelDocuments" %}
+  {% include "partials/documents_panel.html" with context %}
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/tabel-matrix.js') }}"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const periodId = {{ period.id }};
+  const canEdit = {{ 'true' if current_user.has_perm('TABEL', 'can_edit') else 'false' }};
+
+  const matrix = initTabelMatrix({
+    elementId: "tabelMatrixGrid",
+    matrixUrl: "/tabel/" + periodId + "/api/matrix",
+    cellUrl: "/tabel/" + periodId + "/cell",
+    daysInMonth: {{ days_in_month }},
+    readOnly: !canEdit || {{ 'true' if period.is_approved else 'false' }},
+  });
+
+  // --- Tab toggling -------------------------------------------------------
+  document.querySelectorAll(".tabel-tab-btn").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      document.querySelectorAll(".tabel-tab-btn").forEach(function (b) { b.classList.remove("active"); });
+      document.querySelectorAll(".tabel-panel").forEach(function (p) { p.classList.remove("active"); });
+      btn.classList.add("active");
+      document.getElementById("tabelPanel" + (btn.dataset.tab === "main" ? "Main" : "Documents")).classList.add("active");
+    });
+  });
+
+  // --- "Tabeli generasiya et" ----------------------------------------------
+  const generateBtn = document.getElementById("generateBtn");
+  if (generateBtn) {
+    generateBtn.addEventListener("click", function () {
+      generateBtn.disabled = true;
+      fetch("/tabel/" + periodId + "/generate", {
+        method: "POST",
+        headers: { "X-Requested-With": "XMLHttpRequest" }
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (!data.success) {
+            alert(data.error || t("tabel_cell_error"));
+            generateBtn.disabled = false;
+            return;
+          }
+          document.getElementById("exportExcelBtn").disabled = false;
+          document.getElementById("exportPdfBtn").disabled = false;
+          matrix.reload();
+        });
+    });
+  }
+
+  // --- Export ---------------------------------------------------------------
+  document.getElementById("exportExcelBtn").addEventListener("click", function () {
+    matrix.exportExcel("tabel_{{ period.year }}_{{ period.month }}");
+  });
+  document.getElementById("exportPdfBtn").addEventListener("click", function () {
+    matrix.exportPdf("tabel_{{ period.year }}_{{ period.month }}");
+  });
+
+  // --- Təsdiq ----------------------------------------------------------------
+  const approveBtn = document.getElementById("approveBtn");
+  if (approveBtn) {
+    approveBtn.addEventListener("click", function () {
+      fetch("/tabel/" + periodId + "/approve", {
+        method: "POST",
+        headers: { "X-Requested-With": "XMLHttpRequest" }
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (!data.success) return;
+          window.location.reload();
+        });
+    });
+  }
+});
+</script>
+{% endblock %}

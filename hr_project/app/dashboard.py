@@ -2,7 +2,7 @@ from datetime import date, timedelta
 from flask import Blueprint, render_template
 from flask_login import login_required, current_user
 
-from app.models import Employee, TabelEntry, SalaryEntry, ActivityLog, InsurancePolicy, SalaryCard
+from app.models import Employee, TabelPeriod, SalaryEntry, ActivityLog, InsurancePolicy, SalaryCard
 
 dashboard_bp = Blueprint("dashboard", __name__)
 
@@ -62,7 +62,7 @@ def get_notifications():
 def index():
     stats = {
         "employees": Employee.query.filter_by(is_active=True).count(),
-        "tabel_entries": TabelEntry.query.count(),
+        "tabel_periods": TabelPeriod.query.count(),
         "salary_entries": SalaryEntry.query.count(),
     }
     recent_logs = []

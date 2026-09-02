@@ -70,7 +70,7 @@
 
         <div><b>{{ t('emp_contract_start_date') }}:</b> {{ employee.contract_start_date or '—' }}</div>
         <div><b>{{ t('emp_contract_end_date') }}:</b> {{ employee.contract_end_date or '—' }}</div>
-        <div><b>{{ t('emp_remaining_vacation_days') }}:</b> {{ employee.remaining_vacation_days if employee.remaining_vacation_days is not none else '—' }}</div>
+        <div><b>{{ t('emp_remaining_vacation_days') }}:</b> {{ remaining_vacation_days_live if remaining_vacation_days_live is not none else '—' }}</div>
 
         <div><b>{{ t('wh_total_experience') }}:</b> {{ employee.total_experience or '—' }}</div>
         <div><b>{{ t('wh_company_experience') }}:</b> {{ employee.company_experience or '—' }}</div>

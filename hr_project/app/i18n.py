@@ -535,6 +535,8 @@ TRANSLATIONS = {
         "en": 'This is an "annual leave" reason (deducted from the leave balance)',
     },
     "lre_field_active": {"az": "Aktiv", "en": "Active"},
+    "lre_field_tabel_code": {"az": "Tabel kodu", "en": "Timesheet Code"},
+    "lre_tabel_code_placeholder": {"az": "məs: X, NM, ÖM", "en": "e.g. X, NM, ÖM"},
     # --- List placeholder / column strings not yet covered -------------------
     "no_data_generic": {"az": "Məlumat yoxdur", "en": "No data"},
     "holiday_working_day_hint": {
@@ -621,20 +623,21 @@ TRANSLATIONS = {
     "salary_field_base": {"az": "Baza məvacib", "en": "Base Salary"},
     "salary_field_bonus": {"az": "Bonus", "en": "Bonus"},
     "salary_field_deductions": {"az": "Tutulma", "en": "Deductions"},
-    # --- Tabel (tabel/form.html) -----------------------------------------------
-    "tabel_form_title_edit": {
-        "az": "Tabel qeydini dəyiş",
-        "en": "Edit Timesheet Record",
-    },
-    "tabel_form_title_add": {"az": "Yeni tabel qeydi", "en": "New Timesheet Record"},
-    "tabel_field_employee": {"az": "Əməkdaş", "en": "Employee"},
-    "tabel_field_date": {"az": "Tarix", "en": "Date"},
-    "tabel_field_hours": {"az": "Saat", "en": "Hours"},
-    "tabel_field_status": {"az": "Status", "en": "Status"},
-    "tabel_status_present": {"az": "İşdə", "en": "Present"},
-    "tabel_status_absent": {"az": "Yoxdur", "en": "Absent"},
-    "tabel_status_vacation": {"az": "Məzuniyyət", "en": "Vacation"},
-    "tabel_status_sick": {"az": "Xəstəlik", "en": "Sick"},
+    # --- Tabel (tabel/period_add_form.html, period_detail.html) ---------------
+    "tabel_period_form_title": {"az": "Yeni dövr", "en": "New Timesheet Period"},
+    "tabel_field_month": {"az": "Ay", "en": "Month"},
+    "tabel_field_year": {"az": "İl", "en": "Year"},
+    "tabel_generate_btn": {"az": "Tabeli generasiya et", "en": "Generate Timesheet"},
+    "tabel_export_xlsx": {"az": "Excel", "en": "Excel"},
+    "tabel_export_pdf": {"az": "PDF", "en": "PDF"},
+    "tabel_export_sheet_name": {"az": "Tabel", "en": "Timesheet"},
+    "tabel_approve_btn": {"az": "Təsdiqlə", "en": "Approve"},
+    "tabel_unapprove_btn": {"az": "Təsdiqi geri al", "en": "Unapprove"},
+    "tabel_tab_main": {"az": "Tabel", "en": "Timesheet"},
+    "tabel_tab_documents": {"az": "Sənədlər", "en": "Documents"},
+    "tabel_col_contract_number": {"az": "M/n", "en": "Contract #"},
+    "tabel_col_work_days": {"az": "İş günlərinin sayı", "en": "Work Days"},
+    "tabel_cell_error": {"az": "Xəta baş verdi.", "en": "Something went wrong."},
     # --- Əməkhaqları siyahısı (salary/list.html) --------------------------------
     "salary_page_title": {"az": "Əməkhaqları", "en": "Payroll"},
     "search_all_fields": {
@@ -649,10 +652,11 @@ TRANSLATIONS = {
     "salary_col_total": {"az": "Cəmi", "en": "Total"},
     # --- Tabel siyahısı (tabel/list.html) ---------------------------------------
     "tabel_page_title": {"az": "Tabellər", "en": "Timesheets"},
-    "tabel_col_employee": {"az": "Əməkdaş", "en": "Employee"},
-    "tabel_col_date": {"az": "Tarix", "en": "Date"},
-    "tabel_col_hours": {"az": "Saat", "en": "Hours"},
-    "tabel_col_status": {"az": "Status", "en": "Status"},
+    "tabel_add_period_btn": {"az": "Yeni dövr", "en": "New Period"},
+    "tabel_col_no": {"az": "№", "en": "No"},
+    "tabel_col_period": {"az": "Dövr", "en": "Period"},
+    "tabel_col_confirmed": {"az": "Təsdiq", "en": "Approved"},
+    "tabel_action_open": {"az": "Aç", "en": "Open"},
     # --- İstifadəçilər (admin/users.html) -----------------------------------
     "yes": {"az": "Bəli", "en": "Yes"},
     "logging_off": {"az": "Söndürülüb", "en": "Disabled"},

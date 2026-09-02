@@ -23,4 +23,7 @@
     <input type="checkbox" name="is_active" id="is_active" {{ 'checked' if (reason and reason.is_active) or not reason }}>
     <label for="is_active" style="margin:0;">{{ t('lre_field_active') }}</label>
   </div>
+
+  <label>{{ t('lre_field_tabel_code') }}</label>
+  <input type="text" name="tabel_code" maxlength="10" placeholder="{{ t('lre_tabel_code_placeholder') }}" value="{{ reason.tabel_code if reason else '' }}">
 {% endblock %}

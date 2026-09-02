@@ -28,7 +28,6 @@ from app.models import (
     VacationCompensation,
     InsurancePolicy,
     SalaryCard,
-    Document,
 )
 from app.utils.decorators import permission_required, log_action
 from app.utils.uploads import (
@@ -36,6 +35,7 @@ from app.utils.uploads import (
     delete_uploaded_file,
     uploaded_file_path,
 )
+from app.services.document_service import delete_all_documents_for_owner
 from app.services.hr_service import (
     recompute_employee_from_history,
     recompute_employee_contract_from_bildiris,
@@ -44,6 +44,7 @@ from app.services.hr_service import (
 from app.services.leave_service import (
     compute_leave_periods,
     get_leave_balance,
+    get_remaining_vacation_days_live,
     compute_end_date,
     validate_leave_request,
 )
@@ -152,7 +153,9 @@ def api_employees():
             "department": e.department,
             "position": e.position,
             "hire_date": e.hire_date.isoformat() if e.hire_date else None,
-            "remaining_vacation_days": e.remaining_vacation_days,
+            # Canlı hesablanır (bax: leave_service.get_remaining_vacation_days_live) —
+            # saxlanılan sütundan deyil, çünki nəticə bugünkü tarixdən asılıdır.
+            "remaining_vacation_days": get_remaining_vacation_days_live(e),
             "phone": e.phone,
             "email": e.email,
             "is_active": e.is_active,
@@ -205,7 +208,15 @@ def edit_employee(emp_id):
             )
 
         return redirect(url_for("hr.list_employees"))
-    return render_form("hr/form.html", employee=employee, **_form_choices())
+    # "Qalan məzuniyyət günləri" hər dəfə "Məzuniyyət günləri" cədvəlindən
+    # canlı hesablanır (bax: leave_service.get_remaining_vacation_days_live) —
+    # bugünkü tarixdən asılı olduğu üçün saxlanılan sütuna güvənilmir.
+    return render_form(
+        "hr/form.html",
+        employee=employee,
+        remaining_vacation_days_live=get_remaining_vacation_days_live(employee),
+        **_form_choices(),
+    )
 
 
 @hr_bp.route("/delete/<int:emp_id>", methods=["POST"])
@@ -217,8 +228,7 @@ def delete_employee(emp_id):
 
     # Physical files aren't covered by the DB cascade — clean those up first.
     delete_uploaded_file(employee.photo_path, PHOTO_SUBDIR)
-    for doc in employee.document:
-        delete_uploaded_file(doc.stored_filename, DOCUMENT_SUBDIR)
+    delete_all_documents_for_owner("employee", employee.id)
 
     db.session.delete(employee)
     db.session.commit()
@@ -1070,6 +1080,7 @@ def api_leave_reasons():
             "counting_method": r.counting_method_label(),
             "is_annual_leave": r.is_annual_leave,
             "is_active": r.is_active,
+            "tabel_code": r.tabel_code,
         }
         for r in items
     ]
@@ -1081,6 +1092,7 @@ def _apply_leave_reason_form(reason, form):
     reason.counting_method = form.get("counting_method", "calendar")
     reason.is_annual_leave = bool(form.get("is_annual_leave"))
     reason.is_active = bool(form.get("is_active"))
+    reason.tabel_code = form.get("tabel_code", "").strip() or None
 
 
 @hr_bp.route("/leave-reasons/add", methods=["GET", "POST"])
@@ -1315,6 +1327,10 @@ def set_compensation(emp_id):
         comp.period_end = period_end
         comp.compensated_base_days = days
         comp.note = request.form.get("note", "").strip()
+        # Kompensasiya "Qalan məzuniyyət günləri" balansına birbaşa təsir edir
+        # (bax: leave_service.compute_leave_periods -> remaining_base), ona
+        # görə əməkdaşın kartındakı yekun sahə də dərhal yenilənməlidir.
+        recompute_employee_from_history(employee)
         db.session.commit()
         flash("Kompensasiya qeyd olundu.", "success")
         return modal_redirect("hr.vacation_periods", emp_id=emp_id)
@@ -1879,10 +1895,11 @@ def delete_salary_card(emp_id, record_id):
 
 
 # ---------------------------------------------------------------------------
-# Sənədlər (Document) — uploaded files
+# Sənədlər (Document) — this tab is just a thin wrapper around the
+# GENERIC documents system (app.services.document_service +
+# app.modules.documents.routes + templates/partials/documents_panel.html),
+# shared with any other module (e.g. Tabel). See app/models/system/document.py.
 # ---------------------------------------------------------------------------
-
-DOCUMENT_SUBDIR = "employee_documents"
 
 
 @hr_bp.route("/<int:emp_id>/documents")
@@ -1895,101 +1912,3 @@ def document_list(emp_id):
         employee=employee,
         layout=_employee_page_layout(),
     )
-
-
-@hr_bp.route("/<int:emp_id>/documents/api/records")
-@login_required
-@permission_required(MODULE, "can_view")
-def api_documents(emp_id):
-    records = (
-        Document.query.filter_by(employee_id=emp_id)
-        .order_by(Document.uploaded_at.desc())
-        .all()
-    )
-    data = [
-        {
-            "id": d.id,
-            "original_filename": d.original_filename,
-            "document_type": d.document_type.name if d.document_type else None,
-            "note": d.note,
-            "uploaded_at": (
-                d.uploaded_at.strftime("%Y-%m-%d %H:%M") if d.uploaded_at else None
-            ),
-        }
-        for d in records
-    ]
-    return jsonify(data)
-
-
-@hr_bp.route("/<int:emp_id>/documents/add", methods=["GET", "POST"])
-@login_required
-@permission_required(MODULE, "can_add")
-@log_action(MODULE, "ADD_DOCUMENT")
-def add_document(emp_id):
-    employee = Employee.query.get_or_404(emp_id)
-    if request.method == "POST":
-        file = request.files.get("file")
-        stored, original = save_uploaded_file(file, DOCUMENT_SUBDIR)
-        if not stored:
-            flash("Fayl seçilməyib.", "danger")
-            return render_form(
-                "hr/document_form.html",
-                employee=employee,
-                doc_types=_dict_options("document_type"),
-            )
-        doc = Document(
-            employee_id=employee.id,
-            original_filename=original,
-            stored_filename=stored,
-            document_type_id=_parse_int(request.form.get("document_type_id")),
-            note=request.form.get("note", "").strip(),
-        )
-        db.session.add(doc)
-        db.session.commit()
-        flash("Sənəd əlavə olundu.", "success")
-        return modal_redirect("hr.document_list", emp_id=employee.id)
-    return render_form(
-        "hr/document_form.html",
-        employee=employee,
-        doc_types=_dict_options("document_type"),
-    )
-
-
-@hr_bp.route("/<int:emp_id>/documents/<int:doc_id>/download")
-@login_required
-@permission_required(MODULE, "can_view")
-def download_document(emp_id, doc_id):
-    doc = Document.query.filter_by(id=doc_id, employee_id=emp_id).first_or_404()
-    path = uploaded_file_path(doc.stored_filename, DOCUMENT_SUBDIR)
-    if not os.path.exists(path):
-        abort(404)
-    return send_file(path, as_attachment=True, download_name=doc.original_filename)
-
-
-@hr_bp.route("/<int:emp_id>/documents/<int:doc_id>/view")
-@login_required
-@permission_required(MODULE, "can_view")
-def view_document(emp_id, doc_id):
-    """Same file as download_document, but shown inline in the browser
-    (PDF/image/text) instead of forcing a download — used by the "Bax"
-    (preview) row action."""
-    doc = Document.query.filter_by(id=doc_id, employee_id=emp_id).first_or_404()
-    path = uploaded_file_path(doc.stored_filename, DOCUMENT_SUBDIR)
-    if not os.path.exists(path):
-        abort(404)
-    return send_file(path, as_attachment=False, download_name=doc.original_filename)
-
-
-@hr_bp.route("/<int:emp_id>/documents/delete/<int:doc_id>", methods=["POST"])
-@login_required
-@permission_required(MODULE, "can_delete")
-@log_action(MODULE, "DELETE_DOCUMENT")
-def delete_document(emp_id, doc_id):
-    doc = Document.query.filter_by(id=doc_id, employee_id=emp_id).first_or_404()
-    delete_uploaded_file(doc.stored_filename, DOCUMENT_SUBDIR)
-    db.session.delete(doc)
-    db.session.commit()
-    if is_modal_request():
-        return jsonify({"success": True})
-    flash("Sənəd silindi.", "info")
-    return redirect(url_for("hr.document_list", emp_id=emp_id))
