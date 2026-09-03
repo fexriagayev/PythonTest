@@ -14,7 +14,7 @@ function tabelCellStyle(code, hasKey) {
 }
 
 function tabelCellIsEditable(code, hasKey) {
-  return hasKey && (code === "" || code === "+" || code === "-");
+  return hasKey && (code === "+" || code === "-");
 }
 
 function initTabelMatrix(config) {

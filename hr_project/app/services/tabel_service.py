@@ -14,8 +14,8 @@ Generation flow (see generate_period()):
      A day the employee wasn't active on at all (before hire / after
      termination within the month) has NO key in day_marks -> always
      blank/grey, never editable.
-  3. The user can then click any ordinary work-day cell to cycle
-     "+" -> "-" -> "" -> "+" (see cycle_cell()) if they need to correct it.
+  3. The user can then click any ordinary work-day cell to toggle
+     "+" <-> "-" (see cycle_cell()) if they need to correct it.
 """
 
 from datetime import date, datetime, timedelta
@@ -36,8 +36,8 @@ REST_DAY_CODE = "İ"
 HOLIDAY_CODES = {"bayram": "B", "matam": "M"}
 LOCKED_NON_WORKING_CODES = {REST_DAY_CODE, "B", "M"}
 DEFAULT_WORK_MARK = "+"  # generasiya zamanı adi iş günləri default olaraq "+" (işdə) qəbul olunur
-EDITABLE_VALUES = ("", "+", "-")
-CYCLE_NEXT = {"": "+", "+": "-", "-": ""}
+EDITABLE_VALUES = ("+", "-")
+CYCLE_NEXT = {"+": "-", "-": "+"}
 
 
 def month_bounds(year, month):
@@ -182,10 +182,10 @@ def generate_period(period):
 
 
 def cycle_cell(row, day):
-    """Toggles one day cell '' -> '+' -> '-' -> '' for an editable work
-    day of `row` (a TabelEmployeeRow). Returns the new value. Raises
-    ValueError if that cell isn't editable (locked auto-generated code,
-    or the employee wasn't active that day)."""
+    """Toggles one day cell '+' <-> '-' for an ordinary work day of `row`
+    (a TabelEmployeeRow). Returns the new value. Raises ValueError if
+    that cell isn't editable (locked auto-generated code, or the
+    employee wasn't active that day)."""
     key = str(day)
     marks = dict(row.day_marks or {})
     current = marks.get(key)

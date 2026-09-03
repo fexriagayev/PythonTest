@@ -53,16 +53,15 @@ class TabelEmployeeRow(db.Model):
     """Bir əməkdaşın bir dövr (ay) üçün tabel sətri.
 
     Gündəlik işarələr `day_marks` JSON sahəsində saxlanılır:
-    {"1": "İ", "2": "İ", "3": "NM", "4": "", "5": "+", ...}
+    {"1": "İ", "2": "İ", "3": "NM", "4": "+", "5": "-", ...}
 
     Açarların (gün nömrələrinin) mənası:
-      - Açar YOXDURSA  -> əməkdaş həmin gün AKTİV DEYİL (boş göstərilir,
+      - Açar YOXDURSA  -> əməkdaş həmin gün AKTİV DEYİL (boz göstərilir,
         redaktə OLUNMUR).
-      - Açar var, dəyər "" / "+" / "-"  -> ADİ İŞ GÜNÜ, əl ilə redaktə
-        oluna bilər (boş=hələ işarələnməyib). Klik: "" -> "+" -> "-" -> "".
-      - Açar var, dəyər başqa hər hansı kod (İ, X, NM, ÖM, ...) -> AVTOMATİK
-        yaranıb (bazar/bayram/matəm və ya İş buraxması), KİLİDLİDİR,
-        redaktə olunmur.
+      - Açar var, dəyər "+" / "-"  -> ADİ İŞ GÜNÜ, əl ilə redaktə oluna
+        bilər (default "+" = işdə). Klik: "+" <-> "-".
+      - Açar var, dəyər başqa hər hansı kod (İ, B, M, X, NM, ÖM, ...) ->
+        AVTOMATİK yaranıb, KİLİDLİDİR, redaktə olunmur.
     """
 
     __tablename__ = "tabel_employee_rows"

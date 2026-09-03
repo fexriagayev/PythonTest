@@ -37,7 +37,6 @@ def api_periods():
     data = [
         {
             "id": p.id,
-            "row_no": i + 1,
             "label": p.label,
             "is_approved": p.is_approved,
         }
