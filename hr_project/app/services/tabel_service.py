@@ -5,15 +5,17 @@ Generation flow (see generate_period()):
   1. Find every employee who has at least one active current-company
      stint overlapping the period.
   2. For each calendar day of the month, decide the automatic mark:
-       - Sunday or a Holiday-table date -> REST_DAY_CODE ("İ").
+       - A Holiday-table date -> "B" (bayram) or "M" (matəm).
+       - Otherwise, Saturday/Sunday -> REST_DAY_CODE ("İ").
        - Otherwise, an İş buraxması (LeaveRequest) covering that day ->
          that reason's `tabel_code`.
-       - Otherwise (an ordinary work day) -> "" (blank, user-editable).
+       - Otherwise (an ordinary work day) -> DEFAULT_WORK_MARK ("+"),
+         i.e. the employee is assumed present by default.
      A day the employee wasn't active on at all (before hire / after
      termination within the month) has NO key in day_marks -> always
-     blank, never editable.
-  3. The user then clicks blank/"+" /"-" work-day cells to cycle
-     "" -> "+" -> "-" -> "" (see cycle_cell()).
+     blank/grey, never editable.
+  3. The user can then click any ordinary work-day cell to cycle
+     "+" -> "-" -> "" -> "+" (see cycle_cell()) if they need to correct it.
 """
 
 from datetime import date, datetime, timedelta
@@ -31,6 +33,9 @@ from app.models import (
 from app.services.leave_service import get_employment_stints
 
 REST_DAY_CODE = "İ"
+HOLIDAY_CODES = {"bayram": "B", "matam": "M"}
+LOCKED_NON_WORKING_CODES = {REST_DAY_CODE, "B", "M"}
+DEFAULT_WORK_MARK = "+"  # generasiya zamanı adi iş günləri default olaraq "+" (işdə) qəbul olunur
 EDITABLE_VALUES = ("", "+", "-")
 CYCLE_NEXT = {"": "+", "+": "-", "-": ""}
 
@@ -66,22 +71,27 @@ def _active_days(employee, period_start, period_end):
     return active
 
 
-def _rest_days(period_start, period_end):
-    """Set of day-of-month ints that are Sunday or a Holiday-table date
-    (bayram/matəm)."""
-    holidays = {
-        h.date
-        for h in Holiday.query.filter(
-            Holiday.date >= period_start, Holiday.date <= period_end
-        ).all()
-    }
-    rest = set()
+def _weekend_days(period_start, period_end):
+    """Set of day-of-month ints that are Şənbə (Saturday) or Bazar
+    (Sunday)."""
+    weekend = set()
     cur = period_start
     while cur <= period_end:
-        if cur.weekday() == 6 or cur in holidays:  # 6 == Sunday
-            rest.add(cur.day)
+        if cur.weekday() in (5, 6):  # 5 == Saturday, 6 == Sunday
+            weekend.add(cur.day)
         cur += timedelta(days=1)
-    return rest
+    return weekend
+
+
+def _holiday_marks(period_start, period_end):
+    """{day_of_month: 'B'|'M'} for Holiday-table dates within the period
+    (bayram -> 'B', matəm -> 'M')."""
+    marks = {}
+    for h in Holiday.query.filter(
+        Holiday.date >= period_start, Holiday.date <= period_end
+    ).all():
+        marks[h.date.day] = HOLIDAY_CODES.get(h.holiday_type, "B")
+    return marks
 
 
 def _leave_marks_for_employee(employee, period_start, period_end):
@@ -130,7 +140,8 @@ def generate_period(period):
     TabelEmployeeRow.query.filter_by(period_id=period.id).delete()
 
     employees = sorted(_employees_with_current_stint(), key=lambda e: e.full_name or "")
-    rest_days = _rest_days(period_start, period_end)
+    weekend_days = _weekend_days(period_start, period_end)
+    holiday_marks = _holiday_marks(period_start, period_end)
 
     row_no = 0
     for employee in employees:
@@ -144,13 +155,15 @@ def generate_period(period):
         day_marks = {}
         for day in range(1, days_in_month + 1):
             if day not in active_days:
-                continue  # inactive -> no key -> blank, non-editable
-            if day in rest_days:
+                continue  # inactive -> no key -> blank/grey, non-editable
+            if day in holiday_marks:
+                day_marks[str(day)] = holiday_marks[day]
+            elif day in weekend_days:
                 day_marks[str(day)] = REST_DAY_CODE
             elif day in leave_marks:
                 day_marks[str(day)] = leave_marks[day]
             else:
-                day_marks[str(day)] = ""  # editable work day, unmarked
+                day_marks[str(day)] = DEFAULT_WORK_MARK  # adi iş günü -> default "+"
 
         db.session.add(
             TabelEmployeeRow(

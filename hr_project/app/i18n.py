@@ -495,6 +495,9 @@ TRANSLATIONS = {
         "az": "məs: Novruz bayramı",
         "en": "e.g. New Year's Day",
     },
+    "holiday_field_type": {"az": "Növ", "en": "Type"},
+    "holiday_type_bayram": {"az": "Bayram (B)", "en": "Holiday (B)"},
+    "holiday_type_matam": {"az": "Matəm (M)", "en": "Mourning Day (M)"},
     # --- Məzuniyyət kateqoriyaları (leave_category_form.html) ----------------
     "lc_form_title_edit": {"az": "Kateqoriyanı dəyiş", "en": "Edit Category"},
     "lc_form_title_add": {"az": "Yeni kateqoriya", "en": "New Category"},

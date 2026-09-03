@@ -151,8 +151,8 @@ def api_matrix(period_id):
 @log_action(MODULE, "GENERATE_PERIOD")
 def generate(period_id):
     period = TabelPeriod.query.get_or_404(period_id)
-    if period.is_generated:
-        return jsonify({"success": False, "error": "Bu dövr üçün tabel artıq generasiya olunub."}), 400
+    if period.is_approved:
+        return jsonify({"success": False, "error": "Təsdiqlənmiş dövr üçün tabel yenidən generasiya edilə bilməz."}), 400
     generate_period(period)
     db.session.commit()
     return jsonify({"success": True})

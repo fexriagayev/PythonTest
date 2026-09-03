@@ -11,3 +11,6 @@ class Holiday(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     date = db.Column(db.Date, nullable=False, unique=True)
     name = db.Column(db.String(150))
+    # "bayram" (B) or "matam" (M — matəm/mourning day). Used by
+    # app.services.tabel_service to stamp the Tabel matrix.
+    holiday_type = db.Column(db.String(10), nullable=False, default="bayram")

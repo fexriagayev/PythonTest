@@ -6,8 +6,8 @@
    =========================================================================== */
 
 function tabelCellStyle(code, hasKey) {
-  if (!hasKey) return { bg: "#ffffff", color: "#000000" };
-  if (code === "İ") return { bg: "#e05353", color: "#ffffff" };
+  if (!hasKey) return { bg: "#d9d9d9", color: "#666666" }; // aktiv olmayan gün — boz
+  if (code === "İ" || code === "B" || code === "M") return { bg: "#e05353", color: "#ffffff" };
   if (code === "+") return { bg: "#8bc34a", color: "#1b3a00" };
   if (code === "-" || code === "") return { bg: "#ffffff", color: "#000000" };
   return { bg: "#ffe066", color: "#5c4500" }; // İş buraxması kodları (X, NM, ÖM, ...)
@@ -140,7 +140,10 @@ function initTabelMatrix(config) {
   }
 
   function excelFillForCode(value) {
-    if (value === null || value === undefined || value === "" || value === "-") return null;
+    if (value === null || value === undefined) {
+      return { type: "pattern", pattern: "solid", fgColor: { argb: "FFD9D9D9" } }; // aktiv olmayan gün
+    }
+    if (value === "" || value === "-") return null;
     const style = tabelCellStyle(value, true);
     return { type: "pattern", pattern: "solid", fgColor: { argb: "FF" + style.bg.replace("#", "").toUpperCase() } };
   }

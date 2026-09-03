@@ -31,7 +31,9 @@ document.addEventListener("DOMContentLoaded", function () {
     columns: [
       { title: "{{ t('col_id') }}", field: "id", width: 60, sorter: "number" },
       { title: "{{ t('col_date') }}", field: "date", sorter: "date" },
-      { title: "{{ t('col_name') }}", field: "name", headerFilter: "input" }
+      { title: "{{ t('col_name') }}", field: "name", headerFilter: "input" },
+      { title: "{{ t('holiday_field_type') }}", field: "holiday_type", width: 120,
+        formatter: function(cell) { return cell.getValue() === "matam" ? "{{ t('holiday_type_matam') }}" : "{{ t('holiday_type_bayram') }}"; } }
     ]
   }, {
     idField: "id",

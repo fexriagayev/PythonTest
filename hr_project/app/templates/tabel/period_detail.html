@@ -23,7 +23,7 @@
   <span><b>{{ t('tabel_field_year') }}:</b> {{ period.year }}</span>
 
   {% if current_user.has_perm('TABEL', 'can_edit') %}
-  <button type="button" id="generateBtn" class="btn" {{ 'disabled' if period.is_generated }}>
+  <button type="button" id="generateBtn" class="btn" {{ 'disabled' if period.is_approved }}>
     {{ t('tabel_generate_btn') }}
   </button>
   {% endif %}
@@ -99,9 +99,9 @@ document.addEventListener("DOMContentLoaded", function () {
       })
         .then(function (r) { return r.json(); })
         .then(function (data) {
+          generateBtn.disabled = false; // dövr təsdiqlənməyibsə yenidən generasiyaya icazə var
           if (!data.success) {
             alert(data.error || t("tabel_cell_error"));
-            generateBtn.disabled = false;
             return;
           }
           document.getElementById("exportExcelBtn").disabled = false;

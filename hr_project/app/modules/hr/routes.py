@@ -1172,7 +1172,10 @@ def list_holidays():
 def api_holidays():
     items = Holiday.query.order_by(Holiday.date).all()
     return jsonify(
-        [{"id": h.id, "date": h.date.isoformat(), "name": h.name} for h in items]
+        [
+            {"id": h.id, "date": h.date.isoformat(), "name": h.name, "holiday_type": h.holiday_type}
+            for h in items
+        ]
     )
 
 
@@ -1185,6 +1188,7 @@ def add_holiday():
         holiday = Holiday(
             date=_parse_date(request.form.get("date")),
             name=request.form.get("name", "").strip(),
+            holiday_type=request.form.get("holiday_type", "bayram"),
         )
         if Holiday.query.filter_by(date=holiday.date).first():
             flash("Bu tarix artıq bayram kimi qeyd olunub.", "danger")
@@ -1205,6 +1209,7 @@ def edit_holiday(holiday_id):
     if request.method == "POST":
         holiday.date = _parse_date(request.form.get("date"))
         holiday.name = request.form.get("name", "").strip()
+        holiday.holiday_type = request.form.get("holiday_type", "bayram")
         db.session.commit()
         flash("Bayram günü yeniləndi.", "success")
         return modal_redirect("hr.list_holidays")

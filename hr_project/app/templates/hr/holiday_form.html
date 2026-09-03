@@ -9,4 +9,9 @@
   <input type="date" name="date" value="{{ holiday.date if holiday else '' }}" required>
   <label>{{ t('holiday_field_name') }}</label>
   <input type="text" name="name" placeholder="{{ t('holiday_name_placeholder') }}" value="{{ holiday.name if holiday else '' }}">
+  <label>{{ t('holiday_field_type') }}</label>
+  <select name="holiday_type">
+    <option value="bayram" {{ 'selected' if not holiday or holiday.holiday_type == 'bayram' }}>{{ t('holiday_type_bayram') }}</option>
+    <option value="matam" {{ 'selected' if holiday and holiday.holiday_type == 'matam' }}>{{ t('holiday_type_matam') }}</option>
+  </select>
 {% endblock %}
