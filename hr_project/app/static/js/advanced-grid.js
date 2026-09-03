@@ -646,7 +646,7 @@ function bestFitAllColumns(grid) {
    `allowExporting: false` when it's built).
    --------------------------------------------------------------------------- */
 
-function exportGridToExcel(grid, baseKey) {
+function exportGridToExcel(grid, baseKey, customizeCell) {
   if (
     typeof ExcelJS === "undefined" ||
     typeof saveAs === "undefined" ||
@@ -669,7 +669,8 @@ function exportGridToExcel(grid, baseKey) {
     .exportDataGrid({
       component: grid,
       worksheet: worksheet,
-      autoFilterEnabled: true
+      autoFilterEnabled: true,
+      customizeCell: customizeCell || undefined
     })
     .then(function () {
       return workbook.xlsx.writeBuffer();
@@ -682,6 +683,54 @@ function exportGridToExcel(grid, baseKey) {
     })
     .catch(function (err) {
       console.error("Excel export failed:", err);
+      if (
+        typeof DevExpress !== "undefined" &&
+        DevExpress.ui &&
+        DevExpress.ui.notify
+      ) {
+        DevExpress.ui.notify(t("grid_export_error"), "error", 3000);
+      }
+    });
+}
+
+/* ---------------------------------------------------------------------------
+   PDF export
+   ---------------------------------------------------------------------------
+   Same idea as exportGridToExcel, via DevExtreme's DevExpress.pdfExporter
+   (requires jsPDF + jsPDF-AutoTable, both loaded globally in base.html).
+   Accepts an optional `customizeCell({ gridCell, pdfCell })` so callers with
+   special per-cell styling (e.g. the Tabel matrix's coloured day cells) can
+   carry that over into the PDF the same way they do for Excel.
+   --------------------------------------------------------------------------- */
+
+function exportGridToPdf(grid, baseKey, customizeCell) {
+  if (
+    typeof DevExpress === "undefined" ||
+    !DevExpress.pdfExporter ||
+    !window.jspdf ||
+    !window.jspdf.jsPDF
+  ) {
+    console.error("PDF export libraries (jsPDF/jsPDF-AutoTable) are not loaded.");
+    if (DevExpress && DevExpress.ui && DevExpress.ui.notify) {
+      DevExpress.ui.notify(t("grid_export_error"), "error", 3000);
+    }
+    return;
+  }
+
+  const jsPDF = window.jspdf.jsPDF;
+  const doc = new jsPDF({ orientation: "landscape" });
+
+  DevExpress.pdfExporter
+    .exportDataGrid({
+      jsPDFDocument: doc,
+      component: grid,
+      customizeCell: customizeCell || undefined
+    })
+    .then(function () {
+      doc.save((baseKey || "grid") + ".pdf");
+    })
+    .catch(function (err) {
+      console.error("PDF export failed:", err);
       if (
         typeof DevExpress !== "undefined" &&
         DevExpress.ui &&
@@ -726,7 +775,7 @@ function translateNativeMenuItems(items) {
   });
 }
 
-function buildHeaderMenuItems(e, grid, settings, numericFields, persistNow, markDirty, defaultCaptions, baseKey) {
+function buildHeaderMenuItems(e, grid, settings, numericFields, persistNow, markDirty, defaultCaptions, baseKey, meta) {
   const field = e.column && e.column.dataField;
   if (!field) return [];
 
@@ -824,11 +873,24 @@ function buildHeaderMenuItems(e, grid, settings, numericFields, persistNow, mark
     },
     {
       beginGroup: true,
-      icon: "xlsxfile",
-      text: t("grid_export_excel"),
-      onItemClick: function () {
-        exportGridToExcel(grid, baseKey);
-      }
+      icon: "export",
+      text: t("grid_export_menu"),
+      items: [
+        {
+          icon: "xlsxfile",
+          text: t("grid_export_excel"),
+          onItemClick: function () {
+            exportGridToExcel(grid, baseKey, meta && meta.exportCustomizeCellExcel);
+          }
+        },
+        {
+          icon: "exportpdf",
+          text: t("grid_export_pdf"),
+          onItemClick: function () {
+            exportGridToPdf(grid, baseKey, meta && meta.exportCustomizeCellPdf);
+          }
+        }
+      ]
     }
   ];
 }
@@ -959,10 +1021,21 @@ function buildSimpleRowContextItems(data, meta, reloadGrid, grid, baseKey) {
   });
 
   items.push({
-    label: t("grid_export_excel"),
-    action: function () {
-      exportGridToExcel(grid, baseKey);
-    }
+    label: t("grid_export_menu"),
+    menu: [
+      {
+        label: t("grid_export_excel"),
+        action: function () {
+          exportGridToExcel(grid, baseKey, meta.exportCustomizeCellExcel);
+        }
+      },
+      {
+        label: t("grid_export_pdf"),
+        action: function () {
+          exportGridToPdf(grid, baseKey, meta.exportCustomizeCellPdf);
+        }
+      }
+    ]
   });
 
   return items;
@@ -1424,7 +1497,8 @@ function createAdvancedGrid(elementId, baseKey, tabulatorOptions, meta) {
               persistNow,
               markDirty,
               defaultCaptions,
-              baseKey
+              baseKey,
+              meta
             )
           );
           return;

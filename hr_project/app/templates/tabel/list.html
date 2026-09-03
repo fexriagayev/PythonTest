@@ -3,12 +3,6 @@
 {% block page_title %}{{ t('tabel_page_title') }}{% endblock %}
 {% block content %}
 
-<div class="toolbar">
-  {% if current_user.has_perm('TABEL', 'can_add') %}
-  <a href="{{ url_for('tabel.add_period') }}" class="btn">+ {{ t('tabel_add_period_btn') }}</a>
-  {% endif %}
-</div>
-
 <div id="tabelPeriodGrid"></div>
 
 {% endblock %}
@@ -16,12 +10,14 @@
 {% block extra_scripts %}
 <script>
 document.addEventListener("DOMContentLoaded", function () {
+  const canAdd = {{ 'true' if current_user.has_perm('TABEL', 'can_add') else 'false' }};
+  const canEdit = {{ 'true' if current_user.has_perm('TABEL', 'can_edit') or current_user.has_perm('TABEL', 'can_view') else 'false' }};
   const canDelete = {{ 'true' if current_user.has_perm('TABEL', 'can_delete') else 'false' }};
 
-  const table = createAdvancedGrid("tabelPeriodGrid", "tabel_periods", {
+  createAdvancedGrid("tabelPeriodGrid", "tabel_periods", {
     ajaxURL: "{{ url_for('tabel.api_periods') }}",
     pagination: true,
-    paginationSize: 15,
+    paginationSize: 20,
     placeholder: "{{ t('no_data_generic') }}",
     columns: [
       { title: "{{ t('tabel_col_period') }}", field: "label", headerFilter: "input" },
@@ -29,12 +25,9 @@ document.addEventListener("DOMContentLoaded", function () {
     ]
   }, {
     idField: "id",
+    addUrl: canAdd ? "{{ url_for('tabel.add_period') }}" : null,
+    editUrlTemplate: canEdit ? "/tabel/edit/{id}" : null,
     deleteUrlTemplate: canDelete ? "/tabel/{id}/delete" : null,
-    extraRowActions: function (data) {
-      return [
-        { label: t("tabel_action_open"), action: function () { window.location.href = "/tabel/" + data.id; } },
-      ];
-    },
   });
 });
 </script>
