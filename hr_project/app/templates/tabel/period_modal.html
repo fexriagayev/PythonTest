@@ -1,0 +1,207 @@
+{% extends "modal_form_base.html" %}
+{% set form_title = period.label if period else t('tabel_period_form_title') %}
+{% set form_action = "#" %}
+{% set form_no_wrapper_card = true %}
+
+{% block form_actions %}{% endblock %}
+
+{% block form_fields %}
+
+<div class="toolbar" style="flex-wrap:wrap; gap:16px; align-items:center;">
+  <label style="margin:0;">
+    {{ t('tabel_field_month') }}:
+    <select id="periodMonth" {{ 'disabled' if period }}>
+      {% for i in range(1, 13) %}
+      <option value="{{ i }}" {{ 'selected' if i == default_month }}>{{ month_names[i - 1] }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label style="margin:0;">
+    {{ t('tabel_field_year') }}:
+    <input type="number" id="periodYear" value="{{ default_year }}" min="2000" max="2100" style="width:90px;" {{ 'disabled' if period }}>
+  </label>
+
+  {% if not period or not period.is_approved %}
+  <button type="button" id="generateBtn" class="btn">{{ t('tabel_generate_btn') }}</button>
+  {% endif %}
+
+  {% if period %}
+  <button type="button" id="approveBtn" class="btn btn-secondary">
+    {{ t('tabel_unapprove_btn') if period.is_approved else t('tabel_approve_btn') }}
+  </button>
+  {% endif %}
+</div>
+
+{% if period %}
+<div class="tabel-tabs">
+  <button type="button" class="tabel-tab-btn active" data-tab="main">{{ t('tabel_tab_main') }}</button>
+  <button type="button" class="tabel-tab-btn" data-tab="documents">{{ t('tabel_tab_documents') }}</button>
+</div>
+
+<div id="tabelPanelMain" class="tabel-panel active">
+  <div id="tabelMatrixGrid"></div>
+</div>
+
+<div id="tabelPanelDocuments" class="tabel-panel">
+  {% set owner_type = "tabel_period" %}
+  {% set owner_id = period.id %}
+  {% set owner_module = "TABEL" %}
+  {% set panel_id = "tabelDocuments" %}
+  {% include "partials/documents_panel.html" with context %}
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_scripts %}
+<style>
+  .dx-modal-form-fields .tabel-tabs { display:flex; gap:4px; margin:14px 0 10px; }
+  .dx-modal-form-fields .tabel-tabs button {
+    padding:6px 18px; border:1px solid #ccc; background:#eee; cursor:pointer;
+    border-bottom:none; border-radius:4px 4px 0 0;
+  }
+  .dx-modal-form-fields .tabel-tabs button.active { background:#fff; font-weight:600; }
+  .dx-modal-form-fields .tabel-panel { display:none; }
+  .dx-modal-form-fields .tabel-panel.active { display:block; }
+</style>
+<script src="{{ url_for('static', filename='js/tabel-matrix.js') }}"></script>
+<script>
+(function () {
+  const periodId = {{ period.id if period else 'null' }};
+  const isApproved = {{ 'true' if period and period.is_approved else 'false' }};
+  const daysInMonth = {{ days_in_month if days_in_month else 'null' }};
+
+  // Bu modalın "Yadda saxla" (paylaşılan alt toolbar) düyməsinin heç bir
+  // mənası yoxdur — bütün əməliyyatlar (generasiya/xana/təsdiq) öz AJAX
+  // çağırışları ilə dərhal saxlanılır. Employee alt-tab-larında olduğu
+  // kimi onu deaktiv edirik.
+  const popup = getModalPopup();
+  if (popup) {
+    const toolbarItems = popup.option("toolbarItems");
+    const saveItem = findSaveToolbarItem(toolbarItems);
+    if (saveItem) saveItem.options.disabled = true;
+    popup.option("toolbarItems", toolbarItems);
+  }
+
+  // Matris geniş olduğu üçün modalı avtomatik tam ekrana böyüdürük.
+  const root = document.getElementById("appModal");
+  if (root && !root.__isMaximized && typeof toggleModalMaximize === "function") {
+    toggleModalMaximize();
+  }
+
+  function goToPeriod(id) {
+    openFormModal("/tabel/edit/" + id, window.__currentModalSavedCallback);
+  }
+
+  // --- Ay/İl dəyişəndə: artıq mövcud dövrdürsə avtomatik ona keç ----------
+  const monthSelect = document.getElementById("periodMonth");
+  const yearInput = document.getElementById("periodYear");
+
+  function checkExistingPeriod() {
+    if (periodId) return; // artıq mövcud dövrə bağlıyıqsa, axtarmağa ehtiyac yoxdur
+    const year = yearInput.value;
+    const month = monthSelect.value;
+    if (!year || !month) return;
+    fetch("/tabel/lookup?year=" + encodeURIComponent(year) + "&month=" + encodeURIComponent(month), {
+      headers: { "X-Requested-With": "XMLHttpRequest" }
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (data.exists && data.period_id) {
+          goToPeriod(data.period_id);
+        }
+      });
+  }
+  if (monthSelect && !periodId) monthSelect.addEventListener("change", checkExistingPeriod);
+  if (yearInput && !periodId) yearInput.addEventListener("change", checkExistingPeriod);
+
+  // --- "Tabeli generasiya et" ------------------------------------------------
+  const generateBtn = document.getElementById("generateBtn");
+  if (generateBtn) {
+    generateBtn.addEventListener("click", function () {
+      generateBtn.disabled = true;
+
+      function runGenerate(id) {
+        return fetch("/tabel/" + id + "/generate", {
+          method: "POST",
+          headers: { "X-Requested-With": "XMLHttpRequest" }
+        }).then(function (r) { return r.json(); });
+      }
+
+      let chain;
+      if (periodId) {
+        chain = runGenerate(periodId).then(function (data) {
+          if (!data.success) throw data;
+          goToPeriod(periodId);
+        });
+      } else {
+        chain = fetch("/tabel/create", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest" },
+          body: JSON.stringify({ year: yearInput.value, month: monthSelect.value })
+        })
+          .then(function (r) { return r.json(); })
+          .then(function (createData) {
+            if (!createData.success) throw createData;
+            return runGenerate(createData.period_id).then(function (genData) {
+              if (!genData.success) throw genData;
+              // Arxa fondakı dövrlər siyahısı modal açıq ola-ola yenilənsin
+              // ki, bağlananda köhnəlmiş görünməsin (yeni sətir yaranıb).
+              if (typeof window.__currentModalSavedCallback === "function") {
+                window.__currentModalSavedCallback();
+              }
+              goToPeriod(createData.period_id);
+            });
+          });
+      }
+
+      chain.catch(function (err) {
+        alert((err && err.error) || t("tabel_cell_error"));
+        generateBtn.disabled = false;
+      });
+    });
+  }
+
+  // --- Təsdiq ----------------------------------------------------------------
+  const approveBtn = document.getElementById("approveBtn");
+  if (approveBtn) {
+    approveBtn.addEventListener("click", function () {
+      fetch("/tabel/" + periodId + "/approve", {
+        method: "POST",
+        headers: { "X-Requested-With": "XMLHttpRequest" }
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (!data.success) return;
+          if (typeof window.__currentModalSavedCallback === "function") {
+            window.__currentModalSavedCallback();
+          }
+          goToPeriod(periodId);
+        });
+    });
+  }
+
+  // --- Tab keçidi (Tabel / Sənədlər) ------------------------------------------
+  document.querySelectorAll(".tabel-tab-btn").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      document.querySelectorAll(".tabel-tab-btn").forEach(function (b) { b.classList.remove("active"); });
+      document.querySelectorAll(".tabel-panel").forEach(function (p) { p.classList.remove("active"); });
+      btn.classList.add("active");
+      document.getElementById("tabelPanel" + (btn.dataset.tab === "main" ? "Main" : "Documents")).classList.add("active");
+    });
+  });
+
+  // --- Matris ------------------------------------------------------------------
+  if (periodId && daysInMonth) {
+    initTabelMatrix({
+      elementId: "tabelMatrixGrid",
+      gridKey: "tabel_matrix",
+      matrixUrl: "/tabel/" + periodId + "/api/matrix",
+      cellUrl: "/tabel/" + periodId + "/cell",
+      daysInMonth: daysInMonth,
+      readOnly: isApproved
+    });
+  }
+})();
+</script>
+{% endblock %}

@@ -1,15 +1,16 @@
 /* ===========================================================================
    Tabel matrisi — əməkdaş × gün grid-i.
-   createAdvancedGrid-dən İSTİFADƏ ETMİR: bu, sabit sütunlu adi grid deyil,
-   hər ay üçün fərqli sayda (28-31) dinamik gün sütunu olan, xanaları rəngli
-   və klikləməklə "" -> "+" -> "-" -> "" dövr edən xüsusi bir grid-dir.
+   createAdvancedGrid üzərində qurulub (əməkdaş siyahıları ilə EYNİ header/
+   data/footer context menyuları, filter sətri, ixrac (Excel/PDF) burdan
+   avtomatik gəlir). Yalnız gün sütunlarının rəngli/klikləmə davranışı
+   Tabulator-uyğun `formatter` callback-i ilə xüsusi qurulur.
    =========================================================================== */
 
 function tabelCellStyle(code, hasKey) {
   if (!hasKey) return { bg: "#d9d9d9", color: "#666666" }; // aktiv olmayan gün — boz
   if (code === "İ" || code === "B" || code === "M") return { bg: "#e05353", color: "#ffffff" };
   if (code === "+") return { bg: "#8bc34a", color: "#1b3a00" };
-  if (code === "-" || code === "") return { bg: "#ffffff", color: "#000000" };
+  if (code === "-") return { bg: "#ffffff", color: "#000000" };
   return { bg: "#ffe066", color: "#5c4500" }; // İş buraxması kodları (X, NM, ÖM, ...)
 }
 
@@ -19,15 +20,15 @@ function tabelCellIsEditable(code, hasKey) {
 
 function initTabelMatrix(config) {
   /* config: {
-       elementId, matrixUrl, cellUrl, daysInMonth, readOnly,
+       elementId, gridKey, matrixUrl, cellUrl, daysInMonth, readOnly,
        onLoaded(data), onCellChanged(rowId, workDaysCount)
      } */
   let daysInMonth = config.daysInMonth;
+  let grid = null;
 
   function flattenRow(r) {
     const flat = {
       id: r.id,
-      row_no: r.row_no,
       full_name: r.full_name,
       position: r.position,
       contract_number: r.contract_number,
@@ -42,13 +43,18 @@ function initTabelMatrix(config) {
     return flat;
   }
 
-  function paintCell(el, value, hasKey) {
+  function paintCellElement(el, value, hasKey) {
     const style = tabelCellStyle(value, hasKey);
     el.textContent = hasKey && value ? value : "";
     el.style.backgroundColor = style.bg;
     el.style.color = style.color;
     el.style.textAlign = "center";
     el.style.fontWeight = "600";
+    el.style.width = "100%";
+    el.style.height = "100%";
+    el.style.display = "flex";
+    el.style.alignItems = "center";
+    el.style.justifyContent = "center";
     el.style.cursor = (!config.readOnly && tabelCellIsEditable(value, hasKey)) ? "pointer" : "default";
   }
 
@@ -68,64 +74,95 @@ function initTabelMatrix(config) {
           }
           return;
         }
-        paintCell(el, data.value, true);
+        paintCellElement(el, data.value, true);
+
+        // "İş günlərinin sayı" sütununu həmin sətirdə dərhal yenilə (tam
+        // reload lazım deyil) — sakit, heç bir "saxlanıldı" bildirişi yoxdur.
+        if (grid) {
+          const rowIndex = grid.getRowIndexByKey(rowId);
+          if (rowIndex > -1) {
+            grid.cellValue(rowIndex, "work_days_count", data.work_days_count);
+          }
+        }
+
         if (typeof config.onCellChanged === "function") {
           config.onCellChanged(rowId, data.work_days_count);
         }
       });
   }
 
-  function dayColumn(d) {
+  function dayColumnDef(d) {
     return {
-      dataField: "day_" + d,
-      caption: String(d),
+      field: "day_" + d,
+      title: String(d),
       width: 34,
-      alignment: "center",
-      allowSorting: false,
+      hozAlign: "center",
+      headerSort: false,
       allowFiltering: false,
-      allowEditing: false,
-      allowExporting: true,
-      cellTemplate: function (container, options) {
-        const el = container && container.jquery ? container[0] : container;
-        const value = options.value;
+      allowGrouping: false,
+      formatter: function (cell) {
+        const value = cell.getValue();
+        const data = cell.getData();
         const hasKey = value !== null && value !== undefined;
-        paintCell(el, value, hasKey);
+        const el = document.createElement("div");
+        paintCellElement(el, value, hasKey);
         if (!config.readOnly && tabelCellIsEditable(value, hasKey)) {
-          el.onclick = function () { handleCellClick(options.data.id, d, el); };
-        } else {
-          el.onclick = null;
+          el.addEventListener("click", function () {
+            handleCellClick(data.id, d, el);
+          });
         }
+        return el;
       }
     };
   }
 
   const columns = [
-    { dataField: "row_no", caption: t("tabel_col_no"), width: 50, allowEditing: false, fixed: true, fixedPosition: "left" },
-    { dataField: "full_name", caption: t("emp_col_full_name"), width: 170, allowEditing: false, fixed: true, fixedPosition: "left" },
-    { dataField: "position", caption: t("emp_col_position"), width: 150, allowEditing: false, fixed: true, fixedPosition: "left" },
-    { dataField: "contract_number", caption: t("tabel_col_contract_number"), width: 60, allowEditing: false, fixed: true, fixedPosition: "left" }
+    { field: "full_name", title: t("emp_col_full_name"), width: 190, fixed: true, fixedPosition: "left" },
+    { field: "position", title: t("emp_col_position"), width: 150, fixed: true, fixedPosition: "left" },
+    { field: "contract_number", title: t("tabel_col_contract_number"), width: 100, fixed: true, fixedPosition: "left" }
   ];
-  for (let d = 1; d <= daysInMonth; d++) columns.push(dayColumn(d));
+  for (let d = 1; d <= daysInMonth; d++) columns.push(dayColumnDef(d));
   columns.push({
-    dataField: "work_days_count",
-    caption: t("tabel_col_work_days"),
+    field: "work_days_count",
+    title: t("tabel_col_work_days"),
     width: 90,
-    allowEditing: false,
+    sorter: "number",
+    allowFiltering: false,
     fixed: true,
     fixedPosition: "right"
   });
 
-  const instance = $("#" + config.elementId)
-    .dxDataGrid({
-      dataSource: [],
-      keyExpr: "id",
-      showBorders: true,
-      columnAutoWidth: false,
-      allowColumnResizing: true,
-      scrolling: { mode: "standard", useNative: true, columnRenderingMode: "virtual" },
-      columns: columns
-    })
-    .dxDataGrid("instance");
+  // Excel/PDF ixracında da eyni rənglər saxlansın (bax: advanced-grid.js
+  // exportGridToExcel/exportGridToPdf-ə ötürülən customizeCell hook-ları).
+  function isDayField(field) {
+    return typeof field === "string" && field.indexOf("day_") === 0;
+  }
+
+  function exportCustomizeCellExcel(options) {
+    const gridCell = options.gridCell;
+    const excelCell = options.excelCell;
+    if (gridCell.rowType !== "data" || !gridCell.column || !isDayField(gridCell.column.dataField)) return;
+    const value = gridCell.value;
+    if (value === null || value === undefined) {
+      excelCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFD9D9D9" } };
+    } else if (value !== "" && value !== "-") {
+      const style = tabelCellStyle(value, true);
+      excelCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF" + style.bg.replace("#", "").toUpperCase() } };
+    }
+    excelCell.alignment = { horizontal: "center" };
+  }
+
+  function exportCustomizeCellPdf(options) {
+    const gridCell = options.gridCell;
+    const pdfCell = options.pdfCell;
+    if (gridCell.rowType !== "data" || !gridCell.column || !isDayField(gridCell.column.dataField)) return;
+    const value = gridCell.value;
+    if (value === null || value === undefined) {
+      pdfCell.backgroundColor = "#d9d9d9";
+    } else if (value !== "" && value !== "-") {
+      pdfCell.backgroundColor = tabelCellStyle(value, true).bg;
+    }
+  }
 
   function load() {
     return fetch(config.matrixUrl, { headers: { "X-Requested-With": "XMLHttpRequest" } })
@@ -133,79 +170,32 @@ function initTabelMatrix(config) {
       .then(function (data) {
         daysInMonth = data.days_in_month || daysInMonth;
         const rows = (data.rows || []).map(flattenRow);
-        instance.option("dataSource", rows);
+
+        if (!grid) {
+          grid = createAdvancedGrid(
+            config.elementId,
+            config.gridKey || "tabel_matrix",
+            {
+              data: rows,
+              pagination: false, // "full client" — bütün sətirlər bir dəfəyə, səhifələmə yoxdur
+              columns: columns
+            },
+            {
+              idField: "id",
+              exportCustomizeCellExcel: exportCustomizeCellExcel,
+              exportCustomizeCellPdf: exportCustomizeCellPdf
+            }
+          );
+        } else {
+          grid.option("dataSource", rows);
+        }
+
         if (typeof config.onLoaded === "function") config.onLoaded(data);
         return data;
       });
   }
 
-  function excelFillForCode(value) {
-    if (value === null || value === undefined) {
-      return { type: "pattern", pattern: "solid", fgColor: { argb: "FFD9D9D9" } }; // aktiv olmayan gün
-    }
-    if (value === "" || value === "-") return null;
-    const style = tabelCellStyle(value, true);
-    return { type: "pattern", pattern: "solid", fgColor: { argb: "FF" + style.bg.replace("#", "").toUpperCase() } };
-  }
-
-  function exportExcel(fileName) {
-    if (typeof ExcelJS === "undefined" || typeof saveAs === "undefined" || !DevExpress.excelExporter) {
-      console.error("Excel export libraries are not loaded.");
-      return;
-    }
-    const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet(t("tabel_export_sheet_name"));
-    DevExpress.excelExporter
-      .exportDataGrid({
-        component: instance,
-        worksheet: worksheet,
-        customizeCell: function (options) {
-          const gridCell = options.gridCell;
-          const excelCell = options.excelCell;
-          if (
-            gridCell.rowType === "data" &&
-            gridCell.column &&
-            gridCell.column.dataField &&
-            gridCell.column.dataField.indexOf("day_") === 0
-          ) {
-            const fill = excelFillForCode(gridCell.value);
-            if (fill) excelCell.fill = fill;
-            excelCell.alignment = { horizontal: "center" };
-          }
-        }
-      })
-      .then(function () { return workbook.xlsx.writeBuffer(); })
-      .then(function (buffer) {
-        saveAs(new Blob([buffer], { type: "application/octet-stream" }), (fileName || "tabel") + ".xlsx");
-      })
-      .catch(function (err) { console.error("Excel export failed:", err); });
-  }
-
-  function exportPdf(fileName) {
-    /* DevExtreme-in öz pdf_exporter-i versiyalar arası uyğunsuzluqlar
-       yaradır (customizeCell forması dəyişkəndir), ona görə burada
-       rəngləri qoruyan ən etibarlı üsul: grid-in görünən sahəsini
-       html2canvas ilə "şəkil" kimi çəkib jsPDF-ə yerləşdirmək — istifadəçi
-       ekranda nə görürsə, PDF-də də tam eynisi olur. */
-    const gridElement = document.getElementById(config.elementId);
-    if (typeof html2canvas === "undefined" || !window.jspdf) {
-      console.error("PDF export libraries are not loaded.");
-      return;
-    }
-    html2canvas(gridElement, { scale: 2 }).then(function (canvas) {
-      const imgData = canvas.toDataURL("image/png");
-      const jsPDF = window.jspdf.jsPDF;
-      const pdf = new jsPDF({
-        orientation: "landscape",
-        unit: "pt",
-        format: [canvas.width * 0.75 + 40, canvas.height * 0.75 + 40]
-      });
-      pdf.addImage(imgData, "PNG", 20, 20, canvas.width * 0.75, canvas.height * 0.75);
-      pdf.save((fileName || "tabel") + ".pdf");
-    });
-  }
-
   load();
 
-  return { instance: instance, reload: load, exportExcel: exportExcel, exportPdf: exportPdf };
+  return { reload: load, getInstance: function () { return grid; } };
 }

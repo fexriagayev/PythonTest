@@ -626,7 +626,7 @@ TRANSLATIONS = {
     "salary_field_base": {"az": "Baza məvacib", "en": "Base Salary"},
     "salary_field_bonus": {"az": "Bonus", "en": "Bonus"},
     "salary_field_deductions": {"az": "Tutulma", "en": "Deductions"},
-    # --- Tabel (tabel/period_add_form.html, period_detail.html) ---------------
+    # --- Tabel (tabel/period_modal.html) ---------------------------------------
     "tabel_period_form_title": {"az": "Yeni dövr", "en": "New Timesheet Period"},
     "tabel_field_month": {"az": "Ay", "en": "Month"},
     "tabel_field_year": {"az": "İl", "en": "Year"},
@@ -656,10 +656,8 @@ TRANSLATIONS = {
     # --- Tabel siyahısı (tabel/list.html) ---------------------------------------
     "tabel_page_title": {"az": "Tabellər", "en": "Timesheets"},
     "tabel_add_period_btn": {"az": "Yeni dövr", "en": "New Period"},
-    "tabel_col_no": {"az": "№", "en": "No"},
     "tabel_col_period": {"az": "Dövr", "en": "Period"},
     "tabel_col_confirmed": {"az": "Təsdiq", "en": "Approved"},
-    "tabel_action_open": {"az": "Aç", "en": "Open"},
     # --- İstifadəçilər (admin/users.html) -----------------------------------
     "yes": {"az": "Bəli", "en": "Yes"},
     "logging_off": {"az": "Söndürülüb", "en": "Disabled"},
@@ -710,6 +708,8 @@ TRANSLATIONS = {
     "grid_agg_sum": {"az": "Cəmi", "en": "Sum"},
     "grid_row_number": {"az": "№", "en": "#"},
     "grid_export_excel": {"az": "Excel-ə ixrac et", "en": "Export to Excel"},
+    "grid_export_pdf": {"az": "PDF-ə ixrac et", "en": "Export to PDF"},
+    "grid_export_menu": {"az": "İxrac et", "en": "Export"},
     "grid_export_error": {
         "az": "Excel-ə ixrac zamanı xəta baş verdi.",
         "en": "An error occurred while exporting to Excel.",
