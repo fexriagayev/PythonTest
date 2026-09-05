@@ -641,6 +641,10 @@ TRANSLATIONS = {
     "tabel_col_contract_number": {"az": "M/n", "en": "Contract #"},
     "tabel_col_work_days": {"az": "İş günlərinin sayı", "en": "Work Days"},
     "tabel_cell_error": {"az": "Xəta baş verdi.", "en": "Something went wrong."},
+    "tabel_documents_need_period": {
+        "az": "Sənəd əlavə etmək üçün əvvəlcə \"Tabeli generasiya et\" düyməsinə basın.",
+        "en": "Click \"Generate Timesheet\" first to be able to add documents.",
+    },
     # --- Əməkhaqları siyahısı (salary/list.html) --------------------------------
     "salary_page_title": {"az": "Əməkhaqları", "en": "Payroll"},
     "search_all_fields": {

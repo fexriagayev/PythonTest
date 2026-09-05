@@ -4,6 +4,11 @@
    data/footer context menyuları, filter sətri, ixrac (Excel/PDF) burdan
    avtomatik gəlir). Yalnız gün sütunlarının rəngli/klikləmə davranışı
    Tabulator-uyğun `formatter` callback-i ilə xüsusi qurulur.
+
+   Hələ heç bir dövr (TabelPeriod) yaradılmayıbsa (matrixUrl verilməyibsə),
+   grid yenə DƏRHAL yaradılır — sadəcə BOŞ (sıfır sətir) — ki, istifadəçi
+   "Generasiya et"-ə basmazdan əvvəl də cədvəlin necə görünəcəyini görsün.
+   Ay/İl dəyişəndə setDaysInMonth() çağırılıb sütunlar yenidən qurula bilər.
    =========================================================================== */
 
 function tabelCellStyle(code, hasKey) {
@@ -20,10 +25,11 @@ function tabelCellIsEditable(code, hasKey) {
 
 function initTabelMatrix(config) {
   /* config: {
-       elementId, gridKey, matrixUrl, cellUrl, daysInMonth, readOnly,
+       elementId, gridKey, matrixUrl (null = hələ dövr yoxdur, boş grid),
+       cellUrl, daysInMonth, readOnly,
        onLoaded(data), onCellChanged(rowId, workDaysCount)
      } */
-  let daysInMonth = config.daysInMonth;
+  let daysInMonth = config.daysInMonth || 30;
   let grid = null;
 
   function flattenRow(r) {
@@ -58,7 +64,7 @@ function initTabelMatrix(config) {
     el.style.cursor = (!config.readOnly && tabelCellIsEditable(value, hasKey)) ? "pointer" : "default";
   }
 
-  function handleCellClick(rowId, day, el) {
+  function handleCellClick(rowId, day) {
     fetch(config.cellUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest" },
@@ -74,13 +80,17 @@ function initTabelMatrix(config) {
           }
           return;
         }
-        paintCellElement(el, data.value, true);
 
-        // "İş günlərinin sayı" sütununu həmin sətirdə dərhal yenilə (tam
-        // reload lazım deyil) — sakit, heç bir "saxlanıldı" bildirişi yoxdur.
+        // DOM-u ƏL İLƏ boyamaq YOX — grid-in öz data mənbəyini yeniləyirik,
+        // DevExtreme sətri özü yenidən render edir (formatter-i təzədən
+        // çağırıb düzgün rənglə göstərir). Əvvəlki versiya birbaşa DOM-u
+        // boyayırdı, amma work_days_count üçün edilən cellValue() çağırışı
+        // bütün sətri yenidən render etdirdiyi üçün köhnə (data mənbəyindəki)
+        // dəyərlə xananı yenidən "+" göstərirdi.
         if (grid) {
           const rowIndex = grid.getRowIndexByKey(rowId);
           if (rowIndex > -1) {
+            grid.cellValue(rowIndex, "day_" + day, data.value);
             grid.cellValue(rowIndex, "work_days_count", data.work_days_count);
           }
         }
@@ -107,30 +117,33 @@ function initTabelMatrix(config) {
         const el = document.createElement("div");
         paintCellElement(el, value, hasKey);
         if (!config.readOnly && tabelCellIsEditable(value, hasKey)) {
-          el.addEventListener("click", function () {
-            handleCellClick(data.id, d, el);
-          });
+          el.onclick = function () {
+            handleCellClick(data.id, d);
+          };
         }
         return el;
       }
     };
   }
 
-  const columns = [
-    { field: "full_name", title: t("emp_col_full_name"), width: 190, fixed: true, fixedPosition: "left" },
-    { field: "position", title: t("emp_col_position"), width: 150, fixed: true, fixedPosition: "left" },
-    { field: "contract_number", title: t("tabel_col_contract_number"), width: 100, fixed: true, fixedPosition: "left" }
-  ];
-  for (let d = 1; d <= daysInMonth; d++) columns.push(dayColumnDef(d));
-  columns.push({
-    field: "work_days_count",
-    title: t("tabel_col_work_days"),
-    width: 90,
-    sorter: "number",
-    allowFiltering: false,
-    fixed: true,
-    fixedPosition: "right"
-  });
+  function buildColumns() {
+    const columns = [
+      { field: "full_name", title: t("emp_col_full_name"), width: 190, fixed: true, fixedPosition: "left" },
+      { field: "position", title: t("emp_col_position"), width: 150, fixed: true, fixedPosition: "left" },
+      { field: "contract_number", title: t("tabel_col_contract_number"), width: 100, fixed: true, fixedPosition: "left" }
+    ];
+    for (let d = 1; d <= daysInMonth; d++) columns.push(dayColumnDef(d));
+    columns.push({
+      field: "work_days_count",
+      title: t("tabel_col_work_days"),
+      width: 90,
+      sorter: "number",
+      allowFiltering: false,
+      fixed: true,
+      fixedPosition: "right"
+    });
+    return columns;
+  }
 
   // Excel/PDF ixracında da eyni rənglər saxlansın (bax: advanced-grid.js
   // exportGridToExcel/exportGridToPdf-ə ötürülən customizeCell hook-ları).
@@ -164,38 +177,67 @@ function initTabelMatrix(config) {
     }
   }
 
+  // Modal təzəcə açılıb animasiya/reflow bitməmiş ola bilər — bir neçə
+  // an sonra süni "resize" göndəririk ki, grid öz hündürlüyünü/enini
+  // düzgün ölçüdə (klient sahəsinə tam uyğun) yenidən hesablasın. Bax:
+  // advanced-grid.js-dəki toggleModalMaximize-in eyni texnikası.
+  function kickResize() {
+    setTimeout(function () {
+      window.dispatchEvent(new Event("resize"));
+    }, 60);
+  }
+
+  function createGrid() {
+    grid = createAdvancedGrid(
+      config.elementId,
+      config.gridKey || "tabel_matrix",
+      {
+        data: [],
+        pagination: true,
+        paginationSize: 50,
+        columns: buildColumns()
+      },
+      {
+        idField: "id",
+        exportCustomizeCellExcel: exportCustomizeCellExcel,
+        exportCustomizeCellPdf: exportCustomizeCellPdf
+      }
+    );
+    kickResize();
+  }
+
   function load() {
+    if (!config.matrixUrl) {
+      // Hələ heç bir dövr yaradılmayıb — boş grid onsuz da yaradılıb,
+      // ediləcək başqa iş yoxdur.
+      return Promise.resolve(null);
+    }
     return fetch(config.matrixUrl, { headers: { "X-Requested-With": "XMLHttpRequest" } })
       .then(function (r) { return r.json(); })
       .then(function (data) {
         daysInMonth = data.days_in_month || daysInMonth;
         const rows = (data.rows || []).map(flattenRow);
-
-        if (!grid) {
-          grid = createAdvancedGrid(
-            config.elementId,
-            config.gridKey || "tabel_matrix",
-            {
-              data: rows,
-              pagination: false, // "full client" — bütün sətirlər bir dəfəyə, səhifələmə yoxdur
-              columns: columns
-            },
-            {
-              idField: "id",
-              exportCustomizeCellExcel: exportCustomizeCellExcel,
-              exportCustomizeCellPdf: exportCustomizeCellPdf
-            }
-          );
-        } else {
-          grid.option("dataSource", rows);
-        }
-
+        grid.option("dataSource", rows);
         if (typeof config.onLoaded === "function") config.onLoaded(data);
         return data;
       });
   }
 
+  function setDaysInMonth(newDays) {
+    if (!newDays || newDays === daysInMonth) return;
+    daysInMonth = newDays;
+    if (grid) {
+      grid.option("columns", buildColumns());
+      kickResize();
+    }
+  }
+
+  createGrid();
   load();
 
-  return { reload: load, getInstance: function () { return grid; } };
+  return {
+    reload: load,
+    setDaysInMonth: setDaysInMonth,
+    getInstance: function () { return grid; }
+  };
 }

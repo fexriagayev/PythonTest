@@ -482,6 +482,7 @@ function upgradeSelect(field) {
     valueExpr: "value",
     displayExpr: "text",
     value: field.value,
+    disabled: field.disabled,
     searchEnabled: items.length > 8,
     showClearButton: !field.required,
     onValueChanged: function (e) {

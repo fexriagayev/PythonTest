@@ -176,10 +176,11 @@ function applyFormatterCompatibility(dx, original) {
         function () { }
       );
 
+      const el = container && container.jquery ? container[0] : container;
       if (result instanceof Node) {
-        container.appendChild(result);
+        el.appendChild(result);
       } else {
-        container.textContent = result == null ? "" : String(result);
+        el.textContent = result == null ? "" : String(result);
       }
     };
   }

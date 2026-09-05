@@ -6,65 +6,86 @@
 {% block form_actions %}{% endblock %}
 
 {% block form_fields %}
+<div class="dx-modal-form-single-col tabel-modal-body">
 
-<div class="toolbar" style="flex-wrap:wrap; gap:16px; align-items:center;">
-  <label style="margin:0;">
-    {{ t('tabel_field_month') }}:
-    <select id="periodMonth" {{ 'disabled' if period }}>
-      {% for i in range(1, 13) %}
-      <option value="{{ i }}" {{ 'selected' if i == default_month }}>{{ month_names[i - 1] }}</option>
-      {% endfor %}
-    </select>
-  </label>
-  <label style="margin:0;">
-    {{ t('tabel_field_year') }}:
-    <input type="number" id="periodYear" value="{{ default_year }}" min="2000" max="2100" style="width:90px;" {{ 'disabled' if period }}>
-  </label>
-
-  {% if not period or not period.is_approved %}
-  <button type="button" id="generateBtn" class="btn">{{ t('tabel_generate_btn') }}</button>
-  {% endif %}
+  <div class="toolbar tabel-period-row">
+    <div class="tabel-period-row-left">
+      <label style="margin:0;">
+        {{ t('tabel_field_month') }}:
+        <select id="periodMonth" {{ 'disabled' if period }}>
+          {% for i in range(1, 13) %}
+          <option value="{{ i }}" {{ 'selected' if i == default_month }}>{{ month_names[i - 1] }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label style="margin:0;">
+        {{ t('tabel_field_year') }}:
+        <input type="number" id="periodYear" value="{{ default_year }}" min="2000" max="2100" style="width:90px;" {{ 'disabled' if period }}>
+      </label>
+    </div>
+    <div class="tabel-period-row-right">
+      {% if not period or not period.is_approved %}
+      <button type="button" id="generateBtn" class="btn">{{ t('tabel_generate_btn') }}</button>
+      {% endif %}
+      {% if period %}
+      <button type="button" id="approveBtn" class="btn btn-secondary">
+        {{ t('tabel_unapprove_btn') if period.is_approved else t('tabel_approve_btn') }}
+      </button>
+      {% endif %}
+    </div>
+  </div>
 
   {% if period %}
-  <button type="button" id="approveBtn" class="btn btn-secondary">
-    {{ t('tabel_unapprove_btn') if period.is_approved else t('tabel_approve_btn') }}
-  </button>
+  <div class="tabel-tabs">
+    <button type="button" class="tabel-tab-btn active" data-tab="main">{{ t('tabel_tab_main') }}</button>
+    <button type="button" class="tabel-tab-btn" data-tab="documents">{{ t('tabel_tab_documents') }}</button>
+  </div>
+
+  <div id="tabelPanelMain" class="tabel-panel active">
+    <div id="tabelMatrixGrid"></div>
+  </div>
+
+  <div id="tabelPanelDocuments" class="tabel-panel">
+    {% set owner_type = "tabel_period" %}
+    {% set owner_id = period.id %}
+    {% set owner_module = "TABEL" %}
+    {% set panel_id = "tabelDocuments" %}
+    {% include "partials/documents_panel.html" with context %}
+  </div>
+  {% else %}
+  <div class="tabel-tabs">
+    <button type="button" class="tabel-tab-btn active" data-tab="main">{{ t('tabel_tab_main') }}</button>
+    <button type="button" class="tabel-tab-btn" data-tab="documents">{{ t('tabel_tab_documents') }}</button>
+  </div>
+
+  <div id="tabelPanelMain" class="tabel-panel active">
+    <div id="tabelMatrixGrid"></div>
+  </div>
+
+  <div id="tabelPanelDocuments" class="tabel-panel">
+    <p class="text-muted" style="padding:24px 4px;">{{ t('tabel_documents_need_period') }}</p>
+  </div>
   {% endif %}
-</div>
 
-{% if period %}
-<div class="tabel-tabs">
-  <button type="button" class="tabel-tab-btn active" data-tab="main">{{ t('tabel_tab_main') }}</button>
-  <button type="button" class="tabel-tab-btn" data-tab="documents">{{ t('tabel_tab_documents') }}</button>
 </div>
-
-<div id="tabelPanelMain" class="tabel-panel active">
-  <div id="tabelMatrixGrid"></div>
-</div>
-
-<div id="tabelPanelDocuments" class="tabel-panel">
-  {% set owner_type = "tabel_period" %}
-  {% set owner_id = period.id %}
-  {% set owner_module = "TABEL" %}
-  {% set panel_id = "tabelDocuments" %}
-  {% include "partials/documents_panel.html" with context %}
-</div>
-{% endif %}
-
 {% endblock %}
 
 {% block extra_scripts %}
 <style>
-  .dx-modal-form-fields .tabel-tabs { display:flex; gap:4px; margin:14px 0 10px; }
-  .dx-modal-form-fields .tabel-tabs button {
+  .tabel-modal-body { width: 100%; }
+  .tabel-period-row { justify-content: space-between; flex-wrap: wrap; gap: 14px; }
+  .tabel-period-row-left { display:flex; gap:14px; align-items:center; flex-wrap:wrap; }
+  .tabel-period-row-right { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  .tabel-tabs { display:flex; gap:4px; margin:14px 0 10px; }
+  .tabel-tabs button {
     padding:6px 18px; border:1px solid #ccc; background:#eee; cursor:pointer;
     border-bottom:none; border-radius:4px 4px 0 0;
   }
-  .dx-modal-form-fields .tabel-tabs button.active { background:#fff; font-weight:600; }
-  .dx-modal-form-fields .tabel-panel { display:none; }
-  .dx-modal-form-fields .tabel-panel.active { display:block; }
+  .tabel-tabs button.active { background:#fff; font-weight:600; }
+  .tabel-panel { display:none; width:100%; }
+  .tabel-panel.active { display:block; }
+  #tabelMatrixGrid { width:100%; }
 </style>
-<script src="{{ url_for('static', filename='js/tabel-matrix.js') }}"></script>
 <script>
 (function () {
   const periodId = {{ period.id if period else 'null' }};
@@ -74,31 +95,63 @@
   // Bu modalın "Yadda saxla" (paylaşılan alt toolbar) düyməsinin heç bir
   // mənası yoxdur — bütün əməliyyatlar (generasiya/xana/təsdiq) öz AJAX
   // çağırışları ilə dərhal saxlanılır. Employee alt-tab-larında olduğu
-  // kimi onu deaktiv edirik.
+  // kimi onu tamamilə gizlədirik.
   const popup = getModalPopup();
   if (popup) {
     const toolbarItems = popup.option("toolbarItems");
     const saveItem = findSaveToolbarItem(toolbarItems);
-    if (saveItem) saveItem.options.disabled = true;
+    if (saveItem) {
+      saveItem.options.disabled = true;
+      saveItem.options.visible = false;
+    }
     popup.option("toolbarItems", toolbarItems);
   }
 
-  // Matris geniş olduğu üçün modalı avtomatik tam ekrana böyüdürük.
+  // Matris çox geniş olduğu üçün bu modal həmişə tam ekranda açılsın.
   const root = document.getElementById("appModal");
   if (root && !root.__isMaximized && typeof toggleModalMaximize === "function") {
     toggleModalMaximize();
   }
 
   function goToPeriod(id) {
-    openFormModal("/tabel/edit/" + id, window.__currentModalSavedCallback);
+    reloadModalContentInPlace("/tabel/edit/" + id);
+  }
+
+  // Eyni (artıq açıq) modalın içini yeniləmək üçün — openFormModal-dan
+  // FƏRQLİ olaraq popup.show() YENİDƏN çağırılmır (o, artıq görünür,
+  // yenidən show() çağırmaq DevExtreme-in açılış animasiyasını təzədən
+  // işə salır və istifadəçiyə "yeni modal açıldı" kimi görünür) və
+  // modalStateStack-ə heç nə atılmır (bu, geri qayıdılası ayrı bir forma
+  // deyil, sadəcə HƏMİN formanın yenilənməsidir).
+  function reloadModalContentInPlace(url) {
+    const body = getModalBody();
+    const popup = getModalPopup();
+    return fetch(url, { headers: { "X-Requested-With": "XMLHttpRequest" } })
+      .then(function (r) { return r.text(); })
+      .then(function (html) {
+        body.innerHTML = html;
+        relocateModalFlash(body);
+        const title = getModalTitleFromHtml(html);
+        if (title) popup.option("title", title);
+        executeInjectedScripts(body);
+        wireModalForm(window.__currentModalSavedCallback);
+      });
   }
 
   // --- Ay/İl dəyişəndə: artıq mövcud dövrdürsə avtomatik ona keç ----------
   const monthSelect = document.getElementById("periodMonth");
   const yearInput = document.getElementById("periodYear");
 
+  function daysInSelectedMonth() {
+    const year = parseInt(yearInput.value, 10);
+    const month = parseInt(monthSelect.value, 10);
+    if (!year || !month) return 30;
+    return new Date(year, month, 0).getDate(); // ayın son günü = gün sayı
+  }
+
   function checkExistingPeriod() {
     if (periodId) return; // artıq mövcud dövrə bağlıyıqsa, axtarmağa ehtiyac yoxdur
+    if (matrix) matrix.setDaysInMonth(daysInSelectedMonth());
     const year = yearInput.value;
     const month = monthSelect.value;
     if (!year || !month) return;
@@ -188,20 +241,35 @@
       document.querySelectorAll(".tabel-panel").forEach(function (p) { p.classList.remove("active"); });
       btn.classList.add("active");
       document.getElementById("tabelPanel" + (btn.dataset.tab === "main" ? "Main" : "Documents")).classList.add("active");
+      if (btn.dataset.tab === "main") {
+        // Grid gizli ikən (Sənədlər tabında) ölçüləri köhnəlmiş qala bilər —
+        // yenidən görünəndə DevExtreme-ə düzəltdirmək üçün.
+        setTimeout(function () { window.dispatchEvent(new Event("resize")); }, 30);
+      } else {
+        // Sənədlər grid-i də eyni səbəbdən (əvvəlcə gizli yaradılıb) öz
+        // ölçüsünü itirə bilər — tab görünən kimi ona da düzəltdiririk.
+        setTimeout(function () { window.dispatchEvent(new Event("resize")); }, 30);
+      }
     });
   });
 
   // --- Matris ------------------------------------------------------------------
-  if (periodId && daysInMonth) {
-    initTabelMatrix({
-      elementId: "tabelMatrixGrid",
-      gridKey: "tabel_matrix",
-      matrixUrl: "/tabel/" + periodId + "/api/matrix",
-      cellUrl: "/tabel/" + periodId + "/cell",
-      daysInMonth: daysInMonth,
-      readOnly: isApproved
-    });
-  }
+  // Dövr hələ yaradılmayıbsa (matrixUrl=null) belə, grid dərhal BOŞ formada
+  // göstərilir (seçilmiş Ay/İl-ə uyğun gün sayı ilə) ki, istifadəçi
+  // "Generasiya et"-ə basmazdan əvvəl cədvəlin necə olacağını görsün.
+  const matrix = initTabelMatrix({
+    elementId: "tabelMatrixGrid",
+    gridKey: "tabel_matrix",
+    matrixUrl: periodId ? "/tabel/" + periodId + "/api/matrix" : null,
+    cellUrl: periodId ? "/tabel/" + periodId + "/cell" : null,
+    daysInMonth: daysInMonth || daysInSelectedMonth(),
+    readOnly: isApproved || !periodId
+  });
+
+  // Modal İLK açılanda da (default Ay/İl ilə) yoxlanılsın — təkcə istifadəçi
+  // Ay/İl-i dəyişəndə yox. (matrix artıq yuxarıda yaradılıb — checkExistingPeriod
+  // onu istifadə etdiyi üçün bu çağırış BURADAN sonra olmalıdır.)
+  if (!periodId) checkExistingPeriod();
 })();
 </script>
 {% endblock %}
