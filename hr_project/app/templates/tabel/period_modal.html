@@ -146,6 +146,41 @@
       });
   }
 
+  // --- Popup həqiqətən görünəndə işə düş (əvvəlki sabit 50ms gecikmə YOX) ----
+  // BU, "matrix client deyil" (grid client hündürlüyünü doldurmur) və "forma
+  // bir neçə dəfə sönüb-yanır" problemlərinin əsl kökü idi: dxPopup.show()
+  // görünmə keçidini standart CSS animasiya ilə (scale/opacity, ~300ms)
+  // icra edir. `setTimeout(..., 50)` yalnız show() ÇAĞIRILDIQDAN 50ms sonra
+  // işə düşürdü — yəni animasiya HƏLƏ DAVAM EDƏRKƏN (təxminən 1/6 hissəsi
+  // keçmiş, hələ tam ölçüyə çatmamış) grid yaradılırdı. Grid-in hündürlüyü
+  // (bax: advanced-grid.js computeInitialHeight) elementin O ANKI
+  // getBoundingClientRect()-i əsasında BİR DƏFƏLİK statik ədəd kimi
+  // hesablanır və sonra YENİDƏN ölçülmür (bilərəkdən — bax tabel-matrix.js
+  // createGrid-dəki qeyd) — ona görə animasiya bitməmiş ölçülən səhv
+  // (kiçik) hündürlük əbədi qalırdı ("client" olmurdu). Eyni zamanda, ağır
+  // DataGrid-in məhz animasiya davam edərkən yaradılması bir neçə ard-arda
+  // reflow/repaint yaradaraq istifadəçiyə formanın "bir neçə dəfə sönüb-
+  // yanması" kimi görünürdü.
+  //
+  // Düzəliş: sabit gecikmə əvəzinə popup-un öz "shown" hadisəsini gözləyirik
+  // (animasiya artıq TAM bitəndə atılır) — beləliklə grid YALNIZ popup öz
+  // son ölçüsünə çatandan sonra yaradılır. `reloadModalContentInPlace`
+  // (goToPeriod) zamanı popup artıq görünürdür və heç bir animasiya
+  // getmir — bu halda "shown" bir daha atılmayacaq, ona görə həmin halda
+  // dərhal davam edirik.
+  function runWhenModalShown(fn) {
+    const popup = getModalPopup();
+    if (!popup || popup.option("visible")) {
+      fn();
+      return;
+    }
+    function onShown() {
+      popup.off("shown", onShown);
+      fn();
+    }
+    popup.on("shown", onShown);
+  }
+
   // --- Ay/İl dəyişəndə: artıq mövcud dövrdürsə avtomatik ona keç ----------
   const monthSelect = document.getElementById("periodMonth");
   const yearInput = document.getElementById("periodYear");
@@ -159,12 +194,24 @@
 
   let matrix = null; // aşağıda, popup ölçüsü sabitləşəndən sonra yaradılır
 
-  function checkExistingPeriod() {
+  // `onNotFound` YALNIZ modalın İLK açılışında (aşağıdakı runWhenModalShown
+  // çağırışı içində) verilir — bax oradakı qeydə: köhnə davranışda boş preview
+  // grid HƏMİŞƏ dərhal yaradılırdı, bu yoxlama isə bir az sonra (fetch
+  // cavabı gələndə) bitirdi. Cari Ay/İl üçün dövr onsuz da mövcud olan
+  // hallarda (çox rast gəlinən) bu o deməkdi ki, boş grid bir anlıq
+  // yaranıb DƏRHAL məhv edilir və "edit" görünüşünün öz grid-i ilə
+  // əvəz olunurdu — istifadəçiyə modalın 2 dəfə arda-arda yarandığı
+  // kimi görünürdü. İndi əvvəlcə yoxlanılır, boş grid YALNIZ dövr
+  // tapılmadıqda yaradılır.
+  function checkExistingPeriod(onNotFound) {
     if (periodId) return; // artıq mövcud dövrə bağlıyıqsa, axtarmağa ehtiyac yoxdur
     if (matrix) matrix.setDaysInMonth(daysInSelectedMonth());
     const year = yearInput.value;
     const month = monthSelect.value;
-    if (!year || !month) return;
+    if (!year || !month) {
+      if (typeof onNotFound === "function") onNotFound();
+      return;
+    }
     fetch("/tabel/lookup?year=" + encodeURIComponent(year) + "&month=" + encodeURIComponent(month), {
       headers: { "X-Requested-With": "XMLHttpRequest" }
     })
@@ -172,6 +219,8 @@
       .then(function (data) {
         if (data.exists && data.period_id) {
           goToPeriod(data.period_id);
+        } else if (typeof onNotFound === "function") {
+          onNotFound();
         }
       });
   }
@@ -264,33 +313,42 @@
   });
 
   // --- Matris ------------------------------------------------------------------
-  // Grid yaradılması bir az (0ms-dən bir qədər çox) GECİKDİRİLİR ki,
-  // `openFormModal`-ın bu skriptdən SONRA çağırdığı `popup.show()` artıq
-  // işləmiş olsun — əks halda grid hələ göstərilməmiş (görünməz) popup-un
-  // ölçüsünü ölçüb səhv nəticə alardı. Maximize isə YUXARIDA, dərhal
-  // çağırılıb (bax: yuxarıdakı qeyd) — ona görə grid yarananda popup
-  // artıq həm görünür, həm də düz ölçüdədir, ƏLAVƏ bir "resize" siqnalına
-  // ehtiyac qalmır (bax: tabel-matrix.js-dəki createGrid — orada bilərəkdən
-  // heç bir kickResize YOXDUR, məhz bu ikiqat-resize probleminin qarşısını
-  // almaq üçün).
-  setTimeout(function () {
-    // Dövr hələ yaradılmayıbsa (matrixUrl=null) belə, grid dərhal BOŞ
-    // formada göstərilir (seçilmiş Ay/İl-ə uyğun gün sayı ilə) ki,
-    // istifadəçi "Generasiya et"-ə basmazdan əvvəl cədvəlin necə
-    // olacağını görsün.
-    matrix = initTabelMatrix({
-      elementId: "tabelMatrixGrid",
-      gridKey: "tabel_matrix",
-      matrixUrl: periodId ? "/tabel/" + periodId + "/api/matrix" : null,
-      cellUrl: periodId ? "/tabel/" + periodId + "/cell" : null,
-      daysInMonth: daysInMonth || daysInSelectedMonth(),
-      readOnly: isApproved || !periodId
-    });
+  // Grid YALNIZ popup öz açılış animasiyasını bitirib son (maksimallaşdırılmış)
+  // ölçüsünə çatandan sonra yaradılır (bax: runWhenModalShown yuxarıda) —
+  // sabit "50ms" gözləmə YOX, çünki animasiya adətən bundan uzun çəkir və
+  // grid-in hündürlüyü məhz O AN ölçülüb sonra bir daha yenilənmir.
+  runWhenModalShown(function () {
+    if (periodId) {
+      // Mövcud dövr — birbaşa öz matrisini yaradır.
+      matrix = initTabelMatrix({
+        elementId: "tabelMatrixGrid",
+        gridKey: "tabel_matrix",
+        matrixUrl: "/tabel/" + periodId + "/api/matrix",
+        cellUrl: "/tabel/" + periodId + "/cell",
+        daysInMonth: daysInMonth,
+        readOnly: isApproved
+      });
+      return;
+    }
 
-    // Modal İLK açılanda da (default Ay/İl ilə) yoxlanılsın — təkcə
-    // istifadəçi Ay/İl-i dəyişəndə yox.
-    if (!periodId) checkExistingPeriod();
-  }, 50);
+    // Yeni dövr forması: ƏVVƏLCƏ cari (default) Ay/İl üçün dövrün artıq
+    // mövcud olub-olmadığı yoxlanılır. Tapılarsa, boş preview grid heç
+    // yaradılmadan birbaşa mövcud dövrə keçilir (goToPeriod) — bax
+    // checkExistingPeriod-dakı qeydə: bu, boş grid-in bir anlıq yaranıb
+    // dərhal məhv edilməsinin qarşısını alır. Tapılmasa, YALNIZ o zaman
+    // boş preview grid yaradılır ki, istifadəçi "Generasiya et"-ə
+    // basmazdan əvvəl cədvəlin necə olacağını görsün.
+    checkExistingPeriod(function () {
+      matrix = initTabelMatrix({
+        elementId: "tabelMatrixGrid",
+        gridKey: "tabel_matrix",
+        matrixUrl: null,
+        cellUrl: null,
+        daysInMonth: daysInMonth || daysInSelectedMonth(),
+        readOnly: true
+      });
+    });
+  });
 })();
 </script>
 {% endblock %}
