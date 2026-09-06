@@ -108,8 +108,16 @@
   }
 
   // Matris çox geniş olduğu üçün bu modal həmişə tam ekranda açılsın.
-  const root = document.getElementById("appModal");
-  if (root && !root.__isMaximized && typeof toggleModalMaximize === "function") {
+  // BUNU DƏRHAL (heç bir gecikmə olmadan) çağırırıq — bu skript
+  // (executeInjectedScripts vasitəsilə) `openFormModal`-ın popup.show()
+  // çağırmasından ƏVVƏL işə düşür. Əgər maximize-i gecikdirsəydik, popup
+  // əvvəlcə NORMAL ölçüdə görünərdi, sonra bir neçə millisaniyə sonra
+  // birdən-birə tam ekrana "sıçrayardı" — məhz bu, "modal 2 dəfə yaranır"
+  // effektini yaradırdı. İndi popup hələ göstərilməmişdən (show()) əvvəl
+  // artıq maksimum ölçüyə keçdiyi üçün, İLK görünüşü birbaşa tam ekranda
+  // olacaq — heç bir sıçrayış olmadan.
+  const modalRoot = document.getElementById("appModal");
+  if (modalRoot && !modalRoot.__isMaximized && typeof toggleModalMaximize === "function") {
     toggleModalMaximize();
   }
 
@@ -148,6 +156,8 @@
     if (!year || !month) return 30;
     return new Date(year, month, 0).getDate(); // ayın son günü = gün sayı
   }
+
+  let matrix = null; // aşağıda, popup ölçüsü sabitləşəndən sonra yaradılır
 
   function checkExistingPeriod() {
     if (periodId) return; // artıq mövcud dövrə bağlıyıqsa, axtarmağa ehtiyac yoxdur
@@ -235,41 +245,52 @@
   }
 
   // --- Tab keçidi (Tabel / Sənədlər) ------------------------------------------
+  // Hər panel yalnız İLK DƏFƏ görünəndə "resize" siqnalı alır (bax:
+  // fixedOnce aşağıda) — hər keçiddə təkrar-təkrar ölçü düzəltmək görünən
+  // "sıçrayış/flaş" effekti yaradırdı.
+  const fixedOnce = { main: true, documents: false }; // "main" artıq aşağıda ilk yaranışda düzgün ölçülənəcək
   document.querySelectorAll(".tabel-tab-btn").forEach(function (btn) {
     btn.addEventListener("click", function () {
       document.querySelectorAll(".tabel-tab-btn").forEach(function (b) { b.classList.remove("active"); });
       document.querySelectorAll(".tabel-panel").forEach(function (p) { p.classList.remove("active"); });
       btn.classList.add("active");
       document.getElementById("tabelPanel" + (btn.dataset.tab === "main" ? "Main" : "Documents")).classList.add("active");
-      if (btn.dataset.tab === "main") {
-        // Grid gizli ikən (Sənədlər tabında) ölçüləri köhnəlmiş qala bilər —
-        // yenidən görünəndə DevExtreme-ə düzəltdirmək üçün.
-        setTimeout(function () { window.dispatchEvent(new Event("resize")); }, 30);
-      } else {
-        // Sənədlər grid-i də eyni səbəbdən (əvvəlcə gizli yaradılıb) öz
-        // ölçüsünü itirə bilər — tab görünən kimi ona da düzəltdiririk.
+      const key = btn.dataset.tab === "main" ? "main" : "documents";
+      if (!fixedOnce[key]) {
+        fixedOnce[key] = true;
         setTimeout(function () { window.dispatchEvent(new Event("resize")); }, 30);
       }
     });
   });
 
   // --- Matris ------------------------------------------------------------------
-  // Dövr hələ yaradılmayıbsa (matrixUrl=null) belə, grid dərhal BOŞ formada
-  // göstərilir (seçilmiş Ay/İl-ə uyğun gün sayı ilə) ki, istifadəçi
-  // "Generasiya et"-ə basmazdan əvvəl cədvəlin necə olacağını görsün.
-  const matrix = initTabelMatrix({
-    elementId: "tabelMatrixGrid",
-    gridKey: "tabel_matrix",
-    matrixUrl: periodId ? "/tabel/" + periodId + "/api/matrix" : null,
-    cellUrl: periodId ? "/tabel/" + periodId + "/cell" : null,
-    daysInMonth: daysInMonth || daysInSelectedMonth(),
-    readOnly: isApproved || !periodId
-  });
+  // Grid yaradılması bir az (0ms-dən bir qədər çox) GECİKDİRİLİR ki,
+  // `openFormModal`-ın bu skriptdən SONRA çağırdığı `popup.show()` artıq
+  // işləmiş olsun — əks halda grid hələ göstərilməmiş (görünməz) popup-un
+  // ölçüsünü ölçüb səhv nəticə alardı. Maximize isə YUXARIDA, dərhal
+  // çağırılıb (bax: yuxarıdakı qeyd) — ona görə grid yarananda popup
+  // artıq həm görünür, həm də düz ölçüdədir, ƏLAVƏ bir "resize" siqnalına
+  // ehtiyac qalmır (bax: tabel-matrix.js-dəki createGrid — orada bilərəkdən
+  // heç bir kickResize YOXDUR, məhz bu ikiqat-resize probleminin qarşısını
+  // almaq üçün).
+  setTimeout(function () {
+    // Dövr hələ yaradılmayıbsa (matrixUrl=null) belə, grid dərhal BOŞ
+    // formada göstərilir (seçilmiş Ay/İl-ə uyğun gün sayı ilə) ki,
+    // istifadəçi "Generasiya et"-ə basmazdan əvvəl cədvəlin necə
+    // olacağını görsün.
+    matrix = initTabelMatrix({
+      elementId: "tabelMatrixGrid",
+      gridKey: "tabel_matrix",
+      matrixUrl: periodId ? "/tabel/" + periodId + "/api/matrix" : null,
+      cellUrl: periodId ? "/tabel/" + periodId + "/cell" : null,
+      daysInMonth: daysInMonth || daysInSelectedMonth(),
+      readOnly: isApproved || !periodId
+    });
 
-  // Modal İLK açılanda da (default Ay/İl ilə) yoxlanılsın — təkcə istifadəçi
-  // Ay/İl-i dəyişəndə yox. (matrix artıq yuxarıda yaradılıb — checkExistingPeriod
-  // onu istifadə etdiyi üçün bu çağırış BURADAN sonra olmalıdır.)
-  if (!periodId) checkExistingPeriod();
+    // Modal İLK açılanda da (default Ay/İl ilə) yoxlanılsın — təkcə
+    // istifadəçi Ay/İl-i dəyişəndə yox.
+    if (!periodId) checkExistingPeriod();
+  }, 50);
 })();
 </script>
 {% endblock %}

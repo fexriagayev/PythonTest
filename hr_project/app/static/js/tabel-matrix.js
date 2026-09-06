@@ -203,7 +203,12 @@ function initTabelMatrix(config) {
         exportCustomizeCellPdf: exportCustomizeCellPdf
       }
     );
-    kickResize();
+    // QEYD: burada əlavə bir kickResize() ÇAĞIRMIRIQ — bu grid, adətən,
+    // modalın öz maximize+resize ardıcıllığının (bax: tabel/period_modal.html)
+    // İÇİNDƏ yaradılır; o, artıq öz resize siqnalını göndərir. Burada da
+    // əlavə bir kick göndərsəydik, iki ayrı resize demək olar EYNİ anda
+    // (fərqli gecikmələrlə) toqquşub bir-birinin ölçü hesablamasını "əzir"
+    // və nəticədə hündürlük səhv (çox böyük/kiçik) çıxırdı.
   }
 
   function load() {
