@@ -1079,6 +1079,7 @@ def api_leave_reasons():
             "name": r.name,
             "counting_method": r.counting_method_label(),
             "is_annual_leave": r.is_annual_leave,
+            "is_sick_leave": r.is_sick_leave,
             "is_active": r.is_active,
             "tabel_code": r.tabel_code,
         }
@@ -1091,6 +1092,7 @@ def _apply_leave_reason_form(reason, form):
     reason.name = form.get("name", "").strip()
     reason.counting_method = form.get("counting_method", "calendar")
     reason.is_annual_leave = bool(form.get("is_annual_leave"))
+    reason.is_sick_leave = bool(form.get("is_sick_leave"))
     reason.is_active = bool(form.get("is_active"))
     reason.tabel_code = form.get("tabel_code", "").strip() or None
 
@@ -1464,6 +1466,11 @@ def add_leave_request(emp_id):
             end_date=end,
             order_id=_parse_int(request.form.get("order_id")),
             note=request.form.get("note", "").strip(),
+            payment_amount=(
+                _parse_decimal(request.form.get("payment_amount"))
+                if reason.is_annual_leave or reason.is_sick_leave
+                else None
+            ),
         )
         db.session.add(record)
         recompute_employee_from_history(employee)
@@ -1530,6 +1537,11 @@ def edit_leave_request(emp_id, record_id):
         record.end_date = end
         record.order_id = _parse_int(request.form.get("order_id"))
         record.note = request.form.get("note", "").strip()
+        record.payment_amount = (
+            _parse_decimal(request.form.get("payment_amount"))
+            if reason.is_annual_leave or reason.is_sick_leave
+            else None
+        )
         recompute_employee_from_history(employee)
         db.session.commit()
         flash("İş buraxması yeniləndi.", "success")

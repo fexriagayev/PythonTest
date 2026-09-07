@@ -1,0 +1,27 @@
+{% extends "modal_form_base.html" %}
+{% set form_title = t('payroll_entry_form_title') %}
+{% set form_employee_name = entry.full_name_snapshot %}
+{% set form_action = url_for('salary.edit_payroll_entry', entry_id=entry.id) %}
+{% set cancel_url = url_for('salary.payroll_period', period_id=entry.payroll_run.period_id) %}
+{% set form_max_width = '480px' %}
+
+{% block before_form %}
+<p style="color:#888;font-size:0.85em;max-width:440px;">
+  {{ t('payroll_col_monthly_salary') }}: {{ entry.monthly_salary }} ·
+  {{ t('payroll_col_base_amount') }}: {{ entry.base_amount }} ·
+  {{ t('payroll_col_vacation_pay') }}: {{ entry.vacation_pay }} ·
+  {{ t('payroll_col_sick_pay') }}: {{ entry.sick_pay }} ·
+  {{ t('payroll_col_net') }}: {{ entry.net_total }}
+</p>
+{% endblock %}
+
+{% block form_fields %}
+  <label>{{ t('payroll_entry_field_extra') }}</label>
+  <input type="number" step="0.01" min="0" name="extra_amount" value="{{ entry.extra_amount or 0 }}">
+
+  <label>{{ t('payroll_entry_field_bonus') }}</label>
+  <input type="number" step="0.01" min="0" name="bonus" value="{{ entry.bonus or 0 }}">
+
+  <label>{{ t('note_label') }}</label>
+  <textarea name="note" rows="3" style="width:100%;max-width:100%;">{{ entry.note or '' }}</textarea>
+{% endblock %}

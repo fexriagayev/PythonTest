@@ -28,9 +28,13 @@
 <a href="{{ url_for('tabel.list_periods') }}" class="{{ 'active' if request.blueprint=='tabel' }}">
   <i class="bi bi-clock-history"></i> {{ t('tabel') }}
 </a>
-<a href="{{ url_for('salary.list_entries') }}" class="{{ 'active' if request.blueprint=='salary' }}">
+<a href="{{ url_for('salary.list_payroll_periods') }}" class="{{ 'active' if request.blueprint=='salary' and request.endpoint not in ['salary.list_additions','salary.add_addition','salary.edit_addition','salary.delete_addition'] }}">
   <i class="bi bi-cash-coin"></i> {{ t('salary') }}
 </a>
+{% if current_user.has_perm('SALARY', 'can_view') %}
+<a href="{{ url_for('salary.list_additions') }}" class="sub {{ 'active' if request.endpoint in ['salary.list_additions','salary.add_addition','salary.edit_addition','salary.delete_addition'] }}">{{ t('additions_page_title') }}</a>
+<a href="{{ url_for('salary.list_entries') }}" class="sub {{ 'active' if request.endpoint in ['salary.list_entries','salary.add_entry','salary.edit_entry','salary.delete_entry'] }}">{{ t('salary_page_title') }} (manual)</a>
+{% endif %}
 <a href="{{ url_for('dictionaries.index') }}" class="{{ 'active' if request.blueprint=='dictionaries' }}">
   <i class="bi bi-journal-bookmark"></i> {{ t('dictionaries') }}
 </a>

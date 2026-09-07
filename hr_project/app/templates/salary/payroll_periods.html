@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}{{ t('payroll_periods_page_title') }}{% endblock %}
+{% block page_title %}{{ t('payroll_periods_page_title') }}{% endblock %}
+{% block content %}
+
+<div id="payrollPeriodGrid"></div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  createAdvancedGrid("payrollPeriodGrid", "payroll_periods", {
+    ajaxURL: "{{ url_for('salary.api_payroll_periods') }}",
+    pagination: true,
+    paginationSize: 20,
+    placeholder: "{{ t('no_data_generic') }}",
+    columns: [
+      { title: "{{ t('payroll_col_period') }}", field: "period", headerFilter: "input" },
+      { title: "{{ t('payroll_col_employee_count') }}", field: "employee_count", width: 140, sorter: "number" },
+      { title: "{{ t('payroll_col_calculated') }}", field: "is_calculated", width: 110, formatter: "tickCross" },
+      { title: "{{ t('payroll_col_net_total') }}", field: "net_total", width: 140, sorter: "number" },
+      {
+        title: "{{ t('payroll_open_btn') }}", field: "id", width: 90, headerSort: false,
+        formatter: function (cell) {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.className = "btn btn-sm";
+          btn.textContent = "{{ t('payroll_open_btn') }}";
+          btn.addEventListener("click", function () {
+            window.location.href = "/salary/payroll/" + cell.getValue();
+          });
+          return btn;
+        }
+      }
+    ]
+  }, {
+    idField: "id",
+    showRowNumber: true,
+  });
+});
+</script>
+{% endblock %}

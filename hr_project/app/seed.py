@@ -103,19 +103,26 @@ LEAVE_CATEGORIES = [
     ("Ümumi qayda", 21, 0, 0, 0),
 ]
 
-# name, counting_method, is_annual_leave
+# name, counting_method, is_annual_leave, is_sick_leave
 LEAVE_REASONS = [
-    ("Növbəti məzuniyyət", "calendar", True),
-    ("Xəstəlik", "calendar", False),
-    ("Ödənişsiz icazə", "calendar", False),
-    ("Ezamiyyət", "workdays", False),
-    ("Ailə hallarına görə icazə", "workdays_no_holidays", False),
+    ("Növbəti məzuniyyət", "calendar", True, False),
+    ("Xəstəlik", "calendar", False, True),
+    ("Ödənişsiz icazə", "calendar", False, False),
+    ("Ezamiyyət", "workdays", False, False),
+    ("Ailə hallarına görə icazə", "workdays_no_holidays", False, False),
 ]
 
 
 def seed_data():
     """Creates the 3 base modules, HR dictionaries and a default admin account (idempotent)."""
     db.create_all()
+
+    # Mövcud (əvvəllər yaradılmış) DB-lərə modeldə yeni əlavə olunan
+    # sütunları (məs. is_sick_leave, payment_amount) tamamlayır — bax:
+    # app/utils/db_sync.py. db.create_all() YALNIZ çatışmayan cədvəlləri
+    # yaradır, mövcud cədvələ yeni sütun əlavə ETMİR.
+    from app.utils.db_sync import sync_missing_columns
+    sync_missing_columns(db)
 
     modules = {}
     for code, name_az, name_en in MODULES:
@@ -144,10 +151,23 @@ def seed_data():
                 max_bonus_days=max_bonus,
             ))
 
-    for name, counting_method, is_annual in LEAVE_REASONS:
-        exists = LeaveReason.query.filter_by(name=name).first()
-        if not exists:
-            db.session.add(LeaveReason(name=name, counting_method=counting_method, is_annual_leave=is_annual))
+    for name, counting_method, is_annual, is_sick in LEAVE_REASONS:
+        existing = LeaveReason.query.filter_by(name=name).first()
+        if existing:
+            # Mövcud (adı üst-üstə düşən) səbəb — yeni bayraqları (is_sick_leave
+            # kimi, əvvəllər sütun mövcud olmadığı üçün sync_missing_columns
+            # tərəfindən NULL/False ilə doldurulmuş ola bilər) defolt qiymətlərə
+            # uyğunlaşdırır. İstifadəçinin əl ilə dəyişdiyi digər sahələrə
+            # (counting_method və s.) toxunmur.
+            if existing.is_annual_leave != is_annual:
+                existing.is_annual_leave = is_annual
+            if existing.is_sick_leave != is_sick:
+                existing.is_sick_leave = is_sick
+        else:
+            db.session.add(LeaveReason(
+                name=name, counting_method=counting_method,
+                is_annual_leave=is_annual, is_sick_leave=is_sick,
+            ))
 
     if not User.query.filter_by(username="admin").first():
         admin = User(

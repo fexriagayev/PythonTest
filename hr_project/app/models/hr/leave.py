@@ -27,6 +27,12 @@ class LeaveReason(db.Model):
     # that draws down the Məzuniyyət günləri balance and needs the
     # available-days check before it can be submitted.
     is_annual_leave = db.Column(db.Boolean, default=False)
+    # Əməkhaqqı hesablanmasında "xəstəlik pulu" kimi tanınan səbəb(lər).
+    # is_annual_leave kimi, sərbəst — istənilən sayda səbəb bu bayraqla
+    # işarələnə bilər. Leave request formunda bu bayraq seçiləndə (və ya
+    # is_annual_leave seçiləndə) manual "Ödəniş məbləği" sahəsi göstərilir
+    # (bax: leave_request_form.html) — bax: payroll_service.py.
+    is_sick_leave = db.Column(db.Boolean, default=False)
     is_active = db.Column(db.Boolean, default=True)
 
     # 'Tabel kodu' — short code (e.g. "X", "NM", "ÖM") stamped onto the
@@ -98,6 +104,12 @@ class LeaveRequest(db.Model):
     )  # computed, stored for fast querying/overlap checks
     order_id = db.Column(db.Integer, db.ForeignKey("orders.id"))
     note = db.Column(db.Text)
+
+    # Məzuniyyət/xəstəlik pulunun MANUAL rejimdə (bax: PayrollSettings)
+    # birbaşa bu qeydə daxil edilən məbləği. Yalnız leave_reason
+    # is_annual_leave/is_sick_leave olduqda formda göstərilir və istifadə
+    # olunur (bax: app/services/payroll_service.py).
+    payment_amount = db.Column(db.Numeric(12, 2))
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 

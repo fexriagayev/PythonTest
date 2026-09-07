@@ -1,0 +1,110 @@
+{% extends "modal_form_base.html" %}
+{% set form_title = t('addition_form_title_edit') if addition else t('addition_form_title_add') %}
+{% set form_action = url_for('salary.edit_addition', addition_id=addition.id) if addition else url_for('salary.add_addition') %}
+{% set cancel_url = url_for('salary.list_additions') %}
+{% set form_max_width = '600px' %}
+
+{% block form_fields %}
+  <label>{{ t('addition_field_name') }}</label>
+  <input type="text" name="name" value="{{ addition.name if addition else '' }}" required>
+
+  <label>{{ t('addition_field_amount_type') }}</label>
+  {% set amount_types = addition.AMOUNT_TYPES if addition else [('fixed', 'Sabit məbləğ'), ('percent', 'Maaşın faizi')] %}
+  <select name="amount_type" id="amountTypeSelect">
+    {% for code, label in amount_types %}
+    <option value="{{ code }}" {{ 'selected' if addition and addition.amount_type==code }}>{{ label }}</option>
+    {% endfor %}
+  </select>
+
+  <div id="amountFixedRow" class="form-grid">
+    <label>{{ t('addition_field_amount') }}</label>
+    <input type="number" step="0.01" min="0" name="amount" value="{{ addition.amount if addition and addition.amount else '' }}">
+  </div>
+  <div id="amountPercentRow" class="form-grid">
+    <label>{{ t('addition_field_percent') }}</label>
+    <input type="number" step="0.01" min="0" max="100" name="percent" value="{{ addition.percent if addition and addition.percent else '' }}">
+  </div>
+
+  <label>{{ t('addition_field_scope') }}</label>
+  {% set scopes = addition.SCOPES if addition else [('all', 'Bütün əməkdaşlar'), ('individual', 'Seçilmiş əməkdaşlar')] %}
+  <select name="scope" id="scopeSelect">
+    {% for code, label in scopes %}
+    <option value="{{ code }}" {{ 'selected' if addition and addition.scope==code }}>{{ label }}</option>
+    {% endfor %}
+  </select>
+
+  <div id="employeesRow" class="form-grid">
+    <label>{{ t('addition_field_employees') }}</label>
+    <input type="text" id="employeeFilterInput" placeholder="{{ t('search_placeholder') }}" style="margin-bottom:6px;">
+    <div style="max-height:220px;overflow-y:auto;border:1px solid #ddd;border-radius:6px;padding:6px 10px;">
+      {% set selected_ids = addition.employees|map(attribute='id')|list if addition else [] %}
+      {% for emp in employees %}
+      <div class="checkbox-row employee-checkbox-row" data-name="{{ emp.full_name|lower }}">
+        <input type="checkbox" name="employee_ids" id="emp_{{ emp.id }}" value="{{ emp.id }}" {{ 'checked' if emp.id in selected_ids }}>
+        <label for="emp_{{ emp.id }}" style="margin:0;">{{ emp.full_name }}</label>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <label>{{ t('addition_field_valid_from') }}</label>
+  <input type="date" name="valid_from" value="{{ addition.valid_from if addition else '' }}" required>
+
+  <label>{{ t('addition_field_valid_to') }}</label>
+  <input type="date" name="valid_to" value="{{ addition.valid_to if addition and addition.valid_to else '' }}">
+
+  <label>{{ t('addition_field_order') }}</label>
+  <div class="dict-select-row">
+    <select name="order_id">
+      <option value="">{{ t('select_placeholder') }}</option>
+      {% for o in orders %}
+      <option value="{{ o.id }}" {{ 'selected' if addition and addition.order_id==o.id }}>{{ o.label() }}</option>
+      {% endfor %}
+    </select>
+    <button type="button" class="btn btn-secondary" title="{{ t('notif_add_order_new_window') }}" onclick="window.open('{{ url_for('hr.add_order') }}', '_blank')">+</button>
+  </div>
+
+  <div class="checkbox-row">
+    <input type="checkbox" name="is_active" id="addition_is_active" {{ 'checked' if (addition and addition.is_active) or not addition }}>
+    <label for="addition_is_active" style="margin:0;">{{ t('addition_field_active') }}</label>
+  </div>
+
+  <label>{{ t('note_label') }}</label>
+  <textarea name="note" rows="2" style="width:100%;max-width:100%;">{{ addition.note if addition else '' }}</textarea>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  const amountType = document.getElementById("amountTypeSelect");
+  const scope = document.getElementById("scopeSelect");
+  const amountFixedRow = document.getElementById("amountFixedRow");
+  const amountPercentRow = document.getElementById("amountPercentRow");
+  const employeesRow = document.getElementById("employeesRow");
+  const filterInput = document.getElementById("employeeFilterInput");
+  if (!amountType || !scope) return;
+
+  function refreshAmountRows() {
+    const isPercent = amountType.value === "percent";
+    amountFixedRow.style.display = isPercent ? "none" : "";
+    amountPercentRow.style.display = isPercent ? "" : "none";
+  }
+  function refreshScopeRows() {
+    employeesRow.style.display = scope.value === "individual" ? "" : "none";
+  }
+  amountType.addEventListener("change", refreshAmountRows);
+  scope.addEventListener("change", refreshScopeRows);
+  refreshAmountRows();
+  refreshScopeRows();
+
+  if (filterInput) {
+    filterInput.addEventListener("input", function () {
+      const q = filterInput.value.trim().toLowerCase();
+      document.querySelectorAll(".employee-checkbox-row").forEach(function (row) {
+        row.style.display = !q || row.dataset.name.indexOf(q) !== -1 ? "" : "none";
+      });
+    });
+  }
+})();
+</script>
+{% endblock %}

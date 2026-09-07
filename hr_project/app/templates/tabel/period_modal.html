@@ -32,6 +32,11 @@
         {{ t('tabel_unapprove_btn') if period.is_approved else t('tabel_approve_btn') }}
       </button>
       {% endif %}
+      {% if period and period.is_approved %}
+      <button type="button" id="goToPayrollBtn" class="btn btn-secondary">
+        {{ t('tabel_go_to_payroll_btn') }}
+      </button>
+      {% endif %}
     </div>
   </div>
 
@@ -290,6 +295,13 @@
           }
           goToPeriod(periodId);
         });
+    });
+  }
+
+  const goToPayrollBtn = document.getElementById("goToPayrollBtn");
+  if (goToPayrollBtn) {
+    goToPayrollBtn.addEventListener("click", function () {
+      window.location.href = "/salary/payroll/" + periodId;
     });
   }
 

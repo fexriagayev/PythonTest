@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}{{ t('payroll_period_page_title') }} — {{ period.label }}{% endblock %}
+{% block page_title %}{{ t('payroll_period_page_title') }} — {{ period.label }}{% endblock %}
+{% block content %}
+
+<div class="toolbar">
+  {% if current_user.has_perm('SALARY', 'can_add') %}
+  <form method="post" action="{{ url_for('salary.generate_payroll', period_id=period.id) }}" style="display:inline;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="btn">{{ t('payroll_recalculate_btn') }}</button>
+  </form>
+  {% endif %}
+</div>
+
+{% if not run %}
+<p style="color:#888;font-size:0.9em;">{{ t('payroll_not_calculated_hint') }}</p>
+{% endif %}
+
+<div id="payrollEntryGrid"></div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const canEdit = {{ 'true' if current_user.has_perm('SALARY', 'can_edit') else 'false' }};
+
+  createAdvancedGrid("payrollEntryGrid", "payroll_entries", {
+    ajaxURL: "{{ url_for('salary.api_payroll_entries', period_id=period.id) }}",
+    layout: "fitColumns",
+    pagination: true,
+    paginationSize: 30,
+    placeholder: "{{ t('no_data_generic') }}",
+    columns: [
+      { title: "{{ t('payroll_col_row_no') }}", field: "row_no", width: 50, sorter: "number" },
+      { title: "{{ t('payroll_col_employee') }}", field: "employee", headerFilter: "input" },
+      { title: "{{ t('payroll_col_position') }}", field: "position", headerFilter: "input" },
+      { title: "{{ t('payroll_col_monthly_salary') }}", field: "monthly_salary", width: 120, sorter: "number" },
+      { title: "{{ t('payroll_col_norm_days') }}", field: "norm_days", width: 100, sorter: "number" },
+      { title: "{{ t('payroll_col_worked_days') }}", field: "worked_days", width: 110, sorter: "number" },
+      { title: "{{ t('payroll_col_base_amount') }}", field: "base_amount", width: 120, sorter: "number" },
+      { title: "{{ t('payroll_col_extra_amount') }}", field: "extra_amount", width: 120, sorter: "number" },
+      { title: "{{ t('payroll_col_vacation_pay') }}", field: "vacation_pay", width: 130, sorter: "number" },
+      { title: "{{ t('payroll_col_sick_pay') }}", field: "sick_pay", width: 120, sorter: "number" },
+      { title: "{{ t('payroll_col_bonus') }}", field: "bonus", width: 110, sorter: "number" },
+      { title: "{{ t('payroll_col_additions') }}", field: "additions_total", width: 110, sorter: "number" },
+      { title: "{{ t('payroll_col_gross') }}", field: "gross_total", width: 120, sorter: "number", bottomCalc: "sum" },
+      { title: "{{ t('payroll_col_income_tax') }}", field: "income_tax", width: 120, sorter: "number" },
+      { title: "{{ t('payroll_col_dsmf') }}", field: "dsmf_amount", width: 100, sorter: "number" },
+      { title: "{{ t('payroll_col_unemployment') }}", field: "unemployment_amount", width: 120, sorter: "number" },
+      { title: "{{ t('payroll_col_medical') }}", field: "medical_amount", width: 110, sorter: "number" },
+      { title: "{{ t('payroll_col_net') }}", field: "net_total", width: 120, sorter: "number", bottomCalc: "sum" },
+      { title: "{{ t('note_label') }}", field: "note", headerFilter: "input" }
+    ]
+  }, {
+    idField: "id",
+    editUrlTemplate: canEdit ? "/salary/payroll/entry/edit/{id}" : null,
+    numericFields: [
+      "monthly_salary", "norm_days", "worked_days", "base_amount", "extra_amount",
+      "vacation_pay", "sick_pay", "bonus", "additions_total", "gross_total",
+      "income_tax", "dsmf_amount", "unemployment_amount", "medical_amount", "net_total"
+    ],
+  });
+});
+</script>
+{% endblock %}
