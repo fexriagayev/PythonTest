@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% block title %}{{ t('emp_additions_page_title') }} — {{ entry.full_name_snapshot }}{% endblock %}
+{% block page_title %}{{ t('emp_additions_page_title') }} — {{ entry.full_name_snapshot }}{% endblock %}
+{% block content %}
+
+<div class="toolbar">
+  {% if current_user.has_perm('SALARY', 'can_add') %}
+  <button type="button" id="addAdditionBtn" class="btn">+ {{ t('emp_additions_add_btn') }}</button>
+  {% endif %}
+  <a href="{{ url_for('salary.payroll_period', period_id=entry.payroll_run.period_id) }}" class="btn btn-secondary">{{ t('back_button') }}</a>
+</div>
+
+<p style="color:#888;font-size:0.85em;">
+  {{ t('payroll_col_gross') }}: {{ entry.gross_total }} ·
+  {{ t('payroll_col_additions') }}: +{{ entry.additions_total }} ·
+  {{ t('emp_additions_col_deductions_total') }}: -{{ entry.deductions_total }} ·
+  {{ t('payroll_col_net') }}: {{ entry.net_total }}
+</p>
+
+<div id="additionsGrid"></div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const canEdit = {{ 'true' if current_user.has_perm('SALARY', 'can_edit') else 'false' }};
+  const canDelete = {{ 'true' if current_user.has_perm('SALARY', 'can_delete') else 'false' }};
+  const canAdd = {{ 'true' if current_user.has_perm('SALARY', 'can_add') else 'false' }};
+
+  const table = createAdvancedGrid("additionsGrid", "employee_salary_additions", {
+    ajaxURL: "{{ url_for('salary.api_employee_additions', entry_id=entry.id) }}",
+    layout: "fitColumns",
+    pagination: true,
+    paginationSize: 20,
+    placeholder: "{{ t('no_data_generic') }}",
+    columns: [
+      { title: "{{ t('addition_field_addition_type') }}", field: "type_name", headerFilter: "input" },
+      { title: "{{ t('emp_additions_col_kind') }}", field: "kind", width: 100 },
+      { title: "{{ t('additions_col_amount_type') }}", field: "amount_type", width: 130 },
+      { title: "{{ t('additions_col_amount') }}", field: "amount", width: 100, sorter: "number" },
+      { title: "{{ t('additions_col_percent') }}", field: "percent", width: 90, sorter: "number" },
+      { title: "{{ t('additions_col_valid_from') }}", field: "valid_from", width: 120, sorter: "date" },
+      { title: "{{ t('additions_col_valid_to') }}", field: "valid_to", width: 120, sorter: "date" },
+      { title: "{{ t('additions_col_order') }}", field: "order", headerFilter: "input" },
+      { title: "{{ t('additions_col_scope') }}", field: "scope", width: 150 },
+      { title: "{{ t('additions_col_active') }}", field: "is_active", width: 90, formatter: "tickCross" },
+      { title: "{{ t('note_label') }}", field: "note", headerFilter: "input" }
+    ]
+  }, {
+    idField: "id",
+    addUrl: canAdd ? "{{ url_for('salary.add_addition', entry_id=entry.id) }}" : null,
+    // "Bütün əməkdaşlara aid" sətirlər bu pəncərədən redaktə/silinə
+    // bilmir (bax: routes.py `editable` bayrağı) — editUrlTemplate/
+    // deleteUrlTemplate ID əvəzinə "editable" false olan sətirlər üçün
+    // heç bir kontekst-menyu sətri göstərilmir (context-menu.js `id`
+    // sahəsini oxuyur, `editable` sahəsinə fikir vermir — ona görə
+    // server tərəfdə əlavə qoruma qoyulub, bax routes.py).
+    editUrlTemplate: canEdit ? "/salary/additions/edit/{id}" : null,
+    deleteUrlTemplate: canDelete ? "/salary/additions/delete/{id}" : null,
+  });
+
+  const addBtn = document.getElementById("addAdditionBtn");
+  if (addBtn) {
+    addBtn.addEventListener("click", function () {
+      openFormModal("{{ url_for('salary.add_addition', entry_id=entry.id) }}", function () {
+        // Səhifə yenidən yüklənir ki, yuxarıdakı gross/additions/net
+        // xülasəsi (server-tərəfdə render olunub) də təzələnsin —
+        // sadəcə cədvəli yeniləmək kifayət etməzdi.
+        window.location.reload();
+      });
+    });
+  }
+});
+</script>
+{% endblock %}

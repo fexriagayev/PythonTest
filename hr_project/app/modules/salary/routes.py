@@ -165,7 +165,7 @@ def delete_entry(entry_id):
 # Əməkhaqqı hesablanması (Payroll) — təsdiqlənmiş Tabel dövrləri üzrə
 # =============================================================================
 
-from app.models import TabelPeriod, PayrollRun, PayrollEntry, SalaryAddition, Order
+from app.models import TabelPeriod, PayrollRun, PayrollEntry, SalaryAddition, Order, DictionaryItem
 from app.services import payroll_service
 from app.utils.parsing import _parse_decimal
 
@@ -247,11 +247,10 @@ def api_payroll_entries(period_id):
         "norm_days": e.norm_days,
         "worked_days": e.worked_days,
         "base_amount": float(e.base_amount or 0),
-        "extra_amount": float(e.extra_amount or 0),
         "vacation_pay": float(e.vacation_pay or 0),
         "sick_pay": float(e.sick_pay or 0),
-        "bonus": float(e.bonus or 0),
         "additions_total": float(e.additions_total or 0),
+        "deductions_total": float(e.deductions_total or 0),
         "gross_total": float(e.gross_total or 0),
         "income_tax": float(e.income_tax or 0),
         "dsmf_amount": float(e.dsmf_amount or 0),
@@ -263,124 +262,119 @@ def api_payroll_entries(period_id):
     return jsonify(data)
 
 
-@salary_bp.route("/payroll/entry/edit/<int:entry_id>", methods=["GET", "POST"])
-@login_required
-@permission_required(MODULE, "can_edit")
-@log_action(MODULE, "EDIT_PAYROLL_ENTRY")
-def edit_payroll_entry(entry_id):
-    entry = PayrollEntry.query.get_or_404(entry_id)
-    if request.method == "POST":
-        extra = _parse_decimal(request.form.get("extra_amount"))
-        bonus = _parse_decimal(request.form.get("bonus"))
-        error = None
-        if extra is None or bonus is None or extra < 0 or bonus < 0:
-            error = "Əlavə əməkhaqqı və mükafat düzgün, mənfi olmayan rəqəm olmalıdır."
-        if error:
-            flash(error, "danger")
-            return render_form("salary/payroll_entry_form.html", entry=entry)
-
-        entry.extra_amount = extra
-        entry.bonus = bonus
-        entry.note = request.form.get("note", "").strip()
-        # extra_amount/bonus dəyişdiyi üçün gross/net-i yenidən hesablayaq;
-        # vacation_pay/sick_pay/additions öz mənbələrindən təzələnir.
-        payroll_service.recalculate_entry(entry)
-        db.session.commit()
-        flash("Əməkhaqqı sətri yeniləndi.", "success")
-        return modal_redirect("salary.payroll_period", period_id=entry.payroll_run.period_id)
-    return render_form("salary/payroll_entry_form.html", entry=entry)
-
-
 # =============================================================================
-# Əlavələr (SalaryAddition)
+# Əməkhaqqı əlavələri/tutulmaları (SalaryAddition) — KONKRET əməkdaş üçün.
+# Ayrıca ümumi "Əlavələr" menyusu YOXDUR: bu pəncərə YALNIZ payroll
+# siyahısında bir əməkdaşın sətrini "Dəyiş" edərkən açılır (bax:
+# payroll_period.html editUrlTemplate -> /salary/payroll/entry/<id>/additions).
 # =============================================================================
 
 
-@salary_bp.route("/additions")
+@salary_bp.route("/payroll/entry/<int:entry_id>/additions")
 @login_required
 @permission_required(MODULE, "can_view")
-def list_additions():
+def employee_additions(entry_id):
     from flask import render_template
-    return render_template("salary/additions_list.html")
+    entry = PayrollEntry.query.get_or_404(entry_id)
+    return render_template("salary/employee_additions.html", entry=entry)
 
 
-@salary_bp.route("/additions/api")
+@salary_bp.route("/payroll/entry/<int:entry_id>/additions/api")
 @login_required
 @permission_required(MODULE, "can_view")
-def api_additions():
-    items = SalaryAddition.query.order_by(SalaryAddition.valid_from.desc()).all()
+def api_employee_additions(entry_id):
+    entry = PayrollEntry.query.get_or_404(entry_id)
+    items = (
+        SalaryAddition.query.filter(
+            db.or_(
+                SalaryAddition.employees.any(id=entry.employee_id),
+                SalaryAddition.scope == "all",
+            )
+        )
+        .order_by(SalaryAddition.valid_from.desc())
+        .all()
+    )
     data = [{
         "id": a.id,
-        "name": a.name,
+        "type_name": a.type_name(),
+        "kind": "Tutulma" if a.is_deduction() else "Əlavə",
         "amount_type": a.amount_type_label(),
         "amount": float(a.amount) if a.amount_type == "fixed" and a.amount else None,
         "percent": float(a.percent) if a.amount_type == "percent" and a.percent else None,
         "scope": a.scope_label(),
-        "employee_count": len(a.employees) if a.scope == "individual" else None,
         "valid_from": a.valid_from.isoformat() if a.valid_from else "",
         "valid_to": a.valid_to.isoformat() if a.valid_to else "",
         "order": a.order.label() if a.order else "",
         "is_active": a.is_active,
         "note": a.note,
+        "editable": a.scope == "individual",
     } for a in items]
     return jsonify(data)
 
 
-def _addition_form_choices():
-    return {
-        "employees": Employee.query.filter_by(is_active=True).order_by(Employee.full_name).all(),
-        "orders": Order.query.order_by(Order.order_date.desc()).all(),
-    }
-
-
-def _apply_addition_form(addition, form):
+def _apply_addition_form(addition, form, employee):
     from app.utils.parsing import _parse_date, _parse_int
 
-    addition.name = form.get("name", "").strip()
+    addition_type = DictionaryItem.query.get(_parse_int(form.get("addition_type_id")))
+    addition.addition_type_id = addition_type.id if addition_type else None
+
     addition.amount_type = form.get("amount_type", "fixed")
     addition.amount = _parse_decimal(form.get("amount")) if addition.amount_type == "fixed" else None
     addition.percent = _parse_decimal(form.get("percent")) if addition.amount_type == "percent" else None
-    addition.scope = form.get("scope", "all")
+
+    addition.scope = "individual"
+    addition.employees = [employee] if employee else []
+
     addition.valid_from = _parse_date(form.get("valid_from"))
     addition.valid_to = _parse_date(form.get("valid_to"))
     addition.order_id = _parse_int(form.get("order_id"))
     addition.note = form.get("note", "").strip()
     addition.is_active = bool(form.get("is_active"))
-
-    if addition.scope == "individual":
-        ids = [int(v) for v in form.getlist("employee_ids") if v.strip().isdigit()]
-        addition.employees = Employee.query.filter(Employee.id.in_(ids)).all() if ids else []
-    else:
-        addition.employees = []
+    return addition_type
 
 
-@salary_bp.route("/additions/add", methods=["GET", "POST"])
+def _validate_addition(addition, addition_type):
+    if not addition_type:
+        return "Əlavə/tutulma növü seçilməlidir."
+    if not addition.valid_from:
+        return "Qüvvəyə minmə tarixi mütləqdir."
+    if addition.amount_type == "fixed" and not addition.amount:
+        return "Sabit məbləğ daxil edilməlidir."
+    if addition.amount_type == "percent" and not addition.percent:
+        return "Faiz dəyəri daxil edilməlidir."
+    return payroll_service.validate_addition_dates(addition.valid_from, addition.valid_to)
+
+
+@salary_bp.route("/payroll/entry/<int:entry_id>/additions/add", methods=["GET", "POST"])
 @login_required
 @permission_required(MODULE, "can_add")
 @log_action(MODULE, "ADD_ADDITION")
-def add_addition():
+def add_addition(entry_id):
+    entry = PayrollEntry.query.get_or_404(entry_id)
+    addition_types = DictionaryItem.query.filter_by(
+        module_code="SALARY", category="salary_addition_type", is_active=True
+    ).order_by(DictionaryItem.name).all()
+    orders = Order.query.order_by(Order.order_date.desc()).all()
     if request.method == "POST":
         addition = SalaryAddition()
-        _apply_addition_form(addition, request.form)
-        error = None
-        if not addition.name:
-            error = "Əlavənin adı mütləqdir."
-        elif not addition.valid_from:
-            error = "Qüvvəyə minmə tarixi mütləqdir."
-        elif addition.amount_type == "fixed" and not addition.amount:
-            error = "Sabit məbləğ daxil edilməlidir."
-        elif addition.amount_type == "percent" and not addition.percent:
-            error = "Faiz dəyəri daxil edilməlidir."
-        elif addition.scope == "individual" and not addition.employees:
-            error = "Fərdi əlavə üçün ən azı bir əməkdaş seçilməlidir."
+        addition_type = _apply_addition_form(addition, request.form, entry.employee)
+        error = _validate_addition(addition, addition_type)
         if error:
             flash(error, "danger")
-            return render_form("salary/addition_form.html", addition=None, **_addition_form_choices())
+            return render_form(
+                "salary/addition_form.html", addition=None, entry=entry,
+                addition_types=addition_types, orders=orders,
+            )
         db.session.add(addition)
         db.session.commit()
-        flash("Əlavə əlavə olundu.", "success")
-        return modal_redirect("salary.list_additions")
-    return render_form("salary/addition_form.html", addition=None, **_addition_form_choices())
+        payroll_service.recalculate_entry(entry)
+        db.session.commit()
+        flash("Əlavə/tutulma əlavə olundu.", "success")
+        return modal_redirect("salary.employee_additions", entry_id=entry.id)
+    return render_form(
+        "salary/addition_form.html", addition=None, entry=entry,
+        addition_types=addition_types, orders=orders,
+    )
 
 
 @salary_bp.route("/additions/edit/<int:addition_id>", methods=["GET", "POST"])
@@ -389,26 +383,41 @@ def add_addition():
 @log_action(MODULE, "EDIT_ADDITION")
 def edit_addition(addition_id):
     addition = SalaryAddition.query.get_or_404(addition_id)
+    if addition.scope != "individual":
+        flash("Bütün əməkdaşlara aid əlavə/tutulmalar bu pəncərədən redaktə oluna bilməz.", "danger")
+        return redirect(url_for("salary.list_payroll_periods"))
+    # Hansı PayrollEntry-dən (əməkdaşdan) açıldığını tapaq ki, Save/Cancel
+    # düzgün pəncərəyə qayıtsın.
+    employee = addition.employees[0] if addition.employees else None
+    entry = (
+        PayrollEntry.query.filter_by(employee_id=employee.id).first()
+        if employee else None
+    )
+    addition_types = DictionaryItem.query.filter_by(
+        module_code="SALARY", category="salary_addition_type", is_active=True
+    ).order_by(DictionaryItem.name).all()
+    orders = Order.query.order_by(Order.order_date.desc()).all()
     if request.method == "POST":
-        _apply_addition_form(addition, request.form)
-        error = None
-        if not addition.name:
-            error = "Əlavənin adı mütləqdir."
-        elif not addition.valid_from:
-            error = "Qüvvəyə minmə tarixi mütləqdir."
-        elif addition.amount_type == "fixed" and not addition.amount:
-            error = "Sabit məbləğ daxil edilməlidir."
-        elif addition.amount_type == "percent" and not addition.percent:
-            error = "Faiz dəyəri daxil edilməlidir."
-        elif addition.scope == "individual" and not addition.employees:
-            error = "Fərdi əlavə üçün ən azı bir əməkdaş seçilməlidir."
+        addition_type = _apply_addition_form(addition, request.form, employee)
+        error = _validate_addition(addition, addition_type)
         if error:
             flash(error, "danger")
-            return render_form("salary/addition_form.html", addition=addition, **_addition_form_choices())
+            return render_form(
+                "salary/addition_form.html", addition=addition, entry=entry,
+                addition_types=addition_types, orders=orders,
+            )
         db.session.commit()
-        flash("Əlavə yeniləndi.", "success")
-        return modal_redirect("salary.list_additions")
-    return render_form("salary/addition_form.html", addition=addition, **_addition_form_choices())
+        for e in PayrollEntry.query.filter_by(employee_id=employee.id).all() if employee else []:
+            payroll_service.recalculate_entry(e)
+        db.session.commit()
+        flash("Əlavə/tutulma yeniləndi.", "success")
+        return modal_redirect(
+            "salary.employee_additions", entry_id=entry.id if entry else 0
+        )
+    return render_form(
+        "salary/addition_form.html", addition=addition, entry=entry,
+        addition_types=addition_types, orders=orders,
+    )
 
 
 @salary_bp.route("/additions/delete/<int:addition_id>", methods=["POST"])
@@ -417,9 +426,20 @@ def edit_addition(addition_id):
 @log_action(MODULE, "DELETE_ADDITION")
 def delete_addition(addition_id):
     addition = SalaryAddition.query.get_or_404(addition_id)
+    if addition.scope != "individual":
+        message = "Bütün əməkdaşlara aid əlavə/tutulmalar bu pəncərədən silinə bilməz."
+        if is_modal_request():
+            return jsonify({"success": False, "error": message})
+        flash(message, "danger")
+        return redirect(url_for("salary.list_payroll_periods"))
+    employee_id = addition.employees[0].id if addition.employees else None
     db.session.delete(addition)
     db.session.commit()
+    if employee_id:
+        for e in PayrollEntry.query.filter_by(employee_id=employee_id).all():
+            payroll_service.recalculate_entry(e)
+        db.session.commit()
     if is_modal_request():
         return jsonify({"success": True})
-    flash("Əlavə silindi.", "info")
-    return redirect(url_for("salary.list_additions"))
+    flash("Əlavə/tutulma silindi.", "info")
+    return redirect(url_for("salary.list_payroll_periods"))

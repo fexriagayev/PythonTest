@@ -25,39 +25,55 @@
 document.addEventListener("DOMContentLoaded", function () {
   const canEdit = {{ 'true' if current_user.has_perm('SALARY', 'can_edit') else 'false' }};
 
+  const columns = [
+    { title: "{{ t('payroll_col_row_no') }}", field: "row_no", width: 50, sorter: "number" },
+    { title: "{{ t('payroll_col_employee') }}", field: "employee", headerFilter: "input" },
+    { title: "{{ t('payroll_col_position') }}", field: "position", headerFilter: "input" },
+    { title: "{{ t('payroll_col_monthly_salary') }}", field: "monthly_salary", width: 120, sorter: "number" },
+    { title: "{{ t('payroll_col_norm_days') }}", field: "norm_days", width: 100, sorter: "number" },
+    { title: "{{ t('payroll_col_worked_days') }}", field: "worked_days", width: 110, sorter: "number" },
+    { title: "{{ t('payroll_col_base_amount') }}", field: "base_amount", width: 120, sorter: "number" },
+    { title: "{{ t('payroll_col_vacation_pay') }}", field: "vacation_pay", width: 130, sorter: "number" },
+    { title: "{{ t('payroll_col_sick_pay') }}", field: "sick_pay", width: 120, sorter: "number" },
+    { title: "{{ t('payroll_col_additions') }}", field: "additions_total", width: 110, sorter: "number" },
+    { title: "{{ t('emp_additions_col_deductions_total') }}", field: "deductions_total", width: 110, sorter: "number" },
+    { title: "{{ t('payroll_col_gross') }}", field: "gross_total", width: 120, sorter: "number", bottomCalc: "sum" },
+    { title: "{{ t('payroll_col_income_tax') }}", field: "income_tax", width: 120, sorter: "number" },
+    { title: "{{ t('payroll_col_dsmf') }}", field: "dsmf_amount", width: 100, sorter: "number" },
+    { title: "{{ t('payroll_col_unemployment') }}", field: "unemployment_amount", width: 120, sorter: "number" },
+    { title: "{{ t('payroll_col_medical') }}", field: "medical_amount", width: 110, sorter: "number" },
+    { title: "{{ t('payroll_col_net') }}", field: "net_total", width: 120, sorter: "number", bottomCalc: "sum" },
+    { title: "{{ t('note_label') }}", field: "note", headerFilter: "input" }
+  ];
+
+  if (canEdit) {
+    columns.push({
+      title: "{{ t('emp_additions_page_title') }}", field: "id", width: 130, headerSort: false,
+      formatter: function (cell) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "btn btn-sm";
+        btn.textContent = "{{ t('emp_additions_open_btn') }}";
+        btn.addEventListener("click", function () {
+          window.location.href = "/salary/payroll/entry/" + cell.getValue() + "/additions";
+        });
+        return btn;
+      }
+    });
+  }
+
   createAdvancedGrid("payrollEntryGrid", "payroll_entries", {
     ajaxURL: "{{ url_for('salary.api_payroll_entries', period_id=period.id) }}",
     layout: "fitColumns",
     pagination: true,
     paginationSize: 30,
     placeholder: "{{ t('no_data_generic') }}",
-    columns: [
-      { title: "{{ t('payroll_col_row_no') }}", field: "row_no", width: 50, sorter: "number" },
-      { title: "{{ t('payroll_col_employee') }}", field: "employee", headerFilter: "input" },
-      { title: "{{ t('payroll_col_position') }}", field: "position", headerFilter: "input" },
-      { title: "{{ t('payroll_col_monthly_salary') }}", field: "monthly_salary", width: 120, sorter: "number" },
-      { title: "{{ t('payroll_col_norm_days') }}", field: "norm_days", width: 100, sorter: "number" },
-      { title: "{{ t('payroll_col_worked_days') }}", field: "worked_days", width: 110, sorter: "number" },
-      { title: "{{ t('payroll_col_base_amount') }}", field: "base_amount", width: 120, sorter: "number" },
-      { title: "{{ t('payroll_col_extra_amount') }}", field: "extra_amount", width: 120, sorter: "number" },
-      { title: "{{ t('payroll_col_vacation_pay') }}", field: "vacation_pay", width: 130, sorter: "number" },
-      { title: "{{ t('payroll_col_sick_pay') }}", field: "sick_pay", width: 120, sorter: "number" },
-      { title: "{{ t('payroll_col_bonus') }}", field: "bonus", width: 110, sorter: "number" },
-      { title: "{{ t('payroll_col_additions') }}", field: "additions_total", width: 110, sorter: "number" },
-      { title: "{{ t('payroll_col_gross') }}", field: "gross_total", width: 120, sorter: "number", bottomCalc: "sum" },
-      { title: "{{ t('payroll_col_income_tax') }}", field: "income_tax", width: 120, sorter: "number" },
-      { title: "{{ t('payroll_col_dsmf') }}", field: "dsmf_amount", width: 100, sorter: "number" },
-      { title: "{{ t('payroll_col_unemployment') }}", field: "unemployment_amount", width: 120, sorter: "number" },
-      { title: "{{ t('payroll_col_medical') }}", field: "medical_amount", width: 110, sorter: "number" },
-      { title: "{{ t('payroll_col_net') }}", field: "net_total", width: 120, sorter: "number", bottomCalc: "sum" },
-      { title: "{{ t('note_label') }}", field: "note", headerFilter: "input" }
-    ]
+    columns: columns
   }, {
     idField: "id",
-    editUrlTemplate: canEdit ? "/salary/payroll/entry/edit/{id}" : null,
     numericFields: [
-      "monthly_salary", "norm_days", "worked_days", "base_amount", "extra_amount",
-      "vacation_pay", "sick_pay", "bonus", "additions_total", "gross_total",
+      "monthly_salary", "norm_days", "worked_days", "base_amount",
+      "vacation_pay", "sick_pay", "additions_total", "deductions_total", "gross_total",
       "income_tax", "dsmf_amount", "unemployment_amount", "medical_amount", "net_total"
     ],
   });

@@ -56,11 +56,19 @@ class PayrollSettings(db.Model):
 
 
 class SalaryAddition(db.Model):
-    """'Əlavə' — hamıya və ya seçilmiş əməkdaşlara aid edilə bilən, tarix
-    aralığı və əsas əmr ilə təsdiqlənən əməkhaqqı əlavəsi (məs. "Ştat üzrə
-    əlavə", "Səmərəlilik əlavəsi" və s.). Əməkhaqqı hesablanarkən qüvvədə
-    olan bütün uyğun əlavələr avtomatik toplanır (bax: payroll_service.py
-    `applicable_additions`).
+    """Bir əməkdaşa (və ya bütün əməkdaşlara) aid, tarix aralığı və əsas
+    əmr ilə təsdiqlənən əməkhaqqı əlavəsi/tutulması. NÖVÜ (Mükafat, Aliment
+    və s.) sərbəst mətn DEYİL — `addition_type` (DictionaryItem,
+    module_code=SALARY, category="salary_addition_type") kitabçasından
+    seçilir; həmin kitabça qeydinin `value`-si "addition" (əlavədir, gross-a
+    gəlir) və ya "deduction" (tutulmadır, NET-dən çıxılır) olur — bax:
+    `is_deduction` və payroll_service.py `recalculate_entry`.
+
+    Əməkhaqqı hesablanarkən qüvvədə olan bütün uyğun əlavə/tutulmalar
+    avtomatik toplanır (bax: payroll_service.py `applicable_additions`).
+    Bu siyahı "Əməkhaqqı əlavələri" pəncərəsindən (bax: salary/routes.py
+    `employee_additions`) — konkret əməkdaşın əməkhaqqı sətrini
+    "Dəyiş" edərkən — idarə olunur; ayrıca ümumi "Əlavələr" menyusu YOXDUR.
     """
 
     __tablename__ = "salary_additions"
@@ -75,16 +83,16 @@ class SalaryAddition(db.Model):
     ]
 
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(150), nullable=False)
+    addition_type_id = db.Column(db.Integer, db.ForeignKey("dictionary_items.id"))
 
     amount_type = db.Column(db.String(10), nullable=False, default="fixed")
     amount = db.Column(db.Numeric(12, 2))  # amount_type == "fixed" olduqda
     percent = db.Column(db.Numeric(5, 2))  # amount_type == "percent" olduqda
 
-    scope = db.Column(db.String(15), nullable=False, default="all")
+    scope = db.Column(db.String(15), nullable=False, default="individual")
 
     valid_from = db.Column(db.Date, nullable=False)
-    valid_to = db.Column(db.Date)  # NULL = müddətsiz (hələ qüvvədən düşməyib)
+    valid_to = db.Column(db.Date)  # NULL = müddətsiz (cari dövrədək qüvvədədir)
 
     order_id = db.Column(db.Integer, db.ForeignKey("orders.id"))
     note = db.Column(db.Text)
@@ -93,11 +101,18 @@ class SalaryAddition(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     order = db.relationship("Order")
+    addition_type = db.relationship("DictionaryItem")
     employees = db.relationship(
         "Employee",
         secondary="salary_addition_employees",
         backref=db.backref("salary_additions", lazy="dynamic"),
     )
+
+    def type_name(self):
+        return self.addition_type.name if self.addition_type else "—"
+
+    def is_deduction(self):
+        return bool(self.addition_type and self.addition_type.value == "deduction")
 
     def amount_type_label(self):
         return dict(self.AMOUNT_TYPES).get(self.amount_type, self.amount_type)
@@ -125,8 +140,10 @@ class SalaryAddition(db.Model):
         return True
 
     def amount_for(self, base_salary):
-        """Bu əlavənin bir əməkdaş üçün məbləği (`base_salary` — həmin
-        əməkdaşın aylıq maaşı, faiz əsası kimi istifadə olunur)."""
+        """Bu əlavənin/tutulmanın bir əməkdaş üçün məbləği (`base_salary`
+        — həmin əməkdaşın aylıq maaşı, faiz əsası kimi istifadə olunur).
+        İşarə YOXDUR — müsbət ədəd qaytarır, əlavədirmi/tutulmadırmı
+        sualı `is_deduction()` ilə ayrıca yoxlanılır."""
         if self.amount_type == "percent":
             return float(base_salary or 0) * float(self.percent or 0) / 100.0
         return float(self.amount or 0)
@@ -189,10 +206,11 @@ class PayrollRun(db.Model):
 
 class PayrollEntry(db.Model):
     """Bir əməkdaşın bir PayrollRun (= bir təsdiqlənmiş Tabel dövrü)
-    üzrə əməkhaqqı sətri. Manual sahələr (extra_amount, bonus və — manual
-    rejimdə olmadıqda — vacation_pay/sick_pay) istifadəçi tərəfindən
-    redaktə oluna bilər; qalanları `payroll_service.recalculate_entry()`
-    tərəfindən hesablanır.
+    üzrə əməkhaqqı sətri. Manual sahə YOXDUR — `vacation_pay`/`sick_pay`
+    (LeaveRequest-dən) və `additions_total`/`deductions_total`
+    (SalaryAddition-dan, "Əməkhaqqı əlavələri" pəncərəsi vasitəsilə)
+    daxil olmaqla bütün sahələr `payroll_service.recalculate_entry()`
+    tərəfindən öz mənbələrindən hesablanır.
     """
 
     __tablename__ = "payroll_entries"
@@ -219,15 +237,20 @@ class PayrollEntry(db.Model):
     worked_days = db.Column(db.Integer, default=0)  # faktiki işlənmiş gün ("+")
     base_amount = db.Column(db.Numeric(12, 2), default=0)  # monthly_salary * worked/norm
 
-    # --- Manual/yarı-manual sahələr ------------------------------------------
-    extra_amount = db.Column(db.Numeric(12, 2), default=0)  # əlavə əməkhaqqı (manual)
+    # --- Törəmə sahələr (LeaveRequest-dən) -------------------------------------
     vacation_pay = db.Column(db.Numeric(12, 2), default=0)  # məzuniyyət pulu
     sick_pay = db.Column(db.Numeric(12, 2), default=0)  # xəstəlik pulu
-    bonus = db.Column(db.Numeric(12, 2), default=0)  # mükafat (manual)
 
-    # --- Əlavələr (SalaryAddition) --------------------------------------------
+    # --- Əlavələr / Tutulmalar (SalaryAddition) ------------------------------
+    # additions_total: GROSS-a daxil edilən "əlavə" növlü sətirlərin cəmi.
+    # deductions_total: vergi hesablanmış NET-dən çıxılan "tutulma" növlü
+    # sətirlərin cəmi (bax: payroll_service.py — tutulmalar VERGİYƏ CƏLB
+    # OLUNAN gross-u azaltmır, yalnız əldə olunan NET-i azaldır, ki gəlir
+    # vergisi/DSMF və s. düzgün — tam gross üzərindən hesablansın).
     additions_total = db.Column(db.Numeric(12, 2), default=0)
     additions_detail = db.Column(db.JSON, default=list)  # [{"name":..,"amount":..}]
+    deductions_total = db.Column(db.Numeric(12, 2), default=0)
+    deductions_detail = db.Column(db.JSON, default=list)  # [{"name":..,"amount":..}]
 
     # --- Nəticə ----------------------------------------------------------------
     gross_total = db.Column(db.Numeric(12, 2), default=0)
@@ -235,7 +258,7 @@ class PayrollEntry(db.Model):
     dsmf_amount = db.Column(db.Numeric(12, 2), default=0)
     unemployment_amount = db.Column(db.Numeric(12, 2), default=0)
     medical_amount = db.Column(db.Numeric(12, 2), default=0)
-    net_total = db.Column(db.Numeric(12, 2), default=0)
+    net_total = db.Column(db.Numeric(12, 2), default=0)  # tutulmalar çıxıldıqdan sonrakı yekun net
 
     note = db.Column(db.Text)
     updated_at = db.Column(

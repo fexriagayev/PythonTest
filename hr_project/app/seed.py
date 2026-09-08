@@ -103,13 +103,28 @@ LEAVE_CATEGORIES = [
     ("Ümumi qayda", 21, 0, 0, 0),
 ]
 
-# name, counting_method, is_annual_leave, is_sick_leave
+# --- Əməkhaqqı əlavə/tutulma növləri (DictionaryItem, module_code=SALARY,
+# category=SALARY_ADDITION_TYPE_CATEGORY). Admin bunlara "Məlumat
+# kitabçaları → SALARY" menyusundan yenilərini əlavə edə bilər — "value"
+# sahəsi "addition" (əlavədir, maaşa gəlir) və ya "deduction" (tutulmadır,
+# maaşdan çıxılır) olmalıdır (bax: payroll_service.py).
+SALARY_ADDITION_TYPE_CATEGORY = "salary_addition_type"
+SALARY_ADDITION_TYPES = [
+    # name, kind ("addition" | "deduction")
+    ("Mükafat", "addition"),
+    ("Əlavə əməkhaqqı", "addition"),
+    ("Aliment", "deduction"),
+    ("İcra sənədi üzrə tutulma", "deduction"),
+]
+
+
 LEAVE_REASONS = [
-    ("Növbəti məzuniyyət", "calendar", True, False),
-    ("Xəstəlik", "calendar", False, True),
-    ("Ödənişsiz icazə", "calendar", False, False),
-    ("Ezamiyyət", "workdays", False, False),
-    ("Ailə hallarına görə icazə", "workdays_no_holidays", False, False),
+    # name, counting_method, is_annual_leave, is_sick_leave, tabel_code
+    ("Növbəti məzuniyyət", "calendar", True, False, "NM"),
+    ("Xəstəlik", "calendar", False, True, "X"),
+    ("Öz hesabına məzuniyyət", "calendar", False, False, "ÖH"),
+    ("Ezamiyyət", "workdays", False, False, "E"),
+    ("Sosial məzuniyyət", "workdays_no_holidays", False, False, "SM"),
 ]
 
 
@@ -151,22 +166,33 @@ def seed_data():
                 max_bonus_days=max_bonus,
             ))
 
-    for name, counting_method, is_annual, is_sick in LEAVE_REASONS:
+    for name, kind in SALARY_ADDITION_TYPES:
+        exists = DictionaryItem.query.filter_by(
+            module_code="SALARY", category=SALARY_ADDITION_TYPE_CATEGORY, name=name
+        ).first()
+        if not exists:
+            db.session.add(DictionaryItem(
+                module_code="SALARY", category=SALARY_ADDITION_TYPE_CATEGORY,
+                name=name, value=kind,
+            ))
+
+    for name, counting_method, is_annual, is_sick, tabel_code in LEAVE_REASONS:
         existing = LeaveReason.query.filter_by(name=name).first()
         if existing:
-            # Mövcud (adı üst-üstə düşən) səbəb — yeni bayraqları (is_sick_leave
-            # kimi, əvvəllər sütun mövcud olmadığı üçün sync_missing_columns
-            # tərəfindən NULL/False ilə doldurulmuş ola bilər) defolt qiymətlərə
-            # uyğunlaşdırır. İstifadəçinin əl ilə dəyişdiyi digər sahələrə
-            # (counting_method və s.) toxunmur.
+            # Mövcud (adı üst-üstə düşən) səbəb — bayraqları/tabel kodunu
+            # defolt qiymətlərə uyğunlaşdırır. İstifadəçinin əl ilə
+            # dəyişdiyi digər sahələrə (counting_method və s.) toxunmur.
             if existing.is_annual_leave != is_annual:
                 existing.is_annual_leave = is_annual
             if existing.is_sick_leave != is_sick:
                 existing.is_sick_leave = is_sick
+            if not existing.tabel_code:
+                existing.tabel_code = tabel_code
         else:
             db.session.add(LeaveReason(
                 name=name, counting_method=counting_method,
                 is_annual_leave=is_annual, is_sick_leave=is_sick,
+                tabel_code=tabel_code,
             ))
 
     if not User.query.filter_by(username="admin").first():

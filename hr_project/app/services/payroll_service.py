@@ -30,7 +30,7 @@ from app.models import (
     PayrollEntry,
     TabelEmployeeRow,
 )
-from app.services.tabel_service import month_bounds
+from app.services.tabel_service import month_bounds, _weekend_days, _holiday_marks
 
 # ---------------------------------------------------------------------------
 # Vergi/tutulma cədvəlləri (2026)
@@ -197,6 +197,25 @@ def _vacation_and_sick_pay(employee, period_start, period_end, monthly_salary, s
 # ---------------------------------------------------------------------------
 
 
+def validate_addition_dates(valid_from, valid_to):
+    """Əlavə/tutulma tarix aralığı üçün validasiya: `valid_from` ayın 1-i
+    olmalıdır; `valid_to` (verilibsə) öz ayının SON günü olmalıdır — heç
+    biri ayın ortasından başlaya/bitə bilməz (əməkhaqqı dövrləri tam ay
+    olduğu üçün). `valid_to=None` — müddətsiz (cari dövrədək) qüvvədədir.
+    Xəta varsa mətn, yoxdursa None qaytarır."""
+    import calendar as _calendar
+
+    if valid_from and valid_from.day != 1:
+        return "Qüvvəyə minmə tarixi ayın 1-i olmalıdır."
+    if valid_to:
+        last_day = _calendar.monthrange(valid_to.year, valid_to.month)[1]
+        if valid_to.day != last_day:
+            return "Qüvvədən düşmə tarixi öz ayının son günü olmalıdır."
+    if valid_to and valid_from and valid_to < valid_from:
+        return "Qüvvədən düşmə tarixi qüvvəyə minmə tarixindən əvvəl ola bilməz."
+    return None
+
+
 def applicable_additions(employee_id, period_start, period_end):
     """Bu əməkdaşa və bu dövrə tətbiq olunan bütün aktiv SalaryAddition
     sətirləri (həm 'all', həm də bu əməkdaşı əhatə edən 'individual')."""
@@ -212,20 +231,30 @@ def applicable_additions(employee_id, period_start, period_end):
                 result.append(a)
     return result
 
-
 # ---------------------------------------------------------------------------
 # Tabel-dən iş günü norması / faktiki işlənmiş gün
 # ---------------------------------------------------------------------------
 
 
-def _work_day_counts(tabel_row):
-    """(norm_days, worked_days) — norm: adi iş günü xanalarının sayı
-    ('+'/'-' — həftə sonu/bayram/icazə xaric), worked: '+' işarəli
-    (faktiki işlənmiş) günlərin sayı."""
+def _calendar_norm_days(period_start, period_end):
+    """Ayın TƏQVİM üzrə iş günü norması — həftə sonu və bayram/matəm
+    günləri çıxılmaqla ayın ÜMUMİ gün sayı. Bu, KONKRET əməkdaşın həmin
+    ay aktiv olduğu günlərdən ASILI DEYİL (məs. əməkdaş ayın 3-də işdən
+    çıxsa belə, norma bütün ay üçün nə qədərdirsə odur — tabel_service.py
+    ilə eyni "həftə sonu/bayram" tərifindən istifadə edir ki, tabeldəki
+    xanalarla üst-üstə düşsün)."""
+    days_in_month = (period_end - period_start).days + 1
+    weekend_days = _weekend_days(period_start, period_end)
+    holiday_days = set(_holiday_marks(period_start, period_end).keys())
+    non_work_days = weekend_days | holiday_days
+    return days_in_month - len(non_work_days)
+
+
+def _worked_days(tabel_row):
+    """Əməkdaşın bu dövrdə faktiki İŞLƏDİYİ ('+') gün sayı (bax:
+    _calendar_norm_days — norma ilə qarışdırılmasın)."""
     marks = (tabel_row.day_marks or {}) if tabel_row else {}
-    norm = sum(1 for v in marks.values() if v in ("+", "-"))
-    worked = sum(1 for v in marks.values() if v == "+")
-    return norm, worked
+    return sum(1 for v in marks.values() if v == "+")
 
 
 # ---------------------------------------------------------------------------
@@ -235,13 +264,13 @@ def _work_day_counts(tabel_row):
 
 def recalculate_entry(entry):
     """`entry` (PayrollEntry, employee/payroll_run əlaqələri yüklənmiş)
-    üzərində bütün hesablanan sahələri yeniləyir. `extra_amount` və
-    `bonus` bu funksiyaya TOXUNULMUR — onlar həqiqətən manual sahələrdir,
-    birbaşa PayrollEntry üzərində istifadəçi tərəfindən daxil edilir (bax
-    routes.py). `vacation_pay`/`sick_pay` isə mənbəyi LeaveRequest olan
-    TÖRƏMƏ sahələrdir (manual rejimdə belə — məbləğ əməkdaşın İcazələri
-    pəncərəsindəki qeydə daxil edilir, PayrollEntry-ə deyil) — ona görə
-    hər çağırışda yenidən mənbədən oxunub üzərinə yazılır.
+    üzərində bütün hesablanan sahələri yeniləyir. `vacation_pay`/`sick_pay`
+    mənbəyi LeaveRequest olan TÖRƏMƏ sahələrdir (manual rejimdə belə —
+    məbləğ əməkdaşın İcazələri pəncərəsindəki qeydə daxil edilir,
+    PayrollEntry-ə deyil) — ona görə hər çağırışda yenidən mənbədən
+    oxunub üzərinə yazılır. Mükafat/əlavə əməkhaqqı/tutulma (aliment və s.)
+    da eynilə TÖRƏMƏdir — "Əməkhaqqı əlavələri" pəncərəsindəki
+    (SalaryAddition) sətirlərdən yenidən hesablanır.
     """
     settings = PayrollSettings.get()
     period = entry.payroll_run.period
@@ -251,7 +280,8 @@ def recalculate_entry(entry):
     tabel_row = TabelEmployeeRow.query.filter_by(
         period_id=period.id, employee_id=employee.id
     ).first()
-    norm_days, worked_days = _work_day_counts(tabel_row)
+    norm_days = _calendar_norm_days(period_start, period_end)
+    worked_days = _worked_days(tabel_row)
 
     monthly_salary = get_monthly_salary_at(employee, period_end)
     base_amount = (
@@ -262,13 +292,18 @@ def recalculate_entry(entry):
         employee, period_start, period_end, monthly_salary, settings
     )
 
-    additions = applicable_additions(employee.id, period_start, period_end)
     additions_detail = []
+    deductions_detail = []
     additions_total = 0.0
-    for a in additions:
+    deductions_total = 0.0
+    for a in applicable_additions(employee.id, period_start, period_end):
         amt = round(a.amount_for(monthly_salary), 2)
-        additions_detail.append({"name": a.name, "amount": amt})
-        additions_total += amt
+        if a.is_deduction():
+            deductions_detail.append({"name": a.type_name(), "amount": amt})
+            deductions_total += amt
+        else:
+            additions_detail.append({"name": a.type_name(), "amount": amt})
+            additions_total += amt
 
     entry.full_name_snapshot = employee.full_name
     entry.position_snapshot = employee.position
@@ -282,13 +317,18 @@ def recalculate_entry(entry):
 
     entry.additions_total = round(additions_total, 2)
     entry.additions_detail = additions_detail
+    entry.deductions_total = round(deductions_total, 2)
+    entry.deductions_detail = deductions_detail
 
+    # GROSS: yalnız "əlavə" növləri daxildir. "Tutulma" növləri (aliment
+    # və s.) VERGİYƏ CƏLB OLUNAN gross-u azaltmır — real həyatda bu cür
+    # tutulmalar əməkdaşın artıq vergi/DSMF ödənmiş NET məbləğindən
+    # (icra sənədi, məhkəmə qərarı və s. əsasında) çıxılır, ona görə
+    # aşağıda net-dən çıxılır, gross-dan yox.
     gross_total = (
         float(entry.base_amount or 0)
-        + float(entry.extra_amount or 0)
         + float(entry.vacation_pay or 0)
         + float(entry.sick_pay or 0)
-        + float(entry.bonus or 0)
         + float(entry.additions_total or 0)
     )
     entry.gross_total = round(gross_total, 2)
@@ -298,14 +338,16 @@ def recalculate_entry(entry):
     entry.dsmf_amount = result["dsmf"]
     entry.unemployment_amount = result["unemployment"]
     entry.medical_amount = result["medical"]
-    entry.net_total = result["net"]
+    entry.net_total = round(result["net"] - float(entry.deductions_total or 0), 2)
     return entry
 
 
 def generate_or_refresh_payroll(period):
     """Bir TƏSDİQ OLUNMUŞ Tabel dövrü üçün PayrollRun-u yaradır (yoxdursa)
     və bütün əməkdaşlar üçün PayrollEntry sətirlərini hesablayır/yeniləyir.
-    Mövcud sətirlərin manual sahələri (extra_amount, bonus) TOXUNULMUR.
+    Bütün sahələr (o cümlədən mükafat/əlavə/tutulma) mənbələrindən
+    (SalaryAddition, LeaveRequest, Bildirişlər) yenidən oxunur — manual
+    "sahə" YOXDUR, hər şey "Əməkhaqqı əlavələri" pəncərəsindən idarə olunur.
     Commit etmir — çağıran tərəf commit edir."""
     if not period.is_approved:
         raise ValueError("Əməkhaqqı yalnız TƏSDİQ OLUNMUŞ dövr üçün hesablana bilər.")
@@ -333,8 +375,6 @@ def generate_or_refresh_payroll(period):
             entry = PayrollEntry(
                 payroll_run_id=run.id,
                 employee_id=row.employee_id,
-                extra_amount=0,
-                bonus=0,
             )
             db.session.add(entry)
         entry.row_no = row_no

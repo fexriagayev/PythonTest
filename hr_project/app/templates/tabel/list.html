@@ -3,6 +3,12 @@
 {% block page_title %}{{ t('tabel_page_title') }}{% endblock %}
 {% block content %}
 
+<div class="toolbar">
+  {% if current_user.has_perm('TABEL', 'can_add') %}
+  <button type="button" id="addPeriodBtn" class="btn">+ {{ t('tabel_add_period_btn') }}</button>
+  {% endif %}
+</div>
+
 <div id="tabelPeriodGrid"></div>
 
 {% endblock %}
@@ -14,7 +20,7 @@ document.addEventListener("DOMContentLoaded", function () {
   const canEdit = {{ 'true' if current_user.has_perm('TABEL', 'can_edit') or current_user.has_perm('TABEL', 'can_view') else 'false' }};
   const canDelete = {{ 'true' if current_user.has_perm('TABEL', 'can_delete') else 'false' }};
 
-  createAdvancedGrid("tabelPeriodGrid", "tabel_periods", {
+  const table = createAdvancedGrid("tabelPeriodGrid", "tabel_periods", {
     ajaxURL: "{{ url_for('tabel.api_periods') }}",
     pagination: true,
     paginationSize: 20,
@@ -29,6 +35,15 @@ document.addEventListener("DOMContentLoaded", function () {
     editUrlTemplate: canEdit ? "/tabel/edit/{id}" : null,
     deleteUrlTemplate: canDelete ? "/tabel/{id}/delete" : null,
   });
+
+  const addBtn = document.getElementById("addPeriodBtn");
+  if (addBtn) {
+    addBtn.addEventListener("click", function () {
+      openFormModal("{{ url_for('tabel.add_period') }}", function () {
+        table.setData();
+      });
+    });
+  }
 });
 </script>
 {% endblock %}
