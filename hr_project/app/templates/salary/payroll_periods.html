@@ -1,43 +1,124 @@
 {% extends "base.html" %}
-{% block title %}{{ t('payroll_periods_page_title') }}{% endblock %}
-{% block page_title %}{{ t('payroll_periods_page_title') }}{% endblock %}
+{% block title %}{{ t('payroll_period_page_title') }}{% endblock %}
+{% block page_title %}{{ t('payroll_period_page_title') }}{% endblock %}
 {% block content %}
 
-<div id="payrollPeriodGrid"></div>
+<form method="get" class="toolbar" style="align-items:center;">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <select name="month" class="form-control" style="max-width:160px;">
+    {% for name in month_names %}
+    <option value="{{ loop.index }}" {{ 'selected' if loop.index==month }}>{{ name }}</option>
+    {% endfor %}
+  </select>
+  <input type="number" name="year" value="{{ year }}" class="form-control" style="max-width:110px;" min="2000" max="2100">
+  <button type="submit" class="btn btn-secondary">{{ t('payroll_show_btn') }}</button>
+
+  {% if current_user.has_perm('SALARY', 'can_add') %}
+  <button type="submit" formmethod="post"
+    formaction="{{ url_for('salary.generate_payroll', period_id=period.id) if tabel_exists else '#' }}"
+    class="btn" {{ 'disabled' if not tabel_approved or payroll_approved }}>
+    {{ t('payroll_calc_btn') }}
+  </button>
+  {% endif %}
+
+  {% if current_user.has_perm('SALARY', 'can_edit') %}
+  <button type="submit" formmethod="post"
+    formaction="{{ url_for('salary.approve_payroll', period_id=period.id) if tabel_exists else '#' }}"
+    class="btn btn-secondary" {{ 'disabled' if not payroll_calculated or payroll_approved }}>
+    {{ t('payroll_approve_btn') }}
+  </button>
+  {% endif %}
+</form>
+
+{% if not tabel_exists %}
+<p class="payroll-hint payroll-hint-danger">{{ t('payroll_hint_no_tabel') }}</p>
+{% elif not tabel_approved %}
+<p class="payroll-hint payroll-hint-danger">{{ t('payroll_hint_tabel_not_approved') }}</p>
+{% elif payroll_approved %}
+<p class="payroll-hint payroll-hint-success">{{ t('payroll_hint_approved') }}</p>
+{% elif payroll_calculated %}
+<p class="payroll-hint">{{ t('payroll_hint_calculated_not_approved') }}</p>
+{% else %}
+<p class="payroll-hint">{{ t('payroll_hint_not_calculated') }}</p>
+{% endif %}
+
+<div id="payrollEntryGrid"></div>
 
 {% endblock %}
 
 {% block extra_scripts %}
+<style>
+  .payroll-hint { color:#a15c00; font-size:0.9em; background:#fff6e8; border:1px solid #ffe1ad; padding:8px 12px; border-radius:6px; margin:0 0 12px; }
+  .payroll-hint-danger { color:#a3221f; background:#fdeceb; border-color:#f6c6c3; }
+  .payroll-hint-success { color:#1c6b2c; background:#eaf7ec; border-color:#c3e8c9; }
+</style>
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-  createAdvancedGrid("payrollPeriodGrid", "payroll_periods", {
-    ajaxURL: "{{ url_for('salary.api_payroll_periods') }}",
-    pagination: true,
-    paginationSize: 20,
-    placeholder: "{{ t('no_data_generic') }}",
-    columns: [
-      { title: "{{ t('payroll_col_period') }}", field: "period", headerFilter: "input" },
-      { title: "{{ t('payroll_col_employee_count') }}", field: "employee_count", width: 140, sorter: "number" },
-      { title: "{{ t('payroll_col_calculated') }}", field: "is_calculated", width: 110, formatter: "tickCross" },
-      { title: "{{ t('payroll_col_net_total') }}", field: "net_total", width: 140, sorter: "number" },
-      {
-        title: "{{ t('payroll_open_btn') }}", field: "id", width: 90, headerSort: false,
-        formatter: function (cell) {
-          const btn = document.createElement("button");
-          btn.type = "button";
-          btn.className = "btn btn-sm";
-          btn.textContent = "{{ t('payroll_open_btn') }}";
-          btn.addEventListener("click", function () {
-            window.location.href = "/salary/payroll/" + cell.getValue();
-          });
-          return btn;
-        }
+  const canEdit = {{ 'true' if current_user.has_perm('SALARY', 'can_edit') else 'false' }};
+  const payrollApproved = {{ 'true' if payroll_approved else 'false' }};
+  const tabelExists = {{ 'true' if tabel_exists else 'false' }};
+
+  const columns = [
+    { title: "{{ t('payroll_col_row_no') }}", field: "row_no", width: 50, sorter: "number" },
+    { title: "{{ t('payroll_col_employee') }}", field: "employee", headerFilter: "input" },
+    { title: "{{ t('payroll_col_contract_number') }}", field: "contract_number", width: 120, headerFilter: "input" },
+    { title: "{{ t('payroll_col_position') }}", field: "position", headerFilter: "input" },
+    { title: "{{ t('payroll_col_monthly_salary') }}", field: "monthly_salary", width: 120, sorter: "number" },
+    { title: "{{ t('payroll_col_norm_days') }}", field: "norm_days", width: 100, sorter: "number" },
+    { title: "{{ t('payroll_col_worked_days') }}", field: "worked_days", width: 110, sorter: "number" },
+    { title: "{{ t('payroll_col_base_amount') }}", field: "base_amount", width: 120, sorter: "number" },
+    { title: "{{ t('payroll_col_vacation_pay') }}", field: "vacation_pay", width: 130, sorter: "number" },
+    { title: "{{ t('payroll_col_sick_pay') }}", field: "sick_pay", width: 120, sorter: "number" },
+    { title: "{{ t('payroll_col_additions') }}", field: "additions_total", width: 110, sorter: "number" },
+    { title: "{{ t('emp_additions_col_deductions_total') }}", field: "deductions_total", width: 110, sorter: "number" },
+    { title: "{{ t('payroll_col_gross') }}", field: "gross_total", width: 120, sorter: "number", bottomCalc: "sum" },
+    { title: "{{ t('payroll_col_income_tax') }}", field: "income_tax", width: 120, sorter: "number" },
+    { title: "{{ t('payroll_col_dsmf') }}", field: "dsmf_amount", width: 100, sorter: "number" },
+    { title: "{{ t('payroll_col_unemployment') }}", field: "unemployment_amount", width: 120, sorter: "number" },
+    { title: "{{ t('payroll_col_medical') }}", field: "medical_amount", width: 110, sorter: "number" },
+    { title: "{{ t('payroll_col_net') }}", field: "net_total", width: 120, sorter: "number", bottomCalc: "sum" },
+    { title: "{{ t('note_label') }}", field: "note", headerFilter: "input" }
+  ];
+
+  // "Dəyiş" YALNIZ artıq hesablanmış (entry_id mövcud) VƏ təsdiqlənməmiş
+  // sətirlərdə görünür — 0-larla dolu (hələ hesablanmamış) sətirlərdə
+  // dəyişəcək heç nə yoxdur, təsdiqlənmiş sətirlərdə isə dəyişiklik
+  // artıq qadağandır (bax: routes.py add_addition finalized yoxlaması).
+  if (canEdit) {
+    columns.push({
+      title: "{{ t('emp_additions_page_title') }}", field: "entry_id", width: 130, headerSort: false,
+      formatter: function (cell) {
+        const entryId = cell.getValue();
+        if (!entryId || payrollApproved) return "";
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "btn btn-sm";
+        btn.textContent = "{{ t('emp_additions_open_btn') }}";
+        btn.addEventListener("click", function () {
+          window.location.href = "/salary/payroll/entry/" + entryId + "/additions";
+        });
+        return btn;
       }
-    ]
-  }, {
-    idField: "id",
-    showRowNumber: true,
-  });
+    });
+  }
+
+  if (tabelExists) {
+    createAdvancedGrid("payrollEntryGrid", "payroll_entries", {
+      ajaxURL: "{{ url_for('salary.api_payroll_entries', period_id=period.id) if tabel_exists else '' }}",
+      layout: "fitColumns",
+      pagination: true,
+      paginationSize: 30,
+      placeholder: "{{ t('no_data_generic') }}",
+      columns: columns
+    }, {
+      idField: "entry_id",
+      numericFields: [
+        "monthly_salary", "norm_days", "worked_days", "base_amount",
+        "vacation_pay", "sick_pay", "additions_total", "deductions_total", "gross_total",
+        "income_tax", "dsmf_amount", "unemployment_amount", "medical_amount", "net_total"
+      ],
+    });
+  }
 });
 </script>
 {% endblock %}

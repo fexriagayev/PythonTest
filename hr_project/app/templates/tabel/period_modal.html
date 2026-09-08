@@ -199,15 +199,13 @@
 
   let matrix = null; // aşağıda, popup ölçüsü sabitləşəndən sonra yaradılır
 
-  // `onNotFound` YALNIZ modalın İLK açılışında (aşağıdakı runWhenModalShown
-  // çağırışı içində) verilir — bax oradakı qeydə: köhnə davranışda boş preview
-  // grid HƏMİŞƏ dərhal yaradılırdı, bu yoxlama isə bir az sonra (fetch
-  // cavabı gələndə) bitirdi. Cari Ay/İl üçün dövr onsuz da mövcud olan
-  // hallarda (çox rast gəlinən) bu o deməkdi ki, boş grid bir anlıq
-  // yaranıb DƏRHAL məhv edilir və "edit" görünüşünün öz grid-i ilə
-  // əvəz olunurdu — istifadəçiyə modalın 2 dəfə arda-arda yarandığı
-  // kimi görünürdü. İndi əvvəlcə yoxlanılır, boş grid YALNIZ dövr
-  // tapılmadıqda yaradılır.
+  // Yalnız istifadəçi Ay/İl seçimini DƏYİŞƏNDƏ çağırılır (bax aşağıdakı
+  // "change" listener-ləri) — həmin Ay/İl üçün dövr artıq mövcuddursa,
+  // dublikat yaratmağın qarşısını almaq üçün birbaşa mövcud dövrə keçilir.
+  // Modalın İLK açılışında ÇAĞIRILMIR (bax: aşağıdakı runWhenModalShown) —
+  // əks halda "Yeni dövr" düyməsinə basanda, əgər default (cari) ay üçün
+  // dövr onsuz da mövcuddursa, istifadəçi Ay/İl-i dəyişə bilmədən avtomatik
+  // həmin (kilidlənmiş) dövrə atılırdı.
   function checkExistingPeriod(onNotFound) {
     if (periodId) return; // artıq mövcud dövrə bağlıyıqsa, axtarmağa ehtiyac yoxdur
     if (matrix) matrix.setDaysInMonth(daysInSelectedMonth());
@@ -280,28 +278,51 @@
   }
 
   // --- Təsdiq ----------------------------------------------------------------
+  // Təsdiqi GERİ ALARKƏN (unapprove) server 3 nəticədən biri qaytara bilər:
+  //  - success:true                    -> normal davam et
+  //  - 400 + success:false             -> tam BLOKLANIB (əməkhaqqı artıq
+  //                                        təsdiqlənib) — sadəcə xəbərdarlıq göstər
+  //  - 409 + needs_confirmation:true   -> əməkhaqqı hesablanıb (təsdiqlənməyib);
+  //                                        istifadəçi təsdiqləsə, `confirm_payroll_reset`
+  //                                        ilə YENİDƏN göndəririk ki, server tabeli
+  //                                        dəyişdirsin VƏ həmin əməkhaqqını sıfırlasın.
   const approveBtn = document.getElementById("approveBtn");
   if (approveBtn) {
-    approveBtn.addEventListener("click", function () {
-      fetch("/tabel/" + periodId + "/approve", {
+    function requestApprove(extra) {
+      return fetch("/tabel/" + periodId + "/approve", {
         method: "POST",
-        headers: { "X-Requested-With": "XMLHttpRequest" }
-      })
-        .then(function (r) { return r.json(); })
-        .then(function (data) {
-          if (!data.success) return;
-          if (typeof window.__currentModalSavedCallback === "function") {
-            window.__currentModalSavedCallback();
-          }
-          goToPeriod(periodId);
-        });
+        headers: { "X-Requested-With": "XMLHttpRequest", "Content-Type": "application/json" },
+        body: JSON.stringify(extra || {})
+      }).then(function (r) {
+        return r.json().then(function (data) { return { status: r.status, data: data }; });
+      });
+    }
+    function onApproveResult(result) {
+      const data = result.data;
+      if (data.success) {
+        if (typeof window.__currentModalSavedCallback === "function") {
+          window.__currentModalSavedCallback();
+        }
+        goToPeriod(periodId);
+        return;
+      }
+      if (data.needs_confirmation) {
+        if (confirm(data.error)) {
+          requestApprove({ confirm_payroll_reset: true }).then(onApproveResult);
+        }
+        return;
+      }
+      alert(data.error || t("tabel_cell_error"));
+    }
+    approveBtn.addEventListener("click", function () {
+      requestApprove({}).then(onApproveResult);
     });
   }
 
   const goToPayrollBtn = document.getElementById("goToPayrollBtn");
   if (goToPayrollBtn) {
     goToPayrollBtn.addEventListener("click", function () {
-      window.location.href = "/salary/payroll/" + periodId;
+      window.location.href = "/salary/payroll?year={{ period.year if period }}&month={{ period.month if period }}";
     });
   }
 
@@ -343,22 +364,23 @@
       return;
     }
 
-    // Yeni dövr forması: ƏVVƏLCƏ cari (default) Ay/İl üçün dövrün artıq
-    // mövcud olub-olmadığı yoxlanılır. Tapılarsa, boş preview grid heç
-    // yaradılmadan birbaşa mövcud dövrə keçilir (goToPeriod) — bax
-    // checkExistingPeriod-dakı qeydə: bu, boş grid-in bir anlıq yaranıb
-    // dərhal məhv edilməsinin qarşısını alır. Tapılmasa, YALNIZ o zaman
-    // boş preview grid yaradılır ki, istifadəçi "Generasiya et"-ə
-    // basmazdan əvvəl cədvəlin necə olacağını görsün.
-    checkExistingPeriod(function () {
-      matrix = initTabelMatrix({
-        elementId: "tabelMatrixGrid",
-        gridKey: "tabel_matrix",
-        matrixUrl: null,
-        cellUrl: null,
-        daysInMonth: daysInMonth || daysInSelectedMonth(),
-        readOnly: true
-      });
+    // Yeni dövr forması: default Ay/İl üçün BOŞ preview grid dərhal
+    // göstərilir (istifadəçi hələ heç nə seçmədən "Generasiya et"-ə
+    // basmazdan əvvəl cədvəlin necə olacağını görsün) — VƏ Ay/İl seçimi
+    // sərbəst qalır ki, istifadəçi istədiyi dövrü seçə bilsin. (Əvvəllər
+    // burada ilk açılışda avtomatik "mövcud dövr varsa ona keç" yoxlaması
+    // edilirdi — bu, "Yeni dövr" düyməsinə basanda cari ay üçün dövr
+    // artıq mövcud olduqda istifadəçini AVTOMATIK həmin (kilidlənmiş,
+    // dəyişdirilə bilməyən) dövrə atırdı və Ay/İl-i dəyişmək mümkün
+    // olmurdu. İndi bu yoxlama YALNIZ istifadəçi Ay/İl-i özü dəyişəndə
+    // işə düşür — bax aşağıda `checkExistingPeriod` listener-ləri.)
+    matrix = initTabelMatrix({
+      elementId: "tabelMatrixGrid",
+      gridKey: "tabel_matrix",
+      matrixUrl: null,
+      cellUrl: null,
+      daysInMonth: daysInMonth || daysInSelectedMonth(),
+      readOnly: true
     });
   });
 })();

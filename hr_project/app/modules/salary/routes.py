@@ -1,8 +1,9 @@
 from flask import Blueprint, request, redirect, url_for, flash, jsonify
 from flask_login import login_required
+from datetime import datetime
 
 from app import db
-from app.models import SalaryEntry, Employee
+from app.models import SalaryEntry, Employee, TabelEmployeeRow
 from app.utils.decorators import permission_required, log_action
 from app.utils.modal import render_form, modal_redirect, is_modal_request
 from app.utils.parsing import _parse_int
@@ -175,42 +176,35 @@ from app.utils.parsing import _parse_decimal
 @permission_required(MODULE, "can_view")
 def list_payroll_periods():
     from flask import render_template
-    return render_template("salary/payroll_periods.html")
+    from datetime import date as _date
 
+    year = _parse_int(request.args.get("year"))
+    month = _parse_int(request.args.get("month"))
+    if not year or not month:
+        latest = TabelPeriod.query.order_by(
+            TabelPeriod.year.desc(), TabelPeriod.month.desc()
+        ).first()
+        today = _date.today()
+        year = year or (latest.year if latest else today.year)
+        month = month or (latest.month if latest else today.month)
 
-@salary_bp.route("/payroll/api/periods")
-@login_required
-@permission_required(MODULE, "can_view")
-def api_payroll_periods():
-    periods = (
-        TabelPeriod.query.filter_by(is_approved=True)
-        .order_by(TabelPeriod.year.desc(), TabelPeriod.month.desc())
-        .all()
+    period = TabelPeriod.query.filter_by(year=year, month=month).first()
+    run = PayrollRun.query.filter_by(period_id=period.id).first() if period else None
+
+    return render_template(
+        "salary/payroll_periods.html",
+        year=year, month=month, period=period, run=run,
+        month_names=TabelPeriod.MONTH_NAMES_AZ,
+        # Bu bayraqları burada (Python-da) hesablayıb ötürürük, çünki
+        # Jinja-da {% set %} ilə `content` blokunda təyin olunan dəyişən
+        # `extra_scripts` bloku üçün GÖRÜNMÜR (hər `{% block %}` Jinja-da
+        # ayrı skop-dur) — bu, "grid görünmür" bug-ının əsl səbəbi idi:
+        # şablonda tabel_exists həmişə "false" kimi render olunurdu.
+        tabel_exists=period is not None,
+        tabel_approved=period is not None and period.is_approved,
+        payroll_calculated=run is not None,
+        payroll_approved=run is not None and run.is_finalized,
     )
-    data = []
-    for p in periods:
-        run = PayrollRun.query.filter_by(period_id=p.id).first()
-        net_total = (
-            sum(float(e.net_total or 0) for e in run.entries) if run else None
-        )
-        data.append({
-            "id": p.id,
-            "period": p.label,
-            "employee_count": len(p.rows),
-            "is_calculated": run is not None,
-            "net_total": net_total,
-        })
-    return jsonify(data)
-
-
-@salary_bp.route("/payroll/<int:period_id>")
-@login_required
-@permission_required(MODULE, "can_view")
-def payroll_period(period_id):
-    from flask import render_template
-    period = TabelPeriod.query.get_or_404(period_id)
-    run = PayrollRun.query.filter_by(period_id=period.id).first()
-    return render_template("salary/payroll_period.html", period=period, run=run)
 
 
 @salary_bp.route("/payroll/<int:period_id>/generate", methods=["POST"])
@@ -219,46 +213,82 @@ def payroll_period(period_id):
 @log_action(MODULE, "GENERATE_PAYROLL")
 def generate_payroll(period_id):
     period = TabelPeriod.query.get_or_404(period_id)
+    redirect_target = redirect(url_for("salary.list_payroll_periods", year=period.year, month=period.month))
     if not period.is_approved:
         flash("Əməkhaqqı yalnız təsdiq olunmuş dövr üçün hesablana bilər.", "danger")
-        return redirect(url_for("salary.payroll_period", period_id=period.id))
+        return redirect_target
     if not period.rows:
         flash("Bu dövr üçün tabel generasiya olunmayıb.", "danger")
-        return redirect(url_for("salary.payroll_period", period_id=period.id))
+        return redirect_target
+    existing_run = PayrollRun.query.filter_by(period_id=period.id).first()
+    if existing_run and existing_run.is_finalized:
+        flash("Bu dövrün əməkhaqqısı artıq təsdiqlənib, yenidən hesablana bilməz.", "danger")
+        return redirect_target
     payroll_service.generate_or_refresh_payroll(period)
     db.session.commit()
     flash("Əməkhaqqı hesablandı.", "success")
-    return redirect(url_for("salary.payroll_period", period_id=period.id))
+    return redirect_target
+
+
+@salary_bp.route("/payroll/<int:period_id>/approve", methods=["POST"])
+@login_required
+@permission_required(MODULE, "can_edit")
+@log_action(MODULE, "APPROVE_PAYROLL")
+def approve_payroll(period_id):
+    period = TabelPeriod.query.get_or_404(period_id)
+    redirect_target = redirect(url_for("salary.list_payroll_periods", year=period.year, month=period.month))
+    run = PayrollRun.query.filter_by(period_id=period.id).first()
+    if not run:
+        flash("Bu dövr üçün əməkhaqqı hesablanmayıb.", "danger")
+        return redirect_target
+    if run.is_finalized:
+        flash("Əməkhaqqı artıq təsdiqlənib.", "info")
+        return redirect_target
+    run.is_finalized = True
+    run.finalized_at = datetime.utcnow()
+    db.session.commit()
+    flash("Əməkhaqqı təsdiqləndi.", "success")
+    return redirect_target
 
 
 @salary_bp.route("/payroll/<int:period_id>/api/entries")
 @login_required
 @permission_required(MODULE, "can_view")
 def api_payroll_entries(period_id):
-    run = PayrollRun.query.filter_by(period_id=period_id).first()
-    if not run:
-        return jsonify([])
-    data = [{
-        "id": e.id,
-        "row_no": e.row_no,
-        "employee": e.full_name_snapshot,
-        "position": e.position_snapshot,
-        "monthly_salary": float(e.monthly_salary or 0),
-        "norm_days": e.norm_days,
-        "worked_days": e.worked_days,
-        "base_amount": float(e.base_amount or 0),
-        "vacation_pay": float(e.vacation_pay or 0),
-        "sick_pay": float(e.sick_pay or 0),
-        "additions_total": float(e.additions_total or 0),
-        "deductions_total": float(e.deductions_total or 0),
-        "gross_total": float(e.gross_total or 0),
-        "income_tax": float(e.income_tax or 0),
-        "dsmf_amount": float(e.dsmf_amount or 0),
-        "unemployment_amount": float(e.unemployment_amount or 0),
-        "medical_amount": float(e.medical_amount or 0),
-        "net_total": float(e.net_total or 0),
-        "note": e.note,
-    } for e in run.entries]
+    period = TabelPeriod.query.get_or_404(period_id)
+    run = PayrollRun.query.filter_by(period_id=period.id).first()
+    entries_by_employee = {e.employee_id: e for e in run.entries} if run else {}
+
+    rows = (
+        TabelEmployeeRow.query.filter_by(period_id=period.id)
+        .order_by(TabelEmployeeRow.row_no)
+        .all()
+    )
+    data = []
+    for r in rows:
+        e = entries_by_employee.get(r.employee_id)
+        data.append({
+            "entry_id": e.id if e else None,
+            "row_no": r.row_no,
+            "employee": r.full_name_snapshot,
+            "contract_number": r.contract_number_snapshot,
+            "position": r.position_snapshot,
+            "monthly_salary": float(e.monthly_salary or 0) if e else 0,
+            "norm_days": e.norm_days if e else 0,
+            "worked_days": e.worked_days if e else 0,
+            "base_amount": float(e.base_amount or 0) if e else 0,
+            "vacation_pay": float(e.vacation_pay or 0) if e else 0,
+            "sick_pay": float(e.sick_pay or 0) if e else 0,
+            "additions_total": float(e.additions_total or 0) if e else 0,
+            "deductions_total": float(e.deductions_total or 0) if e else 0,
+            "gross_total": float(e.gross_total or 0) if e else 0,
+            "income_tax": float(e.income_tax or 0) if e else 0,
+            "dsmf_amount": float(e.dsmf_amount or 0) if e else 0,
+            "unemployment_amount": float(e.unemployment_amount or 0) if e else 0,
+            "medical_amount": float(e.medical_amount or 0) if e else 0,
+            "net_total": float(e.net_total or 0) if e else 0,
+            "note": e.note if e else None,
+        })
     return jsonify(data)
 
 
@@ -351,6 +381,12 @@ def _validate_addition(addition, addition_type):
 @log_action(MODULE, "ADD_ADDITION")
 def add_addition(entry_id):
     entry = PayrollEntry.query.get_or_404(entry_id)
+    if entry.payroll_run.is_finalized:
+        flash("Bu dövrün əməkhaqqısı təsdiqlənib, əlavə/tutulma dəyişdirilə bilməz.", "danger")
+        return redirect(url_for(
+            "salary.list_payroll_periods",
+            year=entry.payroll_run.period.year, month=entry.payroll_run.period.month,
+        ))
     addition_types = DictionaryItem.query.filter_by(
         module_code="SALARY", category="salary_addition_type", is_active=True
     ).order_by(DictionaryItem.name).all()

@@ -44,6 +44,15 @@ def api_periods():
 @log_action(MODULE, "DELETE_PERIOD")
 def delete_period(period_id):
     period = TabelPeriod.query.get_or_404(period_id)
+    from app.models import PayrollRun
+    run = PayrollRun.query.filter_by(period_id=period.id).first()
+    if run:
+        message = (
+            "Bu dövr üçün əməkhaqqı təsdiqlənib, dövr silinə bilməz."
+            if run.is_finalized else
+            "Bu dövr üçün əməkhaqqı hesablanıb. Dövrü silmək üçün əvvəlcə tabel təsdiqini geri alın (bu, hesablanmış əməkhaqqını da siləcək)."
+        )
+        return jsonify({"success": False, "error": message}), 400
     delete_all_documents_for_owner("tabel_period", period.id)
     db.session.delete(period)
     db.session.commit()
@@ -205,6 +214,32 @@ def set_cell(period_id):
 @log_action(MODULE, "APPROVE_PERIOD")
 def toggle_approve(period_id):
     period = TabelPeriod.query.get_or_404(period_id)
+
+    if period.is_approved:
+        # Təsdiqi GERİ ALMAQ (unapprove) — bu, tabeli yenidən redaktə
+        # edilə bilən hala qaytarır (generate/cell marşrutları YALNIZ
+        # is_approved=False olduqda icazə verir). Ona görə bu, əməkhaqqı
+        # üçün risk yaradan YEGANƏ keçid nöqtəsidir: əgər bu dövr üçün
+        # əməkhaqqı artıq hesablanıbsa, tabel dəyişəcək amma əməkhaqqı
+        # köhnə (indi səhv) qalacaq.
+        from app.models import PayrollRun
+        run = PayrollRun.query.filter_by(period_id=period.id).first()
+        if run:
+            if run.is_finalized:
+                return jsonify({
+                    "success": False,
+                    "error": "Bu dövrün əməkhaqqısı artıq təsdiqlənib. Tabeldə dəyişiklik etmək üçün əvvəlcə əməkhaqqı təsdiqini geri almalısınız.",
+                }), 400
+            payload = request.get_json(silent=True) or {}
+            if not payload.get("confirm_payroll_reset"):
+                return jsonify({
+                    "success": False,
+                    "needs_confirmation": True,
+                    "error": "Bu dövrə əməkhaqqı hesablanıb. Tabeldə dəyişiklik etsəniz, həmin əməkhaqqı sıfırlanacaq. Davam etmək istəyirsiniz?",
+                }), 409
+            # Təsdiqləndi — hesablanmış (amma təsdiqlənməmiş) əməkhaqqını sıfırla.
+            db.session.delete(run)
+
     period.is_approved = not period.is_approved
     period.approved_at = datetime.utcnow() if period.is_approved else None
     db.session.commit()

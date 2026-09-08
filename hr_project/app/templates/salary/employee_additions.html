@@ -7,7 +7,7 @@
   {% if current_user.has_perm('SALARY', 'can_add') %}
   <button type="button" id="addAdditionBtn" class="btn">+ {{ t('emp_additions_add_btn') }}</button>
   {% endif %}
-  <a href="{{ url_for('salary.payroll_period', period_id=entry.payroll_run.period_id) }}" class="btn btn-secondary">{{ t('back_button') }}</a>
+  <a href="{{ url_for('salary.list_payroll_periods', year=entry.payroll_run.period.year, month=entry.payroll_run.period.month) }}" class="btn btn-secondary">{{ t('back_button') }}</a>
 </div>
 
 <p style="color:#888;font-size:0.85em;">

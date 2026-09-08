@@ -667,21 +667,34 @@ TRANSLATIONS = {
     "salary_col_bonus": {"az": "Bonus", "en": "Bonus"},
     "salary_col_deductions": {"az": "Tutulma", "en": "Deductions"},
     "salary_col_total": {"az": "Cəmi", "en": "Total"},
-    # --- Payroll (salary/payroll_periods.html, payroll_period.html) -------------
-    "payroll_periods_page_title": {"az": "Əməkhaqqı hesablanması", "en": "Payroll Calculation"},
-    "payroll_col_period": {"az": "Dövr", "en": "Period"},
-    "payroll_col_employee_count": {"az": "Əməkdaş sayı", "en": "Employee Count"},
-    "payroll_col_calculated": {"az": "Hesablanıb", "en": "Calculated"},
-    "payroll_col_net_total": {"az": "Net cəmi", "en": "Net Total"},
-    "payroll_open_btn": {"az": "Aç", "en": "Open"},
+    # --- Payroll (salary/payroll_periods.html) -----------------------------
     "payroll_period_page_title": {"az": "Əməkhaqqı", "en": "Payroll"},
-    "payroll_recalculate_btn": {"az": "Yenidən hesabla", "en": "Recalculate"},
-    "payroll_not_calculated_hint": {
-        "az": "Bu dövr üçün əməkhaqqı hələ hesablanmayıb. \"Yenidən hesabla\" düyməsinə basın.",
-        "en": "Payroll hasn't been calculated for this period yet. Click \"Recalculate\".",
+    "payroll_show_btn": {"az": "Göstər", "en": "Show"},
+    "payroll_calc_btn": {"az": "Hesabla", "en": "Calculate"},
+    "payroll_approve_btn": {"az": "Təsdiq et", "en": "Approve"},
+    "payroll_hint_no_tabel": {
+        "az": "Bu dövr üçün tabel mövcud deyil. Əvvəlcə \"Tabel\" bölməsindən dövrü yaradın.",
+        "en": "No timesheet exists for this period yet. Create it first in the \"Tabel\" section.",
+    },
+    "payroll_hint_tabel_not_approved": {
+        "az": "Bu dövrün tabeli hələ təsdiqlənməyib. Əməkhaqqı hesablamaq üçün əvvəlcə tabeli təsdiqləyin.",
+        "en": "This period's timesheet hasn't been approved yet. Approve the timesheet first to calculate payroll.",
+    },
+    "payroll_hint_not_calculated": {
+        "az": "Bu dövr üçün əməkhaqqı hələ hesablanmayıb — aşağıdakı sətirlərdə hələlik 0 göstərilir.",
+        "en": "Payroll hasn't been calculated for this period yet — rows below show 0 for now.",
+    },
+    "payroll_hint_calculated_not_approved": {
+        "az": "Əməkhaqqı hesablanıb, amma hələ təsdiqlənməyib.",
+        "en": "Payroll has been calculated but not yet approved.",
+    },
+    "payroll_hint_approved": {
+        "az": "Bu dövrün əməkhaqqısı təsdiqlənib — dəyişdirilə bilməz.",
+        "en": "This period's payroll has been approved — it can no longer be changed.",
     },
     "payroll_col_row_no": {"az": "№", "en": "No"},
     "payroll_col_employee": {"az": "Əməkdaş", "en": "Employee"},
+    "payroll_col_contract_number": {"az": "Müqavilə N", "en": "Contract No"},
     "payroll_col_position": {"az": "Vəzifə", "en": "Position"},
     "payroll_col_monthly_salary": {"az": "Aylıq maaş", "en": "Monthly Salary"},
     "payroll_col_norm_days": {"az": "Norma (gün)", "en": "Norm (days)"},
