@@ -230,11 +230,14 @@ def generate_payroll(period_id):
     return redirect_target
 
 
-@salary_bp.route("/payroll/<int:period_id>/approve", methods=["POST"])
+@salary_bp.route("/payroll/<int:period_id>/toggle-approval", methods=["POST"])
 @login_required
 @permission_required(MODULE, "can_edit")
-@log_action(MODULE, "APPROVE_PAYROLL")
-def approve_payroll(period_id):
+@log_action(MODULE, "TOGGLE_PAYROLL_APPROVAL")
+def toggle_payroll_approval(period_id):
+    """Təsdiqlə/Təsdiqi ləğv et — TƏK düymə, əməkhaqqının cari vəziyyətinə
+    görə hansı əməliyyatın aparılacağını özü müəyyən edir (bax:
+    payroll_periods.html-dəki tək "toggle" düyməsi)."""
     period = TabelPeriod.query.get_or_404(period_id)
     redirect_target = redirect(url_for("salary.list_payroll_periods", year=period.year, month=period.month))
     run = PayrollRun.query.filter_by(period_id=period.id).first()
@@ -242,30 +245,15 @@ def approve_payroll(period_id):
         flash("Bu dövr üçün əməkhaqqı hesablanmayıb.", "danger")
         return redirect_target
     if run.is_finalized:
-        flash("Əməkhaqqı artıq təsdiqlənib.", "info")
-        return redirect_target
-    run.is_finalized = True
-    run.finalized_at = datetime.utcnow()
-    db.session.commit()
-    flash("Əməkhaqqı təsdiqləndi.", "success")
-    return redirect_target
-
-
-@salary_bp.route("/payroll/<int:period_id>/unapprove", methods=["POST"])
-@login_required
-@permission_required(MODULE, "can_edit")
-@log_action(MODULE, "UNAPPROVE_PAYROLL")
-def unapprove_payroll(period_id):
-    period = TabelPeriod.query.get_or_404(period_id)
-    redirect_target = redirect(url_for("salary.list_payroll_periods", year=period.year, month=period.month))
-    run = PayrollRun.query.filter_by(period_id=period.id).first()
-    if not run or not run.is_finalized:
-        flash("Bu dövrün əməkhaqqısı təsdiqlənməyib.", "info")
-        return redirect_target
-    run.is_finalized = False
-    run.finalized_at = None
-    db.session.commit()
-    flash("Əməkhaqqı təsdiqi ləğv edildi.", "success")
+        run.is_finalized = False
+        run.finalized_at = None
+        db.session.commit()
+        flash("Əməkhaqqı təsdiqi ləğv edildi.", "success")
+    else:
+        run.is_finalized = True
+        run.finalized_at = datetime.utcnow()
+        db.session.commit()
+        flash("Əməkhaqqı təsdiqləndi.", "success")
     return redirect_target
 
 
@@ -324,6 +312,11 @@ def api_payroll_entries(period_id):
             "dsmf_amount": float(e.dsmf_amount or 0) if e else 0,
             "unemployment_amount": float(e.unemployment_amount or 0) if e else 0,
             "medical_amount": float(e.medical_amount or 0) if e else 0,
+            "total_deductions": (
+                float(e.income_tax or 0) + float(e.dsmf_amount or 0)
+                + float(e.unemployment_amount or 0) + float(e.medical_amount or 0)
+                + float(e.deductions_total or 0)
+            ) if e else 0,
             "net_total": float(e.net_total or 0) if e else 0,
             "note": e.note if e else None,
         })

@@ -669,7 +669,6 @@ TRANSLATIONS = {
     "salary_col_total": {"az": "Cəmi", "en": "Total"},
     # --- Payroll (salary/payroll_periods.html) -----------------------------
     "payroll_period_page_title": {"az": "Əməkhaqqı", "en": "Payroll"},
-    "payroll_show_btn": {"az": "Göstər", "en": "Show"},
     "payroll_calc_btn": {"az": "Hesabla", "en": "Calculate"},
     "payroll_approve_btn": {"az": "Təsdiq et", "en": "Approve"},
     "payroll_unapprove_btn": {"az": "Təsdiqi ləğv et", "en": "Cancel Approval"},
@@ -698,7 +697,6 @@ TRANSLATIONS = {
         "az": "Bu dövrün əməkhaqqısı təsdiqlənib — dəyişdirilə bilməz.",
         "en": "This period's payroll has been approved — it can no longer be changed.",
     },
-    "payroll_col_row_no": {"az": "№", "en": "No"},
     "payroll_col_employee": {"az": "Əməkdaş", "en": "Employee"},
     "payroll_col_contract_number": {"az": "Müqavilə N", "en": "Contract No"},
     "payroll_col_position": {"az": "Vəzifə", "en": "Position"},
@@ -714,6 +712,7 @@ TRANSLATIONS = {
     "payroll_col_dsmf": {"az": "DSMF", "en": "DSMF"},
     "payroll_col_unemployment": {"az": "İşsizlik sığ.", "en": "Unemployment Ins."},
     "payroll_col_medical": {"az": "Tibbi sığ.", "en": "Medical Ins."},
+    "payroll_col_total_deductions": {"az": "Cəmi tutulma", "en": "Total Deductions"},
     "payroll_col_net": {"az": "Net", "en": "Net"},
     # --- Əməkhaqqı əlavələri/tutulmaları — əməkdaş kontekstində
     # (salary/employee_additions.html, addition_form.html). Ayrıca ümumi

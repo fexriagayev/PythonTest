@@ -409,6 +409,23 @@
       readOnly: true
     });
     loadForSelectedPeriod();
+
+    // Native "change" event-ə əlavə TƏHLÜKƏSİZLİK QATI: bu nöqtədə
+    // (popup artıq göstərilib) wireModalForm() onsuz da işləyib qurtarıb
+    // və monthSelect/yearInput artıq DevExtreme widget-lərinə
+    // çevrilib (field.__dxEditor təyin olunub) — buna görə widget-in öz
+    // "valueChanged" hadisəsinə də BİRBAŞA qoşuluruq. (Nəzəri olaraq
+    // DevExtreme widget-in dəyəri dəyişəndə native input-a `change`
+    // event-i sintez edib göndərir və bu, yuxarıdakı adi
+    // addEventListener("change", ...) ilə tutulmalıdır — amma bu əlavə
+    // qoşulma heç bir zərər vermir və hər hansı brauzer/versiya
+    // fərqindən asılı olmayaraq işi zəmanətə alır.)
+    if (monthSelect && monthSelect.__dxEditor && typeof monthSelect.__dxEditor.on === "function") {
+      monthSelect.__dxEditor.on("valueChanged", loadForSelectedPeriod);
+    }
+    if (yearInput && yearInput.__dxEditor && typeof yearInput.__dxEditor.on === "function") {
+      yearInput.__dxEditor.on("valueChanged", loadForSelectedPeriod);
+    }
   });
 })();
 </script>
