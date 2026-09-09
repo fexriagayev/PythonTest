@@ -672,6 +672,12 @@ TRANSLATIONS = {
     "payroll_show_btn": {"az": "Göstər", "en": "Show"},
     "payroll_calc_btn": {"az": "Hesabla", "en": "Calculate"},
     "payroll_approve_btn": {"az": "Təsdiq et", "en": "Approve"},
+    "payroll_unapprove_btn": {"az": "Təsdiqi ləğv et", "en": "Cancel Approval"},
+    "payroll_reset_btn": {"az": "Sıfırla", "en": "Reset"},
+    "payroll_reset_confirm": {
+        "az": "Bu dövrün hesablanmış əməkhaqqısı silinəcək. Davam etmək istəyirsiniz?",
+        "en": "This period's calculated payroll will be deleted. Continue?",
+    },
     "payroll_hint_no_tabel": {
         "az": "Bu dövr üçün tabel mövcud deyil. Əvvəlcə \"Tabel\" bölməsindən dövrü yaradın.",
         "en": "No timesheet exists for this period yet. Create it first in the \"Tabel\" section.",

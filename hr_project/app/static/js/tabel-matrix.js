@@ -237,12 +237,28 @@ function initTabelMatrix(config) {
     }
   }
 
+  // Dövr hələ yaradılmayıbsa (Ay/İl sərbəst seçilə bilən "Yeni dövr"
+  // forması), Ay/İl dəyişəndə matrisin MƏNBƏYİNİ (önizləmə <-> əsl
+  // dövrün öz matrisi) DƏYİŞMƏK lazım gəlir — grid-i sıfırdan yaratmaq
+  // əvəzinə (bu, DevExtreme instansını lazımsız dağıdıb-qurardı), sadəcə
+  // `config`-i (bağlı closure-da) yeniləyib yenidən yükləyirik. `config`
+  // obyekt REFERANSI dəyişmir — `handleCellClick`/formatter-lər onu HƏR
+  // ÇAĞIRIŞDA təzədən oxuduğu üçün (yaradılış anında "yaddaşa
+  // köçürülmür"), bu mutasiya avtomatik nəzərə alınır.
+  function setSource(matrixUrl, cellUrl, readOnly) {
+    config.matrixUrl = matrixUrl;
+    config.cellUrl = cellUrl;
+    config.readOnly = readOnly;
+    return load();
+  }
+
   createGrid();
   load();
 
   return {
     reload: load,
     setDaysInMonth: setDaysInMonth,
+    setSource: setSource,
     getInstance: function () { return grid; }
   };
 }

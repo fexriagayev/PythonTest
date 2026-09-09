@@ -198,37 +198,65 @@
   }
 
   let matrix = null; // aşağıda, popup ölçüsü sabitləşəndən sonra yaradılır
+  // "Yeni dövr" (Ay/İl sərbəst) rejimində HANSI dövrə baxdığımızı izləyir —
+  // statik `periodId`-dən (server-də bir dəfə render olunub, HEÇ VAXT
+  // dəyişmir) FƏRQLİ olaraq, bu, istifadəçi Ay/İl-i dəyişdikcə YENİLƏNİR
+  // (bax: loadForSelectedPeriod aşağıda).
+  let currentPeriodId = periodId;
 
-  // Yalnız istifadəçi Ay/İl seçimini DƏYİŞƏNDƏ çağırılır (bax aşağıdakı
-  // "change" listener-ləri) — həmin Ay/İl üçün dövr artıq mövcuddursa,
-  // dublikat yaratmağın qarşısını almaq üçün birbaşa mövcud dövrə keçilir.
-  // Modalın İLK açılışında ÇAĞIRILMIR (bax: aşağıdakı runWhenModalShown) —
-  // əks halda "Yeni dövr" düyməsinə basanda, əgər default (cari) ay üçün
-  // dövr onsuz da mövcuddursa, istifadəçi Ay/İl-i dəyişə bilmədən avtomatik
-  // həmin (kilidlənmiş) dövrə atılırdı.
-  function checkExistingPeriod(onNotFound) {
-    if (periodId) return; // artıq mövcud dövrə bağlıyıqsa, axtarmağa ehtiyac yoxdur
-    if (matrix) matrix.setDaysInMonth(daysInSelectedMonth());
+  // Ay/İl DƏYİŞƏNDƏ (yalnız "Yeni dövr" rejimində, periodId=null olduqda)
+  // çağırılır — VƏ modalın İLK açılışında da (bax: runWhenModalShown).
+  // Məqsəd: istifadəçi hansı Ay/İl seçsə seçsin (mövcud dövr olsa belə),
+  // Ay/İl seçimləri HEÇ VAXT kilidlənməsin (əvvəllər burada mövcud dövr
+  // tapılanda goToPeriod() ilə "edit" görünüşünə keçilirdi — həmin
+  // görünüşdə Ay/İl selectləri disabled olduğu üçün istifadəçi bir daha
+  // dövrü dəyişə bilmirdi). İndi bunun əvəzinə, tapılan dövrün datası
+  // EYNİ modalın matrisinə (mövcuddursa əsl, olmasa önizləmə mənbəyindən)
+  // yüklənir, Ay/İl isə sərbəst qalır.
+  function loadForSelectedPeriod() {
+    if (periodId || !matrix) return; // statik "edit" rejimində Ay/İl onsuz da kilidlidir
+    matrix.setDaysInMonth(daysInSelectedMonth());
     const year = yearInput.value;
     const month = monthSelect.value;
-    if (!year || !month) {
-      if (typeof onNotFound === "function") onNotFound();
-      return;
-    }
+    if (!year || !month) return;
+
     fetch("/tabel/lookup?year=" + encodeURIComponent(year) + "&month=" + encodeURIComponent(month), {
       headers: { "X-Requested-With": "XMLHttpRequest" }
     })
       .then(function (r) { return r.json(); })
       .then(function (data) {
         if (data.exists && data.period_id) {
-          goToPeriod(data.period_id);
-        } else if (typeof onNotFound === "function") {
-          onNotFound();
+          currentPeriodId = data.period_id;
+          // Dövr artıq mövcuddur — generasiya statusunu öyrənmək üçün
+          // əsl matris endpoint-ini bir dəfə sorğulayırıq (is_generated/
+          // is_approved), sonra matrix.setSource bunu yenidən (indi
+          // grid-in öz mənbəyi kimi) yükləyəcək.
+          return fetch("/tabel/" + data.period_id + "/api/matrix", {
+            headers: { "X-Requested-With": "XMLHttpRequest" }
+          })
+            .then(function (r) { return r.json(); })
+            .then(function (matrixData) {
+              // Günlər xanası YALNIZ tabel generasiya olunub VƏ təsdiqlənməyibsə aktivdir.
+              const readOnly = !matrixData.is_generated || matrixData.is_approved;
+              matrix.setSource(
+                "/tabel/" + data.period_id + "/api/matrix",
+                readOnly ? null : "/tabel/" + data.period_id + "/cell",
+                readOnly
+              );
+            });
         }
+        // Bu Ay/İl üçün dövr hələ yoxdur — önizləmə mənbəyindən əməkdaş
+        // siyahısını göstər (günlər HƏMİŞƏ deaktiv, "Generasiya et"ə qədər).
+        currentPeriodId = null;
+        return matrix.setSource(
+          "/tabel/preview?year=" + encodeURIComponent(year) + "&month=" + encodeURIComponent(month),
+          null,
+          true
+        );
       });
   }
-  if (monthSelect && !periodId) monthSelect.addEventListener("change", checkExistingPeriod);
-  if (yearInput && !periodId) yearInput.addEventListener("change", checkExistingPeriod);
+  if (monthSelect && !periodId) monthSelect.addEventListener("change", loadForSelectedPeriod);
+  if (yearInput && !periodId) yearInput.addEventListener("change", loadForSelectedPeriod);
 
   // --- "Tabeli generasiya et" ------------------------------------------------
   const generateBtn = document.getElementById("generateBtn");
@@ -244,10 +272,12 @@
       }
 
       let chain;
-      if (periodId) {
-        chain = runGenerate(periodId).then(function (data) {
+      if (currentPeriodId) {
+        // Seçilmiş Ay/İl üçün dövr artıq mövcuddur (bax: loadForSelectedPeriod)
+        // — sadəcə onu (yenidən) generasiya edirik.
+        chain = runGenerate(currentPeriodId).then(function (data) {
           if (!data.success) throw data;
-          goToPeriod(periodId);
+          goToPeriod(currentPeriodId);
         });
       } else {
         chain = fetch("/tabel/create", {
@@ -364,16 +394,12 @@
       return;
     }
 
-    // Yeni dövr forması: default Ay/İl üçün BOŞ preview grid dərhal
-    // göstərilir (istifadəçi hələ heç nə seçmədən "Generasiya et"-ə
-    // basmazdan əvvəl cədvəlin necə olacağını görsün) — VƏ Ay/İl seçimi
-    // sərbəst qalır ki, istifadəçi istədiyi dövrü seçə bilsin. (Əvvəllər
-    // burada ilk açılışda avtomatik "mövcud dövr varsa ona keç" yoxlaması
-    // edilirdi — bu, "Yeni dövr" düyməsinə basanda cari ay üçün dövr
-    // artıq mövcud olduqda istifadəçini AVTOMATIK həmin (kilidlənmiş,
-    // dəyişdirilə bilməyən) dövrə atırdı və Ay/İl-i dəyişmək mümkün
-    // olmurdu. İndi bu yoxlama YALNIZ istifadəçi Ay/İl-i özü dəyişəndə
-    // işə düşür — bax aşağıda `checkExistingPeriod` listener-ləri.)
+    // Yeni dövr forması: matris əvvəlcə boş qabıq kimi yaradılır (heç bir
+    // mənbə olmadan), sonra `loadForSelectedPeriod()` seçilmiş (default)
+    // Ay/İl üçün həqiqi mənbəni (mövcud dövrün öz matrisi VƏ YA hələ
+    // yaradılmayıbsa önizləmə) tapıb yükləyir — Ay/İl HƏMİŞƏ sərbəst qalır,
+    // tapılan dövr nə olursa olsun heç vaxt "edit" görünüşünə keçid/kilid
+    // olmur (bax: loadForSelectedPeriod-dakı qeyd).
     matrix = initTabelMatrix({
       elementId: "tabelMatrixGrid",
       gridKey: "tabel_matrix",
@@ -382,6 +408,7 @@
       daysInMonth: daysInMonth || daysInSelectedMonth(),
       readOnly: true
     });
+    loadForSelectedPeriod();
   });
 })();
 </script>

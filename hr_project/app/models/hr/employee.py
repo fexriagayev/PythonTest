@@ -69,6 +69,9 @@ class Employee(db.Model):
             owner_type="employee", owner_id=self.id
         ).all()
 
+    educations = db.relationship(
+        "EmployeeEducation", back_populates="employee", cascade="all, delete-orphan"
+    )
 
     def __repr__(self):
         return f"<Employee {self.id} {self.full_name}>"

@@ -139,32 +139,9 @@ def generate_period(period):
 
     TabelEmployeeRow.query.filter_by(period_id=period.id).delete()
 
-    employees = sorted(_employees_with_current_stint(), key=lambda e: e.full_name or "")
-    weekend_days = _weekend_days(period_start, period_end)
-    holiday_marks = _holiday_marks(period_start, period_end)
-
     row_no = 0
-    for employee in employees:
-        active_days = _active_days(employee, period_start, period_end)
-        if not active_days:
-            continue
-
+    for employee, day_marks in _build_all_day_marks(period.year, period.month):
         row_no += 1
-        leave_marks = _leave_marks_for_employee(employee, period_start, period_end)
-
-        day_marks = {}
-        for day in range(1, days_in_month + 1):
-            if day not in active_days:
-                continue  # inactive -> no key -> blank/grey, non-editable
-            if day in holiday_marks:
-                day_marks[str(day)] = holiday_marks[day]
-            elif day in weekend_days:
-                day_marks[str(day)] = REST_DAY_CODE
-            elif day in leave_marks:
-                day_marks[str(day)] = leave_marks[day]
-            else:
-                day_marks[str(day)] = DEFAULT_WORK_MARK  # adi iş günü -> default "+"
-
         db.session.add(
             TabelEmployeeRow(
                 period_id=period.id,
@@ -179,6 +156,63 @@ def generate_period(period):
 
     period.is_generated = True
     period.generated_at = datetime.utcnow()
+
+
+def _build_all_day_marks(year, month):
+    """generate_period() ilə preview_rows() arasında PAYLAŞILAN nüvə:
+    seçilmiş Ay/İl üçün (employee, day_marks) cütlərini (yalnız ən azı
+    bir aktiv günü olan əməkdaşlar üçün) qaytarır. DB-yə heç nə YAZMIR —
+    çağıran tərəf (generate_period) TabelEmployeeRow-a çevirib əlavə edir."""
+    period_start, period_end, days_in_month = month_bounds(year, month)
+    employees = sorted(_employees_with_current_stint(), key=lambda e: e.full_name or "")
+    weekend_days = _weekend_days(period_start, period_end)
+    holiday_marks = _holiday_marks(period_start, period_end)
+
+    result = []
+    for employee in employees:
+        active_days = _active_days(employee, period_start, period_end)
+        if not active_days:
+            continue
+        leave_marks = _leave_marks_for_employee(employee, period_start, period_end)
+        day_marks = {}
+        for day in range(1, days_in_month + 1):
+            if day not in active_days:
+                continue  # inactive -> no key -> blank/grey, non-editable
+            if day in holiday_marks:
+                day_marks[str(day)] = holiday_marks[day]
+            elif day in weekend_days:
+                day_marks[str(day)] = REST_DAY_CODE
+            elif day in leave_marks:
+                day_marks[str(day)] = leave_marks[day]
+            else:
+                day_marks[str(day)] = DEFAULT_WORK_MARK  # adi iş günü -> default "+"
+        result.append((employee, day_marks))
+    return result
+
+
+def preview_rows(year, month):
+    """`generate_period()` ilə EYNİ məntiqlə, AMMA HEÇ NƏYİ DB-yə
+    YAZMADAN, seçilmiş Ay/İl üçün əməkdaş sətirlərinin ÖNİZLƏMƏSİNİ
+    qaytarır. "Yeni dövr" formasında, dövr hələ yaradılmamışkən (Ay/İl
+    seçimi zamanı) istifadə olunur ki, istifadəçi "Generasiya et"-ə
+    basmazdan əvvəl də əməkdaş siyahısını görsün (bax: tabel/routes.py
+    `preview_period`). Sətirlərin `id`-si YOXDUR (heç bir TabelEmployeeRow
+    hələ mövcud deyil) — bunun əvəzinə grid-in unikal açarı üçün
+    `employee_id` istifadə olunur; günlər isə HƏMİŞƏ readOnly göstərilir
+    (bax: period_modal.html/tabel-matrix.js — cellUrl bu rejimdə yoxdur)."""
+    _, period_end, _ = month_bounds(year, month)
+    rows = []
+    for employee, day_marks in _build_all_day_marks(year, month):
+        rows.append({
+            "id": employee.id,
+            "employee_id": employee.id,
+            "full_name": employee.full_name,
+            "position": employee.position,
+            "contract_number": _contract_number_at(employee, period_end),
+            "day_marks": day_marks,
+            "work_days_count": sum(1 for v in day_marks.values() if v == "+"),
+        })
+    return rows
 
 
 def cycle_cell(row, day):

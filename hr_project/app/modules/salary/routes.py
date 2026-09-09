@@ -251,6 +251,44 @@ def approve_payroll(period_id):
     return redirect_target
 
 
+@salary_bp.route("/payroll/<int:period_id>/unapprove", methods=["POST"])
+@login_required
+@permission_required(MODULE, "can_edit")
+@log_action(MODULE, "UNAPPROVE_PAYROLL")
+def unapprove_payroll(period_id):
+    period = TabelPeriod.query.get_or_404(period_id)
+    redirect_target = redirect(url_for("salary.list_payroll_periods", year=period.year, month=period.month))
+    run = PayrollRun.query.filter_by(period_id=period.id).first()
+    if not run or not run.is_finalized:
+        flash("Bu dövrün əməkhaqqısı təsdiqlənməyib.", "info")
+        return redirect_target
+    run.is_finalized = False
+    run.finalized_at = None
+    db.session.commit()
+    flash("Əməkhaqqı təsdiqi ləğv edildi.", "success")
+    return redirect_target
+
+
+@salary_bp.route("/payroll/<int:period_id>/reset", methods=["POST"])
+@login_required
+@permission_required(MODULE, "can_add")
+@log_action(MODULE, "RESET_PAYROLL")
+def reset_payroll(period_id):
+    period = TabelPeriod.query.get_or_404(period_id)
+    redirect_target = redirect(url_for("salary.list_payroll_periods", year=period.year, month=period.month))
+    run = PayrollRun.query.filter_by(period_id=period.id).first()
+    if not run:
+        flash("Bu dövr üçün hesablanmış əməkhaqqı yoxdur.", "info")
+        return redirect_target
+    if run.is_finalized:
+        flash("Təsdiqlənmiş əməkhaqqı sıfırlana bilməz — əvvəlcə təsdiqi ləğv edin.", "danger")
+        return redirect_target
+    db.session.delete(run)
+    db.session.commit()
+    flash("Əməkhaqqı sıfırlandı.", "success")
+    return redirect_target
+
+
 @salary_bp.route("/payroll/<int:period_id>/api/entries")
 @login_required
 @permission_required(MODULE, "can_view")

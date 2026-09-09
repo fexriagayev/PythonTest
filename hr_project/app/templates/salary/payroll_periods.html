@@ -27,6 +27,20 @@
     class="btn btn-secondary" {{ 'disabled' if not payroll_calculated or payroll_approved }}>
     {{ t('payroll_approve_btn') }}
   </button>
+  <button type="submit" formmethod="post"
+    formaction="{{ url_for('salary.unapprove_payroll', period_id=period.id) if tabel_exists else '#' }}"
+    class="btn btn-secondary" {{ 'disabled' if not payroll_approved }}>
+    {{ t('payroll_unapprove_btn') }}
+  </button>
+  {% endif %}
+
+  {% if current_user.has_perm('SALARY', 'can_add') %}
+  <button type="submit" formmethod="post"
+    formaction="{{ url_for('salary.reset_payroll', period_id=period.id) if tabel_exists else '#' }}"
+    class="btn btn-secondary" {{ 'disabled' if not payroll_calculated or payroll_approved }}
+    onclick="return confirm('{{ t('payroll_reset_confirm') }}');">
+    {{ t('payroll_reset_btn') }}
+  </button>
   {% endif %}
 </form>
 

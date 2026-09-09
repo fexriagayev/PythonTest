@@ -8,7 +8,7 @@ from app.models import TabelPeriod, TabelEmployeeRow
 from app.utils.decorators import permission_required, log_action
 from app.utils.modal import render_form
 from app.utils.parsing import _parse_int
-from app.services.tabel_service import month_bounds, generate_period, cycle_cell
+from app.services.tabel_service import month_bounds, generate_period, cycle_cell, preview_rows
 from app.services.document_service import delete_all_documents_for_owner
 
 tabel_bp = Blueprint("tabel", __name__)
@@ -98,6 +98,28 @@ def period_detail(period_id):
         days_in_month=days_in_month,
         month_names=TabelPeriod.MONTH_NAMES_AZ,
     )
+
+
+@tabel_bp.route("/preview")
+@login_required
+@permission_required(MODULE, "can_view")
+def preview_period():
+    """AJAX: TabelPeriod hələ yaradılmayıb — seçilmiş Ay/İl üçün əməkdaş
+    sətirlərinin ÖNİZLƏMƏSİNİ (bax: tabel_service.preview_rows) qaytarır.
+    "Yeni dövr" formasında Ay/İl seçimi hər dəyişəndə çağırılır ki,
+    istifadəçi "Generasiya et"-ə basmazdan əvvəl də əməkdaş siyahısını
+    görsün. Cavab api_matrix ilə EYNİ formatdadır (is_generated=False)."""
+    year = _parse_int(request.args.get("year"))
+    month = _parse_int(request.args.get("month"))
+    if not year or not month or not (1 <= month <= 12):
+        return jsonify({"days_in_month": 30, "is_generated": False, "is_approved": False, "rows": []})
+    _, _, days_in_month = month_bounds(year, month)
+    return jsonify({
+        "days_in_month": days_in_month,
+        "is_generated": False,
+        "is_approved": False,
+        "rows": preview_rows(year, month),
+    })
 
 
 @tabel_bp.route("/lookup")
