@@ -1,20 +1,6 @@
-
--Modal pəncərə yalnız əməkdaşın əsas məlumatı dəyişdikdə flash mesaj verir, digər alt məlumatlar dəyişən zaman vermir - amma olmalıdır.
-
--növbəti məzuniyyət daxil edərkən gün sayı xanasında məhdudiyyət olmalıdır (istifadə olunmamış əsas və əlavə günlərin sayı üzrə, əgər əməkdaşın toplam 10 gün istifadə olunmamış günü varsa max 10 olmalıdır). Növbəti məzuniyyət daxil edildikdə əgər istifadəçinin köhnə dövrlər üzrə istifadə edilməmiş günləri varsa dövr köhnədən təzəyə doğru olmaqla və hər dövr üzrə əvvəlcə əlavə günlər, sora əsas günlər istifadə olunmaqla məzuniyyət günləri siyahısı yenilənməlidir. 
-
--məzuniyyət günləri siyahısında show/hide column-u 2ci yerdədir. Amma bütün gridlərdə ən solda ilk sütun olmalıdır.
-
--əsas məlumatlar tab-da aşağıdakı sətirlər silinsin:
-* Personal Information
-* Document Information
-* Contact
-
--əsas məlumatlar tab-da məlumatlar 3 sqtunda olsunvə aşağıdakı ardıcıllıqla yerləşdirilsin:
-* Date of Birth, Gender, Marital Status
-* Benefit, Education Type
-* ID Card FIN, ID Card Series/Number, Social Insurance Number
-* Phone, E-mail
-* Note (pəncərə enində olsun width clicent)
-
-- Modal pəncərələrin ölçülərini maximize  və normal etmək olurmu? 
+- Bayram gunleri siyahisinda tarix evezine başlama ve bitme tarixi olmaidirş cunki bezi bayramlar 1 nece gun cekirş bundan elave bezi bayramlar her il tekrarlanirş bunu her il yeniden yigmamaq ucun teklf verir
+- Yeni tabel acilanda cari dovr ucre generasiya olunmuş tabel avtomatik yuklənir (məsələn sentyabr 2026), amma dövrü dəyişəndə proses dayanır (məsələn avqust 2026). Baxmayaraq ki avqust ucun de tabel generasiya olub. 
+- əməkhaqqı siyahısında dövrün ay və il hissəsi 2 sətirdədir, amma 1 sətirdə olmalıdır
+- əməkhaqqı siyahısında Əməkhaqqı əlavələri (dəyiş) sütunu ləğv olunmalıdır. Əvəzində context menyuya əlavə olunsun. Və açılan pəncərə modal olsun. Həmin modalda yalnız həmin əməkdaşa və bir də hamıya aid olan əlavə və tutulmalar görünsün.
+- Əməkhaqqına əlavə tutulma daxil edərkən bunun cari əməkdaşa və ya hamıya aid olması barədə ticket olsun 
+- Əvəzində əməkhaqları (manual) menyusu və funksionallığı tamamilə silinsin
