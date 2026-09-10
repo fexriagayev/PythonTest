@@ -493,7 +493,8 @@ TRANSLATIONS = {
     # --- Bayram günləri (holiday_form.html) -----------------------------------
     "holiday_form_title_edit": {"az": "Bayram gününü dəyiş", "en": "Edit Holiday"},
     "holiday_form_title_add": {"az": "Yeni bayram günü", "en": "New Holiday"},
-    "holiday_field_date": {"az": "Tarix", "en": "Date"},
+    "holiday_field_start_date": {"az": "Başlama tarixi", "en": "Start Date"},
+    "holiday_field_end_date": {"az": "Bitmə tarixi", "en": "End Date"},
     "holiday_field_name": {"az": "Ad", "en": "Name"},
     "holiday_name_placeholder": {
         "az": "məs: Novruz bayramı",
@@ -502,6 +503,13 @@ TRANSLATIONS = {
     "holiday_field_type": {"az": "Növ", "en": "Type"},
     "holiday_type_bayram": {"az": "Bayram (B)", "en": "Holiday (B)"},
     "holiday_type_matam": {"az": "Matəm (M)", "en": "Mourning Day (M)"},
+    "holiday_field_is_recurring": {"az": "Hər il təkrarlanır", "en": "Repeats every year"},
+    "holiday_is_recurring_hint": {
+        "az": "Seçilsə, bu bayram hər il EYNİ ay/gündə (müddəti eyni saxlanılmaqla) avtomatik nəzərə alınır — hər il yenidən daxil etməyə ehtiyac qalmır.",
+        "en": "If checked, this holiday is applied automatically every year on the same month/day (same duration) — no need to re-enter it each year.",
+    },
+    "holiday_col_dates": {"az": "Tarix", "en": "Date"},
+    "holiday_col_recurring": {"az": "Təkrarlanır", "en": "Recurring"},
     # --- Məzuniyyət kateqoriyaları (leave_category_form.html) ----------------
     "lc_form_title_edit": {"az": "Kateqoriyanı dəyiş", "en": "Edit Category"},
     "lc_form_title_add": {"az": "Yeni kateqoriya", "en": "New Category"},
@@ -718,7 +726,6 @@ TRANSLATIONS = {
     # (salary/employee_additions.html, addition_form.html). Ayrıca ümumi
     # "Əlavələr" menyusu YOXDUR — bax: payroll_period.html "Dəyiş" düyməsi.
     "emp_additions_page_title": {"az": "Əməkhaqqı əlavələri", "en": "Salary Additions"},
-    "emp_additions_open_btn": {"az": "Dəyiş", "en": "Edit"},
     "emp_additions_add_btn": {"az": "Yeni əlavə/tutulma", "en": "New Addition/Deduction"},
     "emp_additions_col_kind": {"az": "Növ", "en": "Kind"},
     "emp_additions_col_deductions_total": {"az": "Tutulmalar", "en": "Deductions"},
@@ -734,6 +741,13 @@ TRANSLATIONS = {
     "additions_col_active": {"az": "Aktiv", "en": "Active"},
     "addition_form_title_add": {"az": "Yeni əlavə/tutulma", "en": "New Addition/Deduction"},
     "addition_form_title_edit": {"az": "Əlavə/tutulmanı dəyiş", "en": "Edit Addition/Deduction"},
+    "addition_field_scope": {"az": "Kimə aiddir", "en": "Applies To"},
+    "addition_scope_individual": {"az": "Yalnız bu əməkdaşa", "en": "This employee only"},
+    "addition_scope_all": {"az": "Bütün əməkdaşlara", "en": "All employees"},
+    "addition_scope_hint": {
+        "az": "\"Bütün əməkdaşlara\" seçilsə, bu əlavə/tutulma HƏR əməkdaşın əməkhaqqısına tətbiq olunur və yalnız burada (yaratdığınız zaman) idarə oluna bilər — ayrı-ayrı əməkdaşların pəncərəsindən sonradan redaktə/silinə bilməz.",
+        "en": "If \"All employees\" is selected, this addition/deduction applies to EVERY employee's payroll and can only be managed here (at creation) — it can't later be edited/deleted from an individual employee's window.",
+    },
     "addition_field_addition_type": {"az": "Əlavə/tutulma növü", "en": "Addition/Deduction Type"},
     "addition_type_hint": {
         "az": "Növlərin siyahısını \"Məlumat kitabçaları → SALARY → salary_addition_type\" bölməsindən idarə edə bilərsiniz.",

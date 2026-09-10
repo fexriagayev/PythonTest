@@ -5,6 +5,21 @@
 {% set form_max_width = '520px' %}
 
 {% block form_fields %}
+  <div class="dx-modal-form-single-col" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px;">
+    <label style="margin:0;">{{ t('addition_field_scope') }}</label>
+    <label style="font-weight:normal;display:flex;align-items:center;gap:6px;margin:0;">
+      <input type="radio" name="scope" value="individual" style="width:auto;"
+        {{ 'checked' if not addition or addition.scope == 'individual' }}>
+      {{ t('addition_scope_individual') }} — {{ entry.full_name_snapshot if entry else (addition.employees[0].full_name if addition and addition.employees else '') }}
+    </label>
+    <label style="font-weight:normal;display:flex;align-items:center;gap:6px;margin:0;">
+      <input type="radio" name="scope" value="all" style="width:auto;"
+        {{ 'checked' if addition and addition.scope == 'all' }}>
+      {{ t('addition_scope_all') }}
+    </label>
+    <p style="color:#888;font-size:0.8em;margin:0;">{{ t('addition_scope_hint') }}</p>
+  </div>
+
   <label>{{ t('addition_field_addition_type') }}</label>
   <select name="addition_type_id" required>
     <option value="">{{ t('select_placeholder') }}</option>

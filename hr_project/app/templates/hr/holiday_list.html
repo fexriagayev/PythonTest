@@ -30,10 +30,15 @@ document.addEventListener("DOMContentLoaded", function () {
     placeholder: "{{ t('no_data_generic') }}",
     columns: [
       { title: "{{ t('col_id') }}", field: "id", width: 60, sorter: "number" },
-      { title: "{{ t('col_date') }}", field: "date", sorter: "date" },
+      { title: "{{ t('holiday_col_dates') }}", field: "start_date", sorter: "date",
+        formatter: function(cell) {
+          const row = cell.getData();
+          return row.start_date === row.end_date ? row.start_date : (row.start_date + " — " + row.end_date);
+        } },
       { title: "{{ t('col_name') }}", field: "name", headerFilter: "input" },
       { title: "{{ t('holiday_field_type') }}", field: "holiday_type", width: 120,
-        formatter: function(cell) { return cell.getValue() === "matam" ? "{{ t('holiday_type_matam') }}" : "{{ t('holiday_type_bayram') }}"; } }
+        formatter: function(cell) { return cell.getValue() === "matam" ? "{{ t('holiday_type_matam') }}" : "{{ t('holiday_type_bayram') }}"; } },
+      { title: "{{ t('holiday_col_recurring') }}", field: "is_recurring", width: 110, formatter: "tickCross" }
     ]
   }, {
     idField: "id",

@@ -1172,13 +1172,40 @@ def list_holidays():
 @login_required
 @permission_required(MODULE, "dict_view")
 def api_holidays():
-    items = Holiday.query.order_by(Holiday.date).all()
+    items = Holiday.query.order_by(Holiday.start_date).all()
     return jsonify(
         [
-            {"id": h.id, "date": h.date.isoformat(), "name": h.name, "holiday_type": h.holiday_type}
+            {
+                "id": h.id,
+                "start_date": h.start_date.isoformat(),
+                "end_date": h.end_date.isoformat(),
+                "name": h.name,
+                "holiday_type": h.holiday_type,
+                "is_recurring": h.is_recurring,
+            }
             for h in items
         ]
     )
+
+
+def _apply_holiday_form(holiday, form):
+    start = _parse_date(form.get("start_date"))
+    end = _parse_date(form.get("end_date")) or start
+    holiday.start_date = start
+    holiday.end_date = end
+    holiday.name = form.get("name", "").strip()
+    holiday.holiday_type = form.get("holiday_type", "bayram")
+    holiday.is_recurring = bool(form.get("is_recurring"))
+
+
+def _validate_holiday(holiday):
+    if not holiday.start_date:
+        return "Başlama tarixi mütləqdir."
+    if not holiday.end_date:
+        return "Bitmə tarixi mütləqdir."
+    if holiday.end_date < holiday.start_date:
+        return "Bitmə tarixi başlama tarixindən əvvəl ola bilməz."
+    return None
 
 
 @hr_bp.route("/holidays/add", methods=["GET", "POST"])
@@ -1187,13 +1214,11 @@ def api_holidays():
 @log_action("HR_HOLIDAY", "ADD")
 def add_holiday():
     if request.method == "POST":
-        holiday = Holiday(
-            date=_parse_date(request.form.get("date")),
-            name=request.form.get("name", "").strip(),
-            holiday_type=request.form.get("holiday_type", "bayram"),
-        )
-        if Holiday.query.filter_by(date=holiday.date).first():
-            flash("Bu tarix artıq bayram kimi qeyd olunub.", "danger")
+        holiday = Holiday()
+        _apply_holiday_form(holiday, request.form)
+        error = _validate_holiday(holiday)
+        if error:
+            flash(error, "danger")
             return render_form("hr/holiday_form.html", holiday=holiday)
         db.session.add(holiday)
         db.session.commit()
@@ -1209,9 +1234,11 @@ def add_holiday():
 def edit_holiday(holiday_id):
     holiday = Holiday.query.get_or_404(holiday_id)
     if request.method == "POST":
-        holiday.date = _parse_date(request.form.get("date"))
-        holiday.name = request.form.get("name", "").strip()
-        holiday.holiday_type = request.form.get("holiday_type", "bayram")
+        _apply_holiday_form(holiday, request.form)
+        error = _validate_holiday(holiday)
+        if error:
+            flash(error, "danger")
+            return render_form("hr/holiday_form.html", holiday=holiday)
         db.session.commit()
         flash("Bayram günü yeniləndi.", "success")
         return modal_redirect("hr.list_holidays")

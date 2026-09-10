@@ -4,13 +4,13 @@
 {% block content %}
 
 <form method="get" id="periodForm" class="payroll-toolbar">
-  <div class="payroll-toolbar-group">
+  <div class="payroll-toolbar-group payroll-period-group">
     <select name="month" id="periodMonthSelect" class="form-control">
       {% for name in month_names %}
       <option value="{{ loop.index }}" {{ 'selected' if loop.index==month }}>{{ name }}</option>
       {% endfor %}
     </select>
-    <input type="number" name="year" id="periodYearInput" value="{{ year }}" class="form-control" style="max-width:100px;" min="2000" max="2100">
+    <input type="number" name="year" id="periodYearInput" value="{{ year }}" class="form-control" style="max-width:100px;flex-shrink:0;" min="2000" max="2100">
   </div>
 
   <div class="payroll-toolbar-group">
@@ -68,6 +68,10 @@
     margin-bottom: 12px;
   }
   .payroll-toolbar-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  /* Ay/İl seçimi (dövr) HƏMİŞƏ 1 sətirdə qalsın — yalnız düymələr
+     qrupu (sağdakı .payroll-toolbar-group) dar ekranlarda sətir
+     dəyişə bilər. */
+  .payroll-period-group { flex-wrap: nowrap; }
   .payroll-hint { color:#a15c00; font-size:0.9em; background:#fff6e8; border:1px solid #ffe1ad; padding:8px 12px; border-radius:6px; margin:0 0 12px; }
   .payroll-hint-danger { color:#a3221f; background:#fdeceb; border-color:#f6c6c3; }
   .payroll-hint-success { color:#1c6b2c; background:#eaf7ec; border-color:#c3e8c9; }
@@ -115,30 +119,17 @@ document.addEventListener("DOMContentLoaded", function () {
     { title: "{{ t('note_label') }}", field: "note", headerFilter: "input" }
   ];
 
-  // "Dəyiş" YALNIZ artıq hesablanmış (entry_id mövcud) VƏ təsdiqlənməmiş
-  // sətirlərdə görünür — 0-larla dolu (hələ hesablanmamış) sətirlərdə
-  // dəyişəcək heç nə yoxdur, təsdiqlənmiş sətirlərdə isə dəyişiklik
-  // artıq qadağandır (bax: routes.py add_addition finalized yoxlaması).
-  if (canEdit) {
-    columns.push({
-      title: "{{ t('emp_additions_page_title') }}", field: "entry_id", width: 130, headerSort: false,
-      formatter: function (cell) {
-        const entryId = cell.getValue();
-        if (!entryId || payrollApproved) return "";
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "btn btn-sm";
-        btn.textContent = "{{ t('emp_additions_open_btn') }}";
-        btn.addEventListener("click", function () {
-          window.location.href = "/salary/payroll/entry/" + entryId + "/additions";
-        });
-        return btn;
-      }
-    });
-  }
+  // "Əməkhaqqı əlavələri" indi sütun DEYİL, sətir kontekst menyusunda bir
+  // maddədir (sağ-klik) — açılan pəncərə isə TAM SƏHİFƏYƏ keçid əvəzinə
+  // MODAL kimi açılır (bax: salary/employee_additions.html). YALNIZ artıq
+  // hesablanmış (entry_id mövcud) VƏ təsdiqlənməmiş sətirlərdə görünür —
+  // 0-larla dolu (hələ hesablanmamış) sətirlərdə dəyişəcək heç nə yoxdur,
+  // təsdiqlənmiş sətirlərdə isə dəyişiklik artıq qadağandır (bax:
+  // routes.py add_addition finalized yoxlaması).
+  let payrollTable = null;
 
   if (tabelExists) {
-    createAdvancedGrid("payrollEntryGrid", "payroll_entries", {
+    payrollTable = createAdvancedGrid("payrollEntryGrid", "payroll_entries", {
       ajaxURL: "{{ url_for('salary.api_payroll_entries', period_id=period.id) if tabel_exists else '' }}",
       pagination: true,
       paginationSize: 30,
@@ -152,6 +143,17 @@ document.addEventListener("DOMContentLoaded", function () {
         "income_tax", "dsmf_amount", "unemployment_amount", "medical_amount",
         "deductions_total", "total_deductions", "net_total"
       ],
+      extraRowActions: function (data) {
+        if (!canEdit || !data.entry_id || payrollApproved) return [];
+        return [{
+          label: "{{ t('emp_additions_page_title') }}",
+          action: function () {
+            openFormModal("/salary/payroll/entry/" + data.entry_id + "/additions", function () {
+              payrollTable.setData();
+            });
+          }
+        }];
+      }
     });
   }
 });

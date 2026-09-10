@@ -16,7 +16,6 @@ from .hr.holiday import Holiday
 from .hr.salary_card import SalaryCard
 
 from .payroll.salary import (
-    SalaryEntry,
     PayrollSettings,
     SalaryAddition,
     SalaryAdditionEmployee,

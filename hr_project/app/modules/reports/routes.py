@@ -3,7 +3,7 @@ from flask_login import login_required, current_user
 import csv
 import io
 
-from app.models import Employee, TabelEmployeeRow, SalaryEntry
+from app.models import Employee, TabelEmployeeRow, PayrollEntry
 from app.utils.decorators import log_action
 
 reports_bp = Blueprint("reports", __name__)
@@ -29,9 +29,10 @@ def _rows_for(module_code):
                   r.contract_number_snapshot, r.position_snapshot, r.work_days_count()]
                  for r in TabelEmployeeRow.query.all()]
     elif module_code == "SALARY":
-        header = ["ID", "Əməkdaş", "Dövr", "Baza", "Bonus", "Tutulma", "Cəmi"]
-        rows = [[s.id, s.employee.full_name if s.employee else "", s.period,
-                  s.base_salary, s.bonus, s.deductions, s.total] for s in SalaryEntry.query.all()]
+        header = ["ID", "Dövr", "Əməkdaş", "Baza", "Əlavələr", "Tutulmalar", "Gross", "Net"]
+        rows = [[e.id, e.payroll_run.period.label if e.payroll_run and e.payroll_run.period else "",
+                  e.full_name_snapshot, e.base_amount, e.additions_total, e.deductions_total,
+                  e.gross_total, e.net_total] for e in PayrollEntry.query.all()]
     else:
         header, rows = [], []
     return header, rows

@@ -1,35 +1,86 @@
-{% extends "base.html" %}
-{% block title %}{{ t('emp_additions_page_title') }} — {{ entry.full_name_snapshot }}{% endblock %}
-{% block page_title %}{{ t('emp_additions_page_title') }} — {{ entry.full_name_snapshot }}{% endblock %}
-{% block content %}
+{% extends "modal_form_base.html" %}
+{% set form_title = t('emp_additions_page_title') ~ ' — ' ~ (entry.full_name_snapshot if entry else '') %}
+{% set form_action = "#" %}
+{% set form_no_wrapper_card = true %}
 
-<div class="toolbar">
-  {% if current_user.has_perm('SALARY', 'can_add') %}
-  <button type="button" id="addAdditionBtn" class="btn">+ {{ t('emp_additions_add_btn') }}</button>
-  {% endif %}
-  <a href="{{ url_for('salary.list_payroll_periods', year=entry.payroll_run.period.year, month=entry.payroll_run.period.month) }}" class="btn btn-secondary">{{ t('back_button') }}</a>
+{% block form_actions %}{% endblock %}
+
+{% block form_fields %}
+<div class="dx-modal-form-single-col emp-additions-modal-body">
+  <div class="toolbar emp-additions-toolbar">
+    <div>
+      {% if current_user.has_perm('SALARY', 'can_add') %}
+      <button type="button" id="addAdditionBtn" class="btn">+ {{ t('emp_additions_add_btn') }}</button>
+      {% endif %}
+    </div>
+    <p id="additionsSummary" style="color:#888;font-size:0.85em;margin:0;">
+      {{ t('payroll_col_gross') }}: {{ entry.gross_total }} ·
+      {{ t('payroll_col_additions') }}: +{{ entry.additions_total }} ·
+      {{ t('emp_additions_col_deductions_total') }}: -{{ entry.deductions_total }} ·
+      {{ t('payroll_col_net') }}: {{ entry.net_total }}
+    </p>
+  </div>
+  <div id="additionsGrid"></div>
 </div>
-
-<p style="color:#888;font-size:0.85em;">
-  {{ t('payroll_col_gross') }}: {{ entry.gross_total }} ·
-  {{ t('payroll_col_additions') }}: +{{ entry.additions_total }} ·
-  {{ t('emp_additions_col_deductions_total') }}: -{{ entry.deductions_total }} ·
-  {{ t('payroll_col_net') }}: {{ entry.net_total }}
-</p>
-
-<div id="additionsGrid"></div>
-
 {% endblock %}
 
 {% block extra_scripts %}
+<style>
+  .emp-additions-modal-body { width: 100%; }
+  .emp-additions-toolbar { justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+</style>
 <script>
-document.addEventListener("DOMContentLoaded", function () {
+(function () {
+  // Bu (əvvəllər ayrıca səhifə olan) forma indi MODAL kimi açılır —
+  // paylaşılan popup-un öz "Yadda saxla" düyməsinin mənası yoxdur, hər
+  // əməliyyat (əlavə/redaktə/silmə) öz AJAX çağırışı ilə dərhal saxlanılır.
+  const popup = getModalPopup();
+  if (popup) {
+    const toolbarItems = popup.option("toolbarItems");
+    const saveItem = findSaveToolbarItem(toolbarItems);
+    if (saveItem) {
+      saveItem.options.disabled = true;
+      saveItem.options.visible = false;
+    }
+    popup.option("toolbarItems", toolbarItems);
+  }
+
   const canEdit = {{ 'true' if current_user.has_perm('SALARY', 'can_edit') else 'false' }};
   const canDelete = {{ 'true' if current_user.has_perm('SALARY', 'can_delete') else 'false' }};
   const canAdd = {{ 'true' if current_user.has_perm('SALARY', 'can_add') else 'false' }};
+  const selfUrl = "{{ url_for('salary.employee_additions', entry_id=entry.id) if entry else '' }}";
+  const addUrl = "{{ url_for('salary.add_addition', entry_id=entry.id) if entry else '' }}";
 
-  const table = createAdvancedGrid("additionsGrid", "employee_salary_additions", {
-    ajaxURL: "{{ url_for('salary.api_employee_additions', entry_id=entry.id) }}",
+  // Bu modal daxilində nəsə dəyişəndə (əlavə/redaktə/silmə), ƏSAS
+  // əməkhaqqı siyahısı modalını (bu modalı açan) da xəbərdar edirik ki,
+  // gross/net sütunları köhnəlmiş qalmasın.
+  function notifyParent() {
+    if (typeof window.__currentModalSavedCallback === "function") {
+      window.__currentModalSavedCallback();
+    }
+  }
+
+  // Cədvəli VƏ yuxarıdakı gross/net xülasəsini modalı bağlamadan
+  // yerində yenidən yükləyir (sadəcə grid-i "refresh" etmək kifayət
+  // etməzdi, çünki xülasə server-tərəfdə render olunmuş statik mətndir).
+  function reloadSelfInPlace() {
+    const body = getModalBody();
+    const popup = getModalPopup();
+    return fetch(selfUrl, { headers: { "X-Requested-With": "XMLHttpRequest" } })
+      .then(function (r) { return r.text(); })
+      .then(function (html) {
+        body.innerHTML = html;
+        relocateModalFlash(body);
+        const title = getModalTitleFromHtml(html);
+        if (title) popup.option("title", title);
+        executeInjectedScripts(body);
+        wireModalForm(window.__currentModalSavedCallback);
+        notifyParent();
+      });
+  }
+
+  createAdvancedGrid("additionsGrid", "employee_salary_additions", {
+    ajaxURL: "{{ url_for('salary.api_employee_additions', entry_id=entry.id) if entry else '' }}",
     layout: "fitColumns",
     pagination: true,
     paginationSize: 20,
@@ -49,28 +100,56 @@ document.addEventListener("DOMContentLoaded", function () {
     ]
   }, {
     idField: "id",
-    addUrl: canAdd ? "{{ url_for('salary.add_addition', entry_id=entry.id) }}" : null,
-    // "Bütün əməkdaşlara aid" sətirlər bu pəncərədən redaktə/silinə
-    // bilmir (bax: routes.py `editable` bayrağı) — editUrlTemplate/
-    // deleteUrlTemplate ID əvəzinə "editable" false olan sətirlər üçün
-    // heç bir kontekst-menyu sətri göstərilmir (context-menu.js `id`
-    // sahəsini oxuyur, `editable` sahəsinə fikir vermir — ona görə
-    // server tərəfdə əlavə qoruma qoyulub, bax routes.py).
-    editUrlTemplate: canEdit ? "/salary/additions/edit/{id}" : null,
-    deleteUrlTemplate: canDelete ? "/salary/additions/delete/{id}" : null,
+    // "Bütün əməkdaşlara aid" sətirlər bu pəncərədən redaktə/silinə bilmir
+    // (bax: routes.py `editable` bayrağı — yalnız scope="individual" olan
+    // sətirlər redaktə/silinə bilir). Ona görə redaktə/silmə hərəkətlərini
+    // generic editUrlTemplate/deleteUrlTemplate ƏVƏZİNƏ özümüz qururuq:
+    // həm YALNIZ editable=true olan sətirlərdə göstərmək, həm də uğurlu
+    // əməliyyatdan sonra (sadə grid-refresh-dən fərqli olaraq) yuxarıdakı
+    // xülasəni VƏ əsas əməkhaqqı siyahısını da yeniləmək üçün.
+    extraRowActions: function (data) {
+      if (!data.editable) return [];
+      const actions = [];
+      if (canEdit) {
+        actions.push({
+          label: t("edit"),
+          action: function () {
+            openFormModal("/salary/additions/edit/" + data.id, reloadSelfInPlace);
+          }
+        });
+      }
+      if (canDelete) {
+        actions.push({
+          label: t("delete"),
+          action: function () {
+            if (!confirm(t("grid_confirm_delete"))) return;
+            fetch("/salary/additions/delete/" + data.id, {
+              method: "POST",
+              headers: { "X-Requested-With": "XMLHttpRequest" }
+            })
+              .then(function (r) {
+                if (!r.ok) throw new Error("Delete failed with status " + r.status);
+                return reloadSelfInPlace();
+              })
+              .catch(function (err) {
+                console.error("Delete failed:", err);
+                if (typeof DevExpress !== "undefined" && DevExpress.ui && DevExpress.ui.notify) {
+                  DevExpress.ui.notify(t("grid_delete_error"), "error", 3000);
+                }
+              });
+          }
+        });
+      }
+      return actions;
+    }
   });
 
   const addBtn = document.getElementById("addAdditionBtn");
   if (addBtn) {
     addBtn.addEventListener("click", function () {
-      openFormModal("{{ url_for('salary.add_addition', entry_id=entry.id) }}", function () {
-        // Səhifə yenidən yüklənir ki, yuxarıdakı gross/additions/net
-        // xülasəsi (server-tərəfdə render olunub) də təzələnsin —
-        // sadəcə cədvəli yeniləmək kifayət etməzdi.
-        window.location.reload();
-      });
+      openFormModal(addUrl, reloadSelfInPlace);
     });
   }
-});
+})();
 </script>
 {% endblock %}

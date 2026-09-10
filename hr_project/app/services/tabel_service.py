@@ -33,7 +33,6 @@ from app.models import (
 from app.services.leave_service import get_employment_stints
 
 REST_DAY_CODE = "İ"
-HOLIDAY_CODES = {"bayram": "B", "matam": "M"}
 LOCKED_NON_WORKING_CODES = {REST_DAY_CODE, "B", "M"}
 DEFAULT_WORK_MARK = "+"  # generasiya zamanı adi iş günləri default olaraq "+" (işdə) qəbul olunur
 EDITABLE_VALUES = ("+", "-")
@@ -85,13 +84,10 @@ def _weekend_days(period_start, period_end):
 
 def _holiday_marks(period_start, period_end):
     """{day_of_month: 'B'|'M'} for Holiday-table dates within the period
-    (bayram -> 'B', matəm -> 'M')."""
-    marks = {}
-    for h in Holiday.query.filter(
-        Holiday.date >= period_start, Holiday.date <= period_end
-    ).all():
-        marks[h.date.day] = HOLIDAY_CODES.get(h.holiday_type, "B")
-    return marks
+    (bayram -> 'B', matəm -> 'M'). Bayram günləri indi tarix ARALIĞI
+    (bir neçə gün davam edə bilər) və/və ya TƏKRARLANAN (hər il eyni
+    ay/gündə) ola bilər — bax: Holiday.marks_in_range()."""
+    return {d.day: code for d, code in Holiday.marks_in_range(period_start, period_end).items()}
 
 
 def _leave_marks_for_employee(employee, period_start, period_end):

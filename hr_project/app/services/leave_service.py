@@ -47,15 +47,17 @@ def compute_end_date(start_date, day_count, counting_method):
     if counting_method == "calendar":
         return start_date + timedelta(days=day_count - 1)
 
-    holidays = set()
+    holidays = []
     if counting_method == "workdays_no_holidays":
-        holidays = {h.date for h in Holiday.query.all()}
+        holidays = Holiday.query.all()
 
     cur = start_date
     counted = 0
     while True:
         is_weekend = cur.weekday() >= 5  # 5=Saturday, 6=Sunday
-        is_holiday = cur in holidays
+        # Bayram günləri indi tarix ARALIĞI və/və ya hər il TƏKRARLANAN
+        # ola bilər — bax: Holiday.covers().
+        is_holiday = any(h.covers(cur) for h in holidays)
         if not is_weekend and not is_holiday:
             counted += 1
             if counted == day_count:

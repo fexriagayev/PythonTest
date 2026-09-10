@@ -213,6 +213,17 @@
   // dövrü dəyişə bilmirdi). İndi bunun əvəzinə, tapılan dövrün datası
   // EYNİ modalın matrisinə (mövcuddursa əsl, olmasa önizləmə mənbəyindən)
   // yüklənir, Ay/İl isə sərbəst qalır.
+  // Hər çağırışa öz "nəsil" nömrəsini veririk ki, İKİ sorğu üst-üstə
+  // düşəndə (bax: aşağıdakı qeyd — eyni dəyişikliyə görə "change" HƏM
+  // native event-dən, HƏM DƏ dxEditor-un "valueChanged"-dən İKİ DƏFƏ
+  // tətikləndiyi hallar da daxil olmaqla) YALNIZ ən son çağırışın
+  // cavabı grid-ə tətbiq olunsun. Bunsuz, gecikmiş (köhnə Ay/İl üçün)
+  // bir cavab sonradan gələrsə, artıq göstərilən DÜZGÜN (yeni seçilmiş
+  // dövrün) datasını "əvəz edib" ekranı əvvəlki (səhv) vəziyyətdə
+  // dondururdu — məhz istifadəçilərin gördüyü "dövrü dəyişəndə proses
+  // dayanır" simptomu.
+  let loadToken = 0;
+
   function loadForSelectedPeriod() {
     if (periodId || !matrix) return; // statik "edit" rejimində Ay/İl onsuz da kilidlidir
     matrix.setDaysInMonth(daysInSelectedMonth());
@@ -220,11 +231,15 @@
     const month = monthSelect.value;
     if (!year || !month) return;
 
+    const myToken = ++loadToken;
+
     fetch("/tabel/lookup?year=" + encodeURIComponent(year) + "&month=" + encodeURIComponent(month), {
       headers: { "X-Requested-With": "XMLHttpRequest" }
     })
       .then(function (r) { return r.json(); })
       .then(function (data) {
+        if (myToken !== loadToken) return null; // bu aralıqda daha yeni bir seçim edilib — imtina
+
         if (data.exists && data.period_id) {
           currentPeriodId = data.period_id;
           // Dövr artıq mövcuddur — generasiya statusunu öyrənmək üçün
@@ -236,6 +251,8 @@
           })
             .then(function (r) { return r.json(); })
             .then(function (matrixData) {
+              if (myToken !== loadToken) return; // yenə də ən son seçim deyil
+
               // Günlər xanası YALNIZ tabel generasiya olunub VƏ təsdiqlənməyibsə aktivdir.
               const readOnly = !matrixData.is_generated || matrixData.is_approved;
               matrix.setSource(
@@ -255,6 +272,14 @@
         );
       });
   }
+  // QEYD: bundan başqa, aşağıda (matris yaradıldıqdan sonra) dxEditor-un
+  // öz "valueChanged" hadisəsinə DƏ qoşulurduq — bu, native "change"
+  // (syncNativeValue tərəfindən artıq dispatch olunur, bax: modal.js) ilə
+  // TAM EYNİ dəyişiklik üçün loadForSelectedPeriod-u İKİNCİ DƏFƏ
+  // çağıraraq iki paralel (yarışan) sorğu zənciri yaradırdı. `loadToken`
+  // artıq bu yarışın nəticəsini təhlükəsiz etdiyi üçün ikiqat qoşulma
+  // artıq YALNIZ lazımsız şəbəkə sorğusu yaradır, zərər vermir — amma
+  // yenə də silinib, YALNIZ native "change" dinləyicisi saxlanılıb.
   if (monthSelect && !periodId) monthSelect.addEventListener("change", loadForSelectedPeriod);
   if (yearInput && !periodId) yearInput.addEventListener("change", loadForSelectedPeriod);
 
@@ -409,23 +434,6 @@
       readOnly: true
     });
     loadForSelectedPeriod();
-
-    // Native "change" event-ə əlavə TƏHLÜKƏSİZLİK QATI: bu nöqtədə
-    // (popup artıq göstərilib) wireModalForm() onsuz da işləyib qurtarıb
-    // və monthSelect/yearInput artıq DevExtreme widget-lərinə
-    // çevrilib (field.__dxEditor təyin olunub) — buna görə widget-in öz
-    // "valueChanged" hadisəsinə də BİRBAŞA qoşuluruq. (Nəzəri olaraq
-    // DevExtreme widget-in dəyəri dəyişəndə native input-a `change`
-    // event-i sintez edib göndərir və bu, yuxarıdakı adi
-    // addEventListener("change", ...) ilə tutulmalıdır — amma bu əlavə
-    // qoşulma heç bir zərər vermir və hər hansı brauzer/versiya
-    // fərqindən asılı olmayaraq işi zəmanətə alır.)
-    if (monthSelect && monthSelect.__dxEditor && typeof monthSelect.__dxEditor.on === "function") {
-      monthSelect.__dxEditor.on("valueChanged", loadForSelectedPeriod);
-    }
-    if (yearInput && yearInput.__dxEditor && typeof yearInput.__dxEditor.on === "function") {
-      yearInput.__dxEditor.on("valueChanged", loadForSelectedPeriod);
-    }
   });
 })();
 </script>
