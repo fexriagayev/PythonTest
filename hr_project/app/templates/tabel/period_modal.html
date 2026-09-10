@@ -224,6 +224,33 @@
   // dayanır" simptomu.
   let loadToken = 0;
 
+  // "Generasiya et" düyməsindən İSTİFADƏ OLUNAN eyni məntiq: dövr yoxdursa
+  // əvvəlcə yaradır, sonra (mövcud olsun-olmasın) generasiya edir.
+  // loadForSelectedPeriod (aşağıda) bunu YALNIZ seçilmiş Ay/İl üçün
+  // generasiya olunmuş tabel HƏLƏ yoxdursa çağırır.
+  function runGenerate(id) {
+    return fetch("/tabel/" + id + "/generate", {
+      method: "POST",
+      headers: { "X-Requested-With": "XMLHttpRequest" }
+    }).then(function (r) { return r.json(); });
+  }
+
+  function createAndGenerate(year, month) {
+    return fetch("/tabel/create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest" },
+      body: JSON.stringify({ year: year, month: month })
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (createData) {
+        if (!createData.success) throw createData;
+        return runGenerate(createData.period_id).then(function (genData) {
+          if (!genData.success) throw genData;
+          return createData.period_id;
+        });
+      });
+  }
+
   function loadForSelectedPeriod() {
     if (periodId || !matrix) return; // statik "edit" rejimində Ay/İl onsuz da kilidlidir
     matrix.setDaysInMonth(daysInSelectedMonth());
@@ -233,6 +260,16 @@
 
     const myToken = ++loadToken;
 
+    function applyMatrix(id, readOnly) {
+      if (myToken !== loadToken) return; // artıq daha yeni bir seçim edilib
+      currentPeriodId = id;
+      matrix.setSource(
+        "/tabel/" + id + "/api/matrix",
+        readOnly ? null : "/tabel/" + id + "/cell",
+        readOnly
+      );
+    }
+
     fetch("/tabel/lookup?year=" + encodeURIComponent(year) + "&month=" + encodeURIComponent(month), {
       headers: { "X-Requested-With": "XMLHttpRequest" }
     })
@@ -241,11 +278,8 @@
         if (myToken !== loadToken) return null; // bu aralıqda daha yeni bir seçim edilib — imtina
 
         if (data.exists && data.period_id) {
-          currentPeriodId = data.period_id;
           // Dövr artıq mövcuddur — generasiya statusunu öyrənmək üçün
-          // əsl matris endpoint-ini bir dəfə sorğulayırıq (is_generated/
-          // is_approved), sonra matrix.setSource bunu yenidən (indi
-          // grid-in öz mənbəyi kimi) yükləyəcək.
+          // əsl matris endpoint-ini bir dəfə sorğulayırıq.
           return fetch("/tabel/" + data.period_id + "/api/matrix", {
             headers: { "X-Requested-With": "XMLHttpRequest" }
           })
@@ -253,19 +287,38 @@
             .then(function (matrixData) {
               if (myToken !== loadToken) return; // yenə də ən son seçim deyil
 
-              // Günlər xanası YALNIZ tabel generasiya olunub VƏ təsdiqlənməyibsə aktivdir.
-              const readOnly = !matrixData.is_generated || matrixData.is_approved;
-              matrix.setSource(
-                "/tabel/" + data.period_id + "/api/matrix",
-                readOnly ? null : "/tabel/" + data.period_id + "/cell",
-                readOnly
-              );
+              if (matrixData.is_generated) {
+                // Generasiya olunmuş tabel var — birbaşa onu yüklə (təsdiqlənibsə YALNIZ baxış).
+                applyMatrix(data.period_id, matrixData.is_approved);
+                return;
+              }
+              // Dövr mövcuddur, amma hələ generasiya OLUNMAYIB —
+              // avtomatik generasiya et və sonra yüklə.
+              return runGenerate(data.period_id).then(function (genData) {
+                if (!genData.success) throw genData;
+                applyMatrix(data.period_id, false);
+              });
             });
         }
-        // Bu Ay/İl üçün dövr hələ yoxdur — önizləmə mənbəyindən əməkdaş
-        // siyahısını göstər (günlər HƏMİŞƏ deaktiv, "Generasiya et"ə qədər).
+        // Bu Ay/İl üçün dövr hələ YOXDUR — avtomatik yaradıb generasiya et.
+        return createAndGenerate(year, month).then(function (newPeriodId) {
+          // Arxa fondakı dövrlər siyahısı modal açıq ola-ola yenilənsin ki,
+          // bağlananda köhnəlmiş görünməsin (yeni sətir yaranıb).
+          if (myToken === loadToken && typeof window.__currentModalSavedCallback === "function") {
+            window.__currentModalSavedCallback();
+          }
+          applyMatrix(newPeriodId, false);
+        });
+      })
+      .catch(function (err) {
+        if (myToken !== loadToken) return; // artıq aktual olmayan sorğu — səssizcə imtina
+        console.error("Tabel avtomatik generasiya alınmadı:", err);
         currentPeriodId = null;
-        return matrix.setSource(
+        if (typeof DevExpress !== "undefined" && DevExpress.ui && DevExpress.ui.notify) {
+          DevExpress.ui.notify((err && err.error) || t("tabel_cell_error"), "error", 4000);
+        }
+        // Generasiya baş tutmadısa belə, əməkdaş siyahısını (baxış rejimində) göstərməyə davam et.
+        matrix.setSource(
           "/tabel/preview?year=" + encodeURIComponent(year) + "&month=" + encodeURIComponent(month),
           null,
           true
@@ -284,17 +337,13 @@
   if (yearInput && !periodId) yearInput.addEventListener("change", loadForSelectedPeriod);
 
   // --- "Tabeli generasiya et" ------------------------------------------------
+  // (İndi əsasən YENİDƏN generasiya/sıfırlama üçün: adi halda tabel artıq
+  // Ay/İl seçiləndə loadForSelectedPeriod tərəfindən avtomatik generasiya
+  // olunur — bax yuxarıda.)
   const generateBtn = document.getElementById("generateBtn");
   if (generateBtn) {
     generateBtn.addEventListener("click", function () {
       generateBtn.disabled = true;
-
-      function runGenerate(id) {
-        return fetch("/tabel/" + id + "/generate", {
-          method: "POST",
-          headers: { "X-Requested-With": "XMLHttpRequest" }
-        }).then(function (r) { return r.json(); });
-      }
 
       let chain;
       if (currentPeriodId) {
@@ -305,24 +354,14 @@
           goToPeriod(currentPeriodId);
         });
       } else {
-        chain = fetch("/tabel/create", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest" },
-          body: JSON.stringify({ year: yearInput.value, month: monthSelect.value })
-        })
-          .then(function (r) { return r.json(); })
-          .then(function (createData) {
-            if (!createData.success) throw createData;
-            return runGenerate(createData.period_id).then(function (genData) {
-              if (!genData.success) throw genData;
-              // Arxa fondakı dövrlər siyahısı modal açıq ola-ola yenilənsin
-              // ki, bağlananda köhnəlmiş görünməsin (yeni sətir yaranıb).
-              if (typeof window.__currentModalSavedCallback === "function") {
-                window.__currentModalSavedCallback();
-              }
-              goToPeriod(createData.period_id);
-            });
-          });
+        chain = createAndGenerate(yearInput.value, monthSelect.value).then(function (newPeriodId) {
+          // Arxa fondakı dövrlər siyahısı modal açıq ola-ola yenilənsin
+          // ki, bağlananda köhnəlmiş görünməsin (yeni sətir yaranıb).
+          if (typeof window.__currentModalSavedCallback === "function") {
+            window.__currentModalSavedCallback();
+          }
+          goToPeriod(newPeriodId);
+        });
       }
 
       chain.catch(function (err) {
