@@ -211,7 +211,25 @@ function initTabelMatrix(config) {
     // və nəticədə hündürlük səhv (çox böyük/kiçik) çıxırdı.
   }
 
+  // "Ən son çağırılan `load()` qalib gəlsin" mühafizəsi — BURADA, aşağı
+  // səviyyədə (birbaşa grid-ə data yazılan yerdə). Yuxarı səviyyədəki
+  // (period_modal.html) öz "loadToken"-i YALNIZ "hansı Ay/İl üçün
+  // setSource() ÇAĞIRILSIN" sualını həll edir — amma setSource() bir
+  // dəfə çağırılandan sonra, onun İÇİNDƏKİ fetch(config.matrixUrl) HƏLƏ
+  // DAVAM EDƏRKƏN istifadəçi başqa Ay/İl seçsə, YENİ bir setSource()
+  // çağırılır və bu da ÖZ fetch-ini başladır — nəticədə İKİ MÜSTƏQİL
+  // şəbəkə sorğusu eyni vaxtda gedir. Əgər KÖHNƏ (əvvəlki Ay/İl üçün)
+  // sorğu, YENİ sorğudan GEC cavab versə, onun cavabı `grid.option
+  // ("dataSource", ...)` çağırısı ilə YENİ (düzgün) datanı "əvəz edib"
+  // ekranı köhnə/səhv vəziyyətdə saxlayır — məhz istifadəçinin gördüyü
+  // "hərdən işləyir, hərdən işləmir" təsadüfi (şəbəkə vaxtlamasından
+  // asılı) simptomu. Hər `load()` çağırışına öz sıra nömrəsini verib,
+  // YALNIZ ƏN SON çağırışın cavabını grid-ə tətbiq edərək bunu aradan
+  // qaldırırıq.
+  let loadSeq = 0;
+
   function load() {
+    const mySeq = ++loadSeq;
     if (!config.matrixUrl) {
       // Hələ heç bir dövr yaradılmayıb — boş grid onsuz da yaradılıb,
       // ediləcək başqa iş yoxdur.
@@ -220,6 +238,7 @@ function initTabelMatrix(config) {
     return fetch(config.matrixUrl, { headers: { "X-Requested-With": "XMLHttpRequest" } })
       .then(function (r) { return r.json(); })
       .then(function (data) {
+        if (mySeq !== loadSeq) return null; // bu aralıqda daha yeni bir load() çağırılıb — köhnə cavabı ATIRIQ
         daysInMonth = data.days_in_month || daysInMonth;
         const rows = (data.rows || []).map(flattenRow);
         grid.option("dataSource", rows);
