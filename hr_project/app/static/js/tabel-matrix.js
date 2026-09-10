@@ -187,6 +187,34 @@ function initTabelMatrix(config) {
     }, 60);
   }
 
+  // KÖK SƏBƏB (əvvəlki "loadToken"/"loadSeq" düzəlişləri BUNU HƏLL
+  // ETMİRDİ): createAdvancedGrid, sütun eni/sıra kimi tənzimləmələri
+  // "baseKey" (bax aşağıda: "tabel_matrix") üzrə SERVERDƏ YADDA SAXLAYIR
+  // VƏ hər açılışda AVTOMATIK BƏRPA edir (bax: advanced-grid.js
+  // applyLoadedSettings -> grid.state(devExtremeState)). Bu bərpa edilən
+  // "state" təkcə sütun ölçüləri DEYİL — FİLTR DƏYƏRİ və SƏHİFƏ
+  // NÖMRƏSİNİ DƏ ehtiva edir. Tabel matrisi HƏR DÖVR üçün EYNİ baseKey-i
+  // ("tabel_matrix") paylaşdığı üçün: əgər istifadəçi HƏR HANSI dövrdə
+  // filtr işlətmişdisə (və ya 1-dən başqa səhifədə idisə), bu, YENİ
+  // açılan (tamam FƏRQLİ əməkdaş siyahısına malik) dövrün grid-inə DƏ
+  // tətbiq olunur — filtrə uyğun gəlməyən/mövcud olmayan səhifə heç bir
+  // sətir qalmadan "tamamilə boş" grid göstərir. Bu, məhz "hərdən
+  // işləyir, hərdən işləmir" halının əsl səbəbidir (əvvəlki dövrdə nə
+  // filtr/səhifə qalıbsa, ONDAN ASILI). Aşağıda HƏR dəfə yeni data
+  // yüklənəndə (həm `load()`-un öz sonunda, həm də (yarış vəziyyətini
+  // bağlamaq üçün) `onSettingsLoaded` hook-unda) filtri və səhifəni
+  // sıfırlayırıq ki, HEÇ bir dövrün grid-i başqa dövrdən "miras qalan"
+  // filtr/səhifə ucbatından boş görünməsin.
+  function resetTransientViewState() {
+    if (!grid) return;
+    try {
+      grid.pageIndex(0);
+      grid.clearFilter();
+    } catch (err) {
+      console.warn("Tabel matrisi filtr/səhifə sıfırlanmadı:", err);
+    }
+  }
+
   function createGrid() {
     grid = createAdvancedGrid(
       config.elementId,
@@ -200,7 +228,14 @@ function initTabelMatrix(config) {
       {
         idField: "id",
         exportCustomizeCellExcel: exportCustomizeCellExcel,
-        exportCustomizeCellPdf: exportCustomizeCellPdf
+        exportCustomizeCellPdf: exportCustomizeCellPdf,
+        // Bax yuxarı qeyd: server-dən bərpa olunan filtr/səhifə vəziyyəti
+        // BİZİM öz data yükləməmizdən (load()) ƏVVƏL YOXSA SONRA
+        // bitəcəyi qabaqcadan bilinmir (ikisi də asinxrondur) — buna görə
+        // bərpa TAM BİTƏNDƏ də (bu hook vasitəsilə) YENİDƏN sıfırlayırıq
+        // ki, hansı sıra ilə bitməsindən asılı olmayaraq son nəticə həmişə
+        // "filtrsiz, 1-ci səhifə" olsun.
+        onSettingsLoaded: resetTransientViewState
       }
     );
     // QEYD: burada əlavə bir kickResize() ÇAĞIRMIRIQ — bu grid, adətən,
@@ -242,6 +277,13 @@ function initTabelMatrix(config) {
         daysInMonth = data.days_in_month || daysInMonth;
         const rows = (data.rows || []).map(flattenRow);
         grid.option("dataSource", rows);
+        // Bu YENİ (fərqli dövrə aid) data ilə birlikdə, ƏVVƏLKİ dövrdən
+        // qalma filtr/səhifə DƏ silinməlidir — bax: createGrid()-dəki
+        // "KÖK SƏBƏB" qeydi. `onSettingsLoaded` hook-u ilə YANAŞI (o,
+        // YALNIZ ilk server-bərpası bitəndə bir dəfə işləyir) burada da
+        // sıfırlayırıq ki, HƏR dövr dəyişikliyində (bərpa artıq çoxdan
+        // bitmiş olsa belə) təmiz başlasın.
+        resetTransientViewState();
         if (typeof config.onLoaded === "function") config.onLoaded(data);
         return data;
       });

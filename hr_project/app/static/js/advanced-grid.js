@@ -1947,6 +1947,17 @@ function createAdvancedGrid(elementId, baseKey, tabulatorOptions, meta) {
   fetchGridSettingsFromServer(baseKey)
     .then(function (loaded) {
       applyLoadedSettings(loaded);
+      // Serverdən gələn state (filter/səhifə/sıralama daxil) tətbiq
+      // olunub QURTARANDAN SONRA — çağırıcıya (məs. tabel-matrix.js) bunu
+      // bildiririk. Bəzi grid-lər (məs. dövr-dəyişən tabel matrisi) EYNİ
+      // baseKey-i FƏRQLİ data dəstləri (fərqli dövrlər) üçün YENİDƏN
+      // istifadə edir — həmin hallarda çağırıcı bu hook-dan istifadə edib
+      // (asinxron restore-un öz `load()`-undan ƏVVƏL YOXSA SONRA
+      // bitməsindən ASILI OLMAYARAQ) köhnə filter/səhifə vəziyyətini
+      // etibarlı şəkildə sıfırlaya bilər.
+      if (typeof meta.onSettingsLoaded === "function") {
+        meta.onSettingsLoaded();
+      }
     })
     .catch(function (err) {
       console.error(
