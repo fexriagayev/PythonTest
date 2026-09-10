@@ -11,6 +11,18 @@
             "env": {
                 "PYTHONUNBUFFERED": "1"
             }
+        },
+        {
+            "name": "Run Flask - Remote",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/hr_project/run.py",
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}",
+            "python": "${workspaceFolder}/.venv/bin/python",
+            "env": {
+                "PYTHONUNBUFFERED": "1"
+            }
         }
     ]
 }
