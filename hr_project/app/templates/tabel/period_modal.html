@@ -260,13 +260,14 @@
 
     const myToken = ++loadToken;
 
-    function applyMatrix(id, readOnly) {
+    function applyMatrix(id, readOnly, preloadedData) {
       if (myToken !== loadToken) return; // artıq daha yeni bir seçim edilib
       currentPeriodId = id;
       matrix.setSource(
         "/tabel/" + id + "/api/matrix",
         readOnly ? null : "/tabel/" + id + "/cell",
-        readOnly
+        readOnly,
+        preloadedData
       );
     }
 
@@ -279,7 +280,10 @@
 
         if (data.exists && data.period_id) {
           // Dövr artıq mövcuddur — generasiya statusunu öyrənmək üçün
-          // əsl matris endpoint-ini bir dəfə sorğulayırıq.
+          // əsl matris endpoint-ini bir dəfə sorğulayırıq VƏ (əgər
+          // generasiya olunubsa) EYNİ cavabı birbaşa grid-ə veririk —
+          // İKİNCİ (eyni URL-ə) sorğu ATMIRIQ (bax: tabel-matrix.js
+          // setSource-un preloadedData parametri).
           return fetch("/tabel/" + data.period_id + "/api/matrix", {
             headers: { "X-Requested-With": "XMLHttpRequest" }
           })
@@ -289,7 +293,7 @@
 
               if (matrixData.is_generated) {
                 // Generasiya olunmuş tabel var — birbaşa onu yüklə (təsdiqlənibsə YALNIZ baxış).
-                applyMatrix(data.period_id, matrixData.is_approved);
+                applyMatrix(data.period_id, matrixData.is_approved, matrixData);
                 return;
               }
               // Dövr mövcuddur, amma hələ generasiya OLUNMAYIB —

@@ -79,7 +79,7 @@
       });
   }
 
-  createAdvancedGrid("additionsGrid", "employee_salary_additions", {
+  const additionsGrid = createAdvancedGrid("additionsGrid", "employee_salary_additions", {
     ajaxURL: "{{ url_for('salary.api_employee_additions', entry_id=entry.id) if entry else '' }}",
     layout: "fitColumns",
     pagination: true,
@@ -100,6 +100,28 @@
     ]
   }, {
     idField: "id",
+    // BU grid-in "baseKey"-i ("employee_salary_additions") HƏR əməkdaşın/
+    // qeydin (entry_id) pəncərəsi üçün EYNİDİR — sütun eni kimi
+    // tənzimləmələr məqsədli olaraq paylaşılır, AMMA serverdə yadda
+    // saxlanılan qrid "state" filtr dəyərini VƏ səhifə nömrəsini DƏ
+    // ehtiva edir (bax: tabel-matrix.js-dəki eyni problemin ətraflı izahı).
+    // Başqa sözlə: əgər əvvəlki əməkdaşın pəncərəsində filtr
+    // işlədilibsə/1-ci səhifədə deyildisə, bu YENİ əməkdaşın (tam fərqli
+    // sətirlərə malik) pəncərəsini açanda da tətbiq olunub sətirləri
+    // "gizlədə" bilər — nəticədə pəncərə boş görünər. Bərpa BİTƏN kimi
+    // filtri/səhifəni sıfırlayırıq ki, bu heç vaxt baş verməsin.
+    onSettingsLoaded: function () {
+      // Bax: tabel-matrix.js-dəki eyni qeyd — dataSource/render dövrü ilə
+      // toqquşmasın deyə bir tick GECİKDİRİLİR.
+      setTimeout(function () {
+        try {
+          additionsGrid.pageIndex(0);
+          additionsGrid.clearFilter();
+        } catch (err) {
+          console.warn("Əlavələr grid-i filtr/səhifə sıfırlanmadı:", err);
+        }
+      }, 0);
+    },
     // "Bütün əməkdaşlara aid" sətirlər bu pəncərədən redaktə/silinə bilmir
     // (bax: routes.py `editable` bayrağı — yalnız scope="individual" olan
     // sətirlər redaktə/silinə bilir). Ona görə redaktə/silmə hərəkətlərini

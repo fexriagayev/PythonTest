@@ -207,12 +207,21 @@ function initTabelMatrix(config) {
   // filtr/səhifə ucbatından boş görünməsin.
   function resetTransientViewState() {
     if (!grid) return;
-    try {
-      grid.pageIndex(0);
-      grid.clearFilter();
-    } catch (err) {
-      console.warn("Tabel matrisi filtr/səhifə sıfırlanmadı:", err);
-    }
+    // TƏHLÜKƏSİZLİK ÜÇÜN GECİKDİRİRİK: `grid.option("dataSource", rows)`
+    // DevExtreme-də ASİNXRON daxili render dövrü başladır. Həmin dövr
+    // HƏLƏ DAVAM EDƏRKƏN eyni tick-də `pageIndex()`/`clearFilter()`
+    // çağırmaq bu daxili prosesi "kəsə" bilər və nəticədə YENİ təyin
+    // etdiyimiz sətirlər HEÇ göstərilmədən itə bilər (boş grid). Buna görə
+    // bu iki çağırışı bir mikro-tapşırıq GECİKDİRİRİK ki, dataSource
+    // dəyişikliyi TAM oturandan SONRA işə düşsün.
+    setTimeout(function () {
+      try {
+        grid.pageIndex(0);
+        grid.clearFilter();
+      } catch (err) {
+        console.warn("Tabel matrisi filtr/səhifə sıfırlanmadı:", err);
+      }
+    }, 0);
   }
 
   function createGrid() {
@@ -263,6 +272,15 @@ function initTabelMatrix(config) {
   // qaldırırıq.
   let loadSeq = 0;
 
+  function applyRows(data) {
+    daysInMonth = data.days_in_month || daysInMonth;
+    const rows = (data.rows || []).map(flattenRow);
+    grid.option("dataSource", rows);
+    resetTransientViewState();
+    if (typeof config.onLoaded === "function") config.onLoaded(data);
+    return data;
+  }
+
   function load() {
     const mySeq = ++loadSeq;
     if (!config.matrixUrl) {
@@ -274,18 +292,7 @@ function initTabelMatrix(config) {
       .then(function (r) { return r.json(); })
       .then(function (data) {
         if (mySeq !== loadSeq) return null; // bu aralıqda daha yeni bir load() çağırılıb — köhnə cavabı ATIRIQ
-        daysInMonth = data.days_in_month || daysInMonth;
-        const rows = (data.rows || []).map(flattenRow);
-        grid.option("dataSource", rows);
-        // Bu YENİ (fərqli dövrə aid) data ilə birlikdə, ƏVVƏLKİ dövrdən
-        // qalma filtr/səhifə DƏ silinməlidir — bax: createGrid()-dəki
-        // "KÖK SƏBƏB" qeydi. `onSettingsLoaded` hook-u ilə YANAŞI (o,
-        // YALNIZ ilk server-bərpası bitəndə bir dəfə işləyir) burada da
-        // sıfırlayırıq ki, HƏR dövr dəyişikliyində (bərpa artıq çoxdan
-        // bitmiş olsa belə) təmiz başlasın.
-        resetTransientViewState();
-        if (typeof config.onLoaded === "function") config.onLoaded(data);
-        return data;
+        return applyRows(data);
       });
   }
 
@@ -293,7 +300,17 @@ function initTabelMatrix(config) {
     if (!newDays || newDays === daysInMonth) return;
     daysInMonth = newDays;
     if (grid) {
-      grid.option("columns", buildColumns());
+      // ƏSAS DÜZƏLİŞ: buildColumns() Tabulator-ÜSLUBLU (field/title/
+      // formatter) xam sütun tərifləri qaytarır — bunları DevExtreme-ə
+      // BİRBAŞA vermək OLMAZ (DevExtreme "dataField"/"caption"/
+      // "cellTemplate" gözləyir). Əvvəllər elə BİRBAŞA verilirdi və
+      // nəticədə HEÇ bir sütun datayla bağlanmırdı — grid TAMAMİLƏ BOŞ
+      // görünürdü (məhz "dövrü dəyişəndə" bu baş verirdi, çünki YALNIZ
+      // gün sayı FƏRQLİ olan aya keçəndə bu kod yolu işə düşür). İndi
+      // createAdvancedGrid-in İLK yaradılışda istifadə etdiyi EYNİ
+      // çevirici funksiyanı (buildGridColumns, bax: advanced-grid.js)
+      // çağırırıq ki, iki yer arasında fərq/uyğunsuzluq olmasın.
+      grid.option("columns", buildGridColumns(buildColumns(), {}));
       kickResize();
     }
   }
@@ -306,10 +323,20 @@ function initTabelMatrix(config) {
   // obyekt REFERANSI dəyişmir — `handleCellClick`/formatter-lər onu HƏR
   // ÇAĞIRIŞDA təzədən oxuduğu üçün (yaradılış anında "yaddaşa
   // köçürülmür"), bu mutasiya avtomatik nəzərə alınır.
-  function setSource(matrixUrl, cellUrl, readOnly) {
+  function setSource(matrixUrl, cellUrl, readOnly, preloadedData) {
     config.matrixUrl = matrixUrl;
     config.cellUrl = cellUrl;
     config.readOnly = readOnly;
+    if (preloadedData) {
+      // Çağırıcı (period_modal.html) matris statusunu (is_generated/
+      // is_approved) öyrənmək üçün artıq BU EYNİ URL-i bir dəfə
+      // gətirmişdisə, ONU YENİDƏN gətirməyə ehtiyac yoxdur — birbaşa
+      // tətbiq edirik. `loadSeq`-i də (əlbəttə) artırırıq ki, bu zamanı
+      // hələ davam edən köhnə bir `load()` sorğusu (əgər varsa) öz
+      // köhnəlmiş cavabını bundan SONRA tətbiq edə bilməsin.
+      ++loadSeq;
+      return Promise.resolve(applyRows(preloadedData));
+    }
     return load();
   }
 
