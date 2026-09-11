@@ -79,94 +79,103 @@
       });
   }
 
-  const additionsGrid = createAdvancedGrid("additionsGrid", "employee_salary_additions", {
-    ajaxURL: "{{ url_for('salary.api_employee_additions', entry_id=entry.id) if entry else '' }}",
-    layout: "fitColumns",
-    pagination: true,
-    paginationSize: 20,
-    placeholder: "{{ t('no_data_generic') }}",
-    columns: [
-      { title: "{{ t('addition_field_addition_type') }}", field: "type_name", headerFilter: "input" },
-      { title: "{{ t('emp_additions_col_kind') }}", field: "kind", width: 100 },
-      { title: "{{ t('additions_col_amount_type') }}", field: "amount_type", width: 130 },
-      { title: "{{ t('additions_col_amount') }}", field: "amount", width: 100, sorter: "number" },
-      { title: "{{ t('additions_col_percent') }}", field: "percent", width: 90, sorter: "number" },
-      { title: "{{ t('additions_col_valid_from') }}", field: "valid_from", width: 120, sorter: "date" },
-      { title: "{{ t('additions_col_valid_to') }}", field: "valid_to", width: 120, sorter: "date" },
-      { title: "{{ t('additions_col_order') }}", field: "order", headerFilter: "input" },
-      { title: "{{ t('additions_col_scope') }}", field: "scope", width: 150 },
-      { title: "{{ t('additions_col_active') }}", field: "is_active", width: 90, formatter: "tickCross" },
-      { title: "{{ t('note_label') }}", field: "note", headerFilter: "input" }
-    ]
-  }, {
-    idField: "id",
-    // BU grid-in "baseKey"-i ("employee_salary_additions") HƏR əməkdaşın/
-    // qeydin (entry_id) pəncərəsi üçün EYNİDİR — sütun eni kimi
-    // tənzimləmələr məqsədli olaraq paylaşılır, AMMA serverdə yadda
-    // saxlanılan qrid "state" filtr dəyərini VƏ səhifə nömrəsini DƏ
-    // ehtiva edir (bax: tabel-matrix.js-dəki eyni problemin ətraflı izahı).
-    // Başqa sözlə: əgər əvvəlki əməkdaşın pəncərəsində filtr
-    // işlədilibsə/1-ci səhifədə deyildisə, bu YENİ əməkdaşın (tam fərqli
-    // sətirlərə malik) pəncərəsini açanda da tətbiq olunub sətirləri
-    // "gizlədə" bilər — nəticədə pəncərə boş görünər. Bərpa BİTƏN kimi
-    // filtri/səhifəni sıfırlayırıq ki, bu heç vaxt baş verməsin.
-    onSettingsLoaded: function () {
-      // Bax: tabel-matrix.js-dəki eyni qeyd — dataSource/render dövrü ilə
-      // toqquşmasın deyə bir tick GECİKDİRİLİR.
-      setTimeout(function () {
-        try {
-          additionsGrid.pageIndex(0);
-          additionsGrid.clearFilter();
-        } catch (err) {
-          console.warn("Əlavələr grid-i filtr/səhifə sıfırlanmadı:", err);
+  const addBtn = document.getElementById("addAdditionBtn");
+
+  // Grid-i popup TAM görünənə qədər GÖZLƏYİB yaradırıq (bax: modal.js
+  // runWhenModalShown) — əks halda (bu modal həmişə TƏZƏ açılan
+  // openFormModal() vasitəsilə göstərildiyi üçün) grid, popup-un açılma
+  // animasiyası HƏLƏ DAVAM EDƏRKƏN, konteynerin son ölçüsünə çatmamış
+  // vəziyyətdə yaradılır — hündürlük səhv (kiçik) hesablanıb qalır və
+  // YALNIZ pəncərə resize olanda düzəlir. Elə məhz bildirdiyiniz problem.
+  runWhenModalShown(function () {
+    const additionsGrid = createAdvancedGrid("additionsGrid", "employee_salary_additions", {
+      ajaxURL: "{{ url_for('salary.api_employee_additions', entry_id=entry.id) if entry else '' }}",
+      layout: "fitColumns",
+      pagination: true,
+      paginationSize: 20,
+      placeholder: "{{ t('no_data_generic') }}",
+      columns: [
+        { title: "{{ t('addition_field_addition_type') }}", field: "type_name", headerFilter: "input" },
+        { title: "{{ t('emp_additions_col_kind') }}", field: "kind", width: 100 },
+        { title: "{{ t('additions_col_amount_type') }}", field: "amount_type", width: 130 },
+        { title: "{{ t('additions_col_amount') }}", field: "amount", width: 100, sorter: "number" },
+        { title: "{{ t('additions_col_percent') }}", field: "percent", width: 90, sorter: "number" },
+        { title: "{{ t('additions_col_valid_from') }}", field: "valid_from", width: 120, sorter: "date" },
+        { title: "{{ t('additions_col_valid_to') }}", field: "valid_to", width: 120, sorter: "date" },
+        { title: "{{ t('additions_col_order') }}", field: "order", headerFilter: "input" },
+        { title: "{{ t('additions_col_scope') }}", field: "scope", width: 150 },
+        { title: "{{ t('additions_col_active') }}", field: "is_active", width: 90, formatter: "tickCross" },
+        { title: "{{ t('note_label') }}", field: "note", headerFilter: "input" }
+      ]
+    }, {
+      idField: "id",
+      // BU grid-in "baseKey"-i ("employee_salary_additions") HƏR əməkdaşın/
+      // qeydin (entry_id) pəncərəsi üçün EYNİDİR — sütun eni kimi
+      // tənzimləmələr məqsədli olaraq paylaşılır, AMMA serverdə yadda
+      // saxlanılan qrid "state" filtr dəyərini VƏ səhifə nömrəsini DƏ
+      // ehtiva edir (bax: tabel-matrix.js-dəki eyni problemin ətraflı izahı).
+      // Başqa sözlə: əgər əvvəlki əməkdaşın pəncərəsində filtr
+      // işlədilibsə/1-ci səhifədə deyildisə, bu YENİ əməkdaşın (tam fərqli
+      // sətirlərə malik) pəncərəsini açanda da tətbiq olunub sətirləri
+      // "gizlədə" bilər — nəticədə pəncərə boş görünər. Bərpa BİTƏN kimi
+      // filtri/səhifəni sıfırlayırıq ki, bu heç vaxt baş verməsin.
+      onSettingsLoaded: function () {
+        // Bax: tabel-matrix.js-dəki eyni qeyd — dataSource/render dövrü ilə
+        // toqquşmasın deyə bir tick GECİKDİRİLİR.
+        setTimeout(function () {
+          try {
+            additionsGrid.pageIndex(0);
+            additionsGrid.clearFilter();
+          } catch (err) {
+            console.warn("Əlavələr grid-i filtr/səhifə sıfırlanmadı:", err);
+          }
+        }, 0);
+      },
+      // "Bütün əməkdaşlara aid" sətirlər bu pəncərədən redaktə/silinə bilmir
+      // (bax: routes.py `editable` bayrağı — yalnız scope="individual" olan
+      // sətirlər redaktə/silinə bilir). Ona görə redaktə/silmə hərəkətlərini
+      // generic editUrlTemplate/deleteUrlTemplate ƏVƏZİNƏ özümüz qururuq:
+      // həm YALNIZ editable=true olan sətirlərdə göstərmək, həm də uğurlu
+      // əməliyyatdan sonra (sadə grid-refresh-dən fərqli olaraq) yuxarıdakı
+      // xülasəni VƏ əsas əməkhaqqı siyahısını da yeniləmək üçün.
+      extraRowActions: function (data) {
+        if (!data.editable) return [];
+        const actions = [];
+        if (canEdit) {
+          actions.push({
+            label: t("edit"),
+            action: function () {
+              openFormModal("/salary/additions/edit/" + data.id, reloadSelfInPlace);
+            }
+          });
         }
-      }, 0);
-    },
-    // "Bütün əməkdaşlara aid" sətirlər bu pəncərədən redaktə/silinə bilmir
-    // (bax: routes.py `editable` bayrağı — yalnız scope="individual" olan
-    // sətirlər redaktə/silinə bilir). Ona görə redaktə/silmə hərəkətlərini
-    // generic editUrlTemplate/deleteUrlTemplate ƏVƏZİNƏ özümüz qururuq:
-    // həm YALNIZ editable=true olan sətirlərdə göstərmək, həm də uğurlu
-    // əməliyyatdan sonra (sadə grid-refresh-dən fərqli olaraq) yuxarıdakı
-    // xülasəni VƏ əsas əməkhaqqı siyahısını da yeniləmək üçün.
-    extraRowActions: function (data) {
-      if (!data.editable) return [];
-      const actions = [];
-      if (canEdit) {
-        actions.push({
-          label: t("edit"),
-          action: function () {
-            openFormModal("/salary/additions/edit/" + data.id, reloadSelfInPlace);
-          }
-        });
-      }
-      if (canDelete) {
-        actions.push({
-          label: t("delete"),
-          action: function () {
-            if (!confirm(t("grid_confirm_delete"))) return;
-            fetch("/salary/additions/delete/" + data.id, {
-              method: "POST",
-              headers: { "X-Requested-With": "XMLHttpRequest" }
-            })
-              .then(function (r) {
-                if (!r.ok) throw new Error("Delete failed with status " + r.status);
-                return reloadSelfInPlace();
+        if (canDelete) {
+          actions.push({
+            label: t("delete"),
+            action: function () {
+              if (!confirm(t("grid_confirm_delete"))) return;
+              fetch("/salary/additions/delete/" + data.id, {
+                method: "POST",
+                headers: { "X-Requested-With": "XMLHttpRequest" }
               })
-              .catch(function (err) {
-                console.error("Delete failed:", err);
-                if (typeof DevExpress !== "undefined" && DevExpress.ui && DevExpress.ui.notify) {
-                  DevExpress.ui.notify(t("grid_delete_error"), "error", 3000);
-                }
-              });
-          }
-        });
+                .then(function (r) {
+                  if (!r.ok) throw new Error("Delete failed with status " + r.status);
+                  return reloadSelfInPlace();
+                })
+                .catch(function (err) {
+                  console.error("Delete failed:", err);
+                  if (typeof DevExpress !== "undefined" && DevExpress.ui && DevExpress.ui.notify) {
+                    DevExpress.ui.notify(t("grid_delete_error"), "error", 3000);
+                  }
+                });
+            }
+          });
+        }
+        return actions;
       }
-      return actions;
-    }
+    });
   });
 
-  const addBtn = document.getElementById("addAdditionBtn");
   if (addBtn) {
     addBtn.addEventListener("click", function () {
       openFormModal(addUrl, reloadSelfInPlace);

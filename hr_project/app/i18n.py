@@ -741,7 +741,6 @@ TRANSLATIONS = {
     "additions_col_active": {"az": "Aktiv", "en": "Active"},
     "addition_form_title_add": {"az": "Yeni əlavə/tutulma", "en": "New Addition/Deduction"},
     "addition_form_title_edit": {"az": "Əlavə/tutulmanı dəyiş", "en": "Edit Addition/Deduction"},
-    "addition_field_scope": {"az": "Kimə aiddir", "en": "Applies To"},
     "addition_scope_individual": {"az": "Yalnız bu əməkdaşa", "en": "This employee only"},
     "addition_scope_all": {"az": "Bütün əməkdaşlara", "en": "All employees"},
     "addition_scope_hint": {

@@ -172,19 +172,10 @@
   // son ölçüsünə çatandan sonra yaradılır. `reloadModalContentInPlace`
   // (goToPeriod) zamanı popup artıq görünürdür və heç bir animasiya
   // getmir — bu halda "shown" bir daha atılmayacaq, ona görə həmin halda
-  // dərhal davam edirik.
-  function runWhenModalShown(fn) {
-    const popup = getModalPopup();
-    if (!popup || popup.option("visible")) {
-      fn();
-      return;
-    }
-    function onShown() {
-      popup.off("shown", onShown);
-      fn();
-    }
-    popup.on("shown", onShown);
-  }
+  // dərhal davam edirik. (Bu, indi modal.js-də PAYLAŞILAN bir funksiyadır
+  // — bax: runWhenModalShown — çünki eyni problem hər hansı modal daxilində
+  // grid yaradan başqa formalar üçün də keçərlidir, məs. salary/
+  // employee_additions.html.)
 
   // --- Ay/İl dəyişəndə: artıq mövcud dövrdürsə avtomatik ona keç ----------
   const monthSelect = document.getElementById("periodMonth");

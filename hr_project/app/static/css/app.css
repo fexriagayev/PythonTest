@@ -1211,6 +1211,57 @@ table.simple-table th {
   display: block;
 }
 
+/* A conditionally-shown label+input pair (e.g. "amount" vs "percent" rows
+   that toggle based on another field) that should align EXACTLY like any
+   other field in the surrounding 2-column .dx-modal-form-fields grid —
+   NOT the unrelated 3-column .form-grid layout used elsewhere in the app,
+   which squeezes the pair into a narrow left-aligned block instead of the
+   normal label|input columns. `display: contents` makes the wrapper itself
+   disappear from layout, so its <label>/<input> children become direct
+   grid items of .dx-modal-form-fields, same as every other field. JS must
+   toggle between "contents" (shown) and "none" (hidden) — never ""/block. */
+.dx-modal-form-contents-row {
+  display: contents;
+}
+
+/* Radio group (e.g. "this employee only" vs "all employees" on the
+   əlavə/tutulma form) — always ONE option per line, regardless of any
+   surrounding flex/grid context, since relying on an inline
+   flex-direction:column style is fragile (easy to accidentally override
+   or have collide with the .dx-modal-form-single-col block display). */
+.addition-scope-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+/* Selector deliberately scoped as ".addition-scope-picker .addition-scope-option"
+   (two classes) rather than just ".addition-scope-option" (one class) — it
+   must out-specificity the pre-existing ".dx-modal-form-single-col>label
+   { display: block; }" rule above, which would otherwise silently win and
+   collapse each option's radio+text back onto separate lines instead of
+   inline side by side (while the picker itself still stacks the two
+   options vertically via flex-direction:column). */
+.addition-scope-picker .addition-scope-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: normal;
+  margin: 0;
+}
+
+.addition-scope-option input[type="radio"] {
+  width: auto;
+  flex: none;
+}
+
+.addition-scope-hint {
+  color: #888;
+  font-size: 0.8em;
+  margin: 0;
+}
+
 .dx-modal-form-single-col>label {
   display: block;
 }
