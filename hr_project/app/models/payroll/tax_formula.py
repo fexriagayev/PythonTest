@@ -22,7 +22,6 @@ from datetime import date, datetime
 # daxilində eyni əməkhaqqı siyahısında iki fərqli gəlir vergisi
 # hesablanması olmadığından, əvvəlki sektor-əsaslı ("neft-qaz" / "qeyri-
 # neft-qaz") ayrım LƏĞV OLUNUB.
-<<<<<<< HEAD
 #
 # QEYD — `sick` dəyişəni: hər formula skriptinə `gross`-la YANAŞI `sick`
 # (bu dövrün xəstəlik pulu cəmi) də ötürülür (bax:
@@ -34,8 +33,6 @@ from datetime import date, datetime
 # vergisi isə `sick`-i İSTİFADƏ ETMİR — TAM gross üzərindən hesablanır
 # (xəstəlik pulunun öz ayrıca vergisi ARTIQ sistemin özü tərəfindən
 # əlavə olunur, bax: calculate_gross_to_net-dəki izah).
-=======
->>>>>>> 21ca2bddeb86717111e643c6503ac4af309eb6c6
 # ---------------------------------------------------------------------------
 CODES = [
     ("income_tax", "Gəlir vergisi", "employee",
@@ -48,7 +45,6 @@ CODES = [
      "else:\n"
      "    result = 625 + (gross - 8000) * 0.14\n"),
     ("dsmf", "DSMF (məcburi dövlət sosial sığorta haqqı, işçi payı)", "employee",
-<<<<<<< HEAD
      "base = gross - sick\n"
      "if base <= 200:\n"
      "    result = base * 0.03\n"
@@ -68,25 +64,6 @@ CODES = [
      "result = (gross - sick) * 0.005\n"),
     ("employer_medical", "İTS — işəgötürən (şirkət) payı", "employer",
      "result = (gross - sick) * 0.02\n"),
-=======
-     "if gross <= 200:\n"
-     "    result = gross * 0.03\n"
-     "else:\n"
-     "    result = 6 + (gross - 200) * 0.10\n"),
-    ("unemployment", "İşsizlikdən sığorta haqqı (işçi payı)", "employee",
-     "result = gross * 0.005\n"),
-    ("medical", "İTS (icbari tibbi sığorta haqqı, işçi payı)", "employee",
-     "if gross <= 2500:\n"
-     "    result = gross * 0.02\n"
-     "else:\n"
-     "    result = 50 + (gross - 2500) * 0.005\n"),
-    ("employer_dsmf", "DSMF — işəgötürən (şirkət) payı", "employer",
-     "result = gross * 0.22\n"),
-    ("employer_unemployment", "İşsizlikdən sığorta haqqı — işəgötürən (şirkət) payı", "employer",
-     "result = gross * 0.005\n"),
-    ("employer_medical", "İTS — işəgötürən (şirkət) payı", "employer",
-     "result = gross * 0.02\n"),
->>>>>>> 21ca2bddeb86717111e643c6503ac4af309eb6c6
 ]
 
 TEMPLATE_SCRIPTS = {code: script for code, _name, _side, script in CODES}

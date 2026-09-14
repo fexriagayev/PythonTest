@@ -20,10 +20,7 @@
     <label>{{ t('tax_formula_test_label') }}</label>
     <div class="tax-formula-test-row">
       <input type="number" step="0.01" id="taxFormulaTestGross" value="1000" placeholder="{{ t('tax_formula_test_gross_placeholder') }}">
-<<<<<<< HEAD
       <input type="number" step="0.01" id="taxFormulaTestSick" value="0" placeholder="{{ t('tax_formula_test_sick_placeholder') }}">
-=======
->>>>>>> 21ca2bddeb86717111e643c6503ac4af309eb6c6
       <button type="button" id="taxFormulaTestBtn" class="btn btn-sm">{{ t('tax_formula_test_btn') }}</button>
       <span id="taxFormulaTestResult" class="tax-formula-test-result"></span>
     </div>
@@ -42,10 +39,7 @@
   const testBtn = document.getElementById("taxFormulaTestBtn");
   const scriptInput = document.getElementById("taxFormulaScript");
   const grossInput = document.getElementById("taxFormulaTestGross");
-<<<<<<< HEAD
   const sickInput = document.getElementById("taxFormulaTestSick");
-=======
->>>>>>> 21ca2bddeb86717111e643c6503ac4af309eb6c6
   const resultSpan = document.getElementById("taxFormulaTestResult");
   if (testBtn) {
     testBtn.addEventListener("click", function () {
@@ -54,11 +48,7 @@
       fetch("/salary/tax-formulas/test", {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest" },
-<<<<<<< HEAD
         body: JSON.stringify({ script: scriptInput.value, gross: grossInput.value, sick: sickInput.value })
-=======
-        body: JSON.stringify({ script: scriptInput.value, gross: grossInput.value })
->>>>>>> 21ca2bddeb86717111e643c6503ac4af309eb6c6
       })
         .then(function (r) { return r.json(); })
         .then(function (data) {
