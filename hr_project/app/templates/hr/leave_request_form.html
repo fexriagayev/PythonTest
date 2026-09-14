@@ -34,10 +34,7 @@
   <label>{{ t('lr_field_end_date_auto') }}</label>
   <input type="text" id="endDatePreview" class="field-readonly" disabled value="{{ record.end_date if record else '' }}">
 
-  <div id="paymentAmountRow" class="form-grid" style="display:none;">
-    <label>{{ t('lr_field_payment_amount') }}</label>
-    <input type="number" step="0.01" min="0" name="payment_amount" id="paymentAmountInput" value="{{ record.payment_amount if record and record.payment_amount else '' }}">
-  </div>
+  <div id="paymentAmountsContainer"></div>
 
   <label>{{ t('lr_field_order') }}</label>
   <div class="dict-select-row">
@@ -58,30 +55,54 @@
 <script>
 (function () {
   const empId = {{ employee.id }};
+  const recordId = {{ record.id if record else 'null' }};
   const reasonSelect = document.getElementById("reasonSelect");
   const startInput = document.getElementById("startDateInput");
   const dayCountInput = document.getElementById("dayCountInput");
   const endPreview = document.getElementById("endDatePreview");
-  const paymentAmountRow = document.getElementById("paymentAmountRow");
+  const paymentsContainer = document.getElementById("paymentAmountsContainer");
   if (!reasonSelect) return;
 
-  function refreshPaymentAmountVisibility() {
-    const opt = reasonSelect.options[reasonSelect.selectedIndex];
-    const relevant = !!opt && (opt.dataset.annual === "true" || opt.dataset.sick === "true");
-    paymentAmountRow.style.display = relevant ? "" : "none";
+  // Hər ay üçün ayrıca ödəniş sahəsi (bax: PR qeydi — 2 ayı əhatə edən bir
+  // xəstəlik/məzuniyyət üçün HƏR ay öz "amount"-unu alır, cəmi YOX). Sahə
+  // adları `payment_amount_{year}_{month}` formatındadır — bax: routes.py
+  // _save_leave_monthly_payments.
+  function renderPaymentRows(months) {
+    paymentsContainer.innerHTML = "";
+    months.forEach(function (m) {
+      const row = document.createElement("div");
+      row.className = "dx-modal-form-contents-row";
+      const label = document.createElement("label");
+      label.textContent = "{{ t('lr_field_payment_amount') }} — " + m.label;
+      const input = document.createElement("input");
+      input.type = "number";
+      input.step = "0.01";
+      input.min = "0";
+      input.name = "payment_amount_" + m.year + "_" + m.month;
+      if (m.amount !== null && m.amount !== undefined) input.value = m.amount;
+      row.appendChild(label);
+      row.appendChild(input);
+      paymentsContainer.appendChild(row);
+    });
   }
-  reasonSelect.addEventListener("change", refreshPaymentAmountVisibility);
-  refreshPaymentAmountVisibility();
 
   function refreshEndDate() {
     const reasonId = reasonSelect.value;
     const start = startInput.value;
     const days = dayCountInput.value;
-    if (!reasonId || !start || !days) { endPreview.value = ""; return; }
-    fetch(`/hr/${empId}/leave-requests/api/end-date?leave_reason_id=${reasonId}&start_date=${start}&day_count=${days}`,
-      { headers: { "X-Requested-With": "XMLHttpRequest" } })
+    if (!reasonId || !start || !days) {
+      endPreview.value = "";
+      paymentsContainer.innerHTML = "";
+      return;
+    }
+    let url = `/hr/${empId}/leave-requests/api/end-date?leave_reason_id=${reasonId}&start_date=${start}&day_count=${days}`;
+    if (recordId) url += `&record_id=${recordId}`;
+    fetch(url, { headers: { "X-Requested-With": "XMLHttpRequest" } })
       .then(function (r) { return r.json(); })
-      .then(function (data) { endPreview.value = data.end_date || ""; });
+      .then(function (data) {
+        endPreview.value = data.end_date || "";
+        renderPaymentRows(data.months || []);
+      });
   }
 
   reasonSelect.addEventListener("change", refreshEndDate);

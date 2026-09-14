@@ -105,12 +105,6 @@ class LeaveRequest(db.Model):
     order_id = db.Column(db.Integer, db.ForeignKey("orders.id"))
     note = db.Column(db.Text)
 
-    # Məzuniyyət/xəstəlik pulunun MANUAL rejimdə (bax: PayrollSettings)
-    # birbaşa bu qeydə daxil edilən məbləği. Yalnız leave_reason
-    # is_annual_leave/is_sick_leave olduqda formda göstərilir və istifadə
-    # olunur (bax: app/services/payroll_service.py).
-    payment_amount = db.Column(db.Numeric(12, 2))
-
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     employee = db.relationship(
@@ -121,6 +115,52 @@ class LeaveRequest(db.Model):
     )
     leave_reason = db.relationship("LeaveReason")
     order = db.relationship("Order")
+
+    def total_payment(self):
+        """Bütün ayların ödəniş məbləğlərinin cəmi (bax:
+        LeaveRequestMonthlyPayment) — yalnız göstərmək üçün, əməkhaqqı
+        hesablanmasında İSTİFADƏ OLUNMUR (o, AY-AY ayrıca oxuyur, bax:
+        app.services.payroll_service._vacation_and_sick_pay)."""
+        return round(sum(float(p.amount or 0) for p in self.monthly_payments), 2)
+
+
+class LeaveRequestMonthlyPayment(db.Model):
+    """Bir İş buraxması (LeaveRequest) İKİ (və ya daha çox) TƏQVİM AYINI
+    əhatə edərsə (məs. 20.07.2026 — 02.08.2026), məzuniyyət/xəstəlik
+    haqqı MANUAL rejimdə HƏR AY üçün AYRI-AYRI daxil edilir — bir leave
+    request-in cəmi YOX (bax: leave_request_form.html-də dinamik
+    "hər ay üçün ödəniş" sahələri).
+
+    Bu, VACİBDİR: əməkhaqqı hesablanması zamanı (bax: payroll_service.py
+    _vacation_and_sick_pay) HƏR AYIN öz PayrollEntry-i YALNIZ öz (year,
+    month) sətrini oxuyur — beləliklə İyul əməkhaqqısı yalnız İyula düşən
+    hissəni, Avqust əməkhaqqısı isə YALNIZ Avqusta düşən hissəni görür
+    (xəstəlik pulu üçün: hər ayın öz gəlir vergisi də bu AYRI məbləğ
+    üzərindən, ayrıca hesablanır)."""
+
+    __tablename__ = "leave_request_monthly_payments"
+    __table_args__ = (
+        db.UniqueConstraint(
+            "leave_request_id", "year", "month", name="uq_leave_payment_month"
+        ),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    leave_request_id = db.Column(
+        db.Integer, db.ForeignKey("leave_requests.id"), nullable=False
+    )
+    year = db.Column(db.Integer, nullable=False)
+    month = db.Column(db.Integer, nullable=False)  # 1-12
+    amount = db.Column(db.Numeric(12, 2), nullable=False, default=0)
+
+    leave_request = db.relationship(
+        "LeaveRequest",
+        backref=db.backref(
+            "monthly_payments",
+            cascade="all, delete-orphan",
+            order_by="LeaveRequestMonthlyPayment.year, LeaveRequestMonthlyPayment.month",
+        ),
+    )
 
 
 class VacationCompensation(db.Model):

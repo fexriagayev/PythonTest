@@ -1,5 +1,5 @@
 from flask import Blueprint, request, redirect, url_for, flash, jsonify
-from flask_login import login_required
+from flask_login import login_required, current_user
 from datetime import datetime
 
 from app import db
@@ -16,8 +16,10 @@ MODULE = "SALARY"
 # Əməkhaqqı hesablanması (Payroll) — təsdiqlənmiş Tabel dövrləri üzrə
 # =============================================================================
 
-from app.models import TabelPeriod, PayrollRun, PayrollEntry, SalaryAddition, Order, DictionaryItem
+from app.models import TabelPeriod, PayrollRun, PayrollEntry, SalaryAddition, Order, DictionaryItem, PayrollTaxFormula
+from app.models.payroll.tax_formula import CODES, CODE_NAMES, TEMPLATE_SCRIPTS, SIDE_BY_CODE
 from app.services import payroll_service
+from app.services.formula_engine import evaluate_formula, validate_formula, FormulaError
 from app.utils.parsing import _parse_decimal
 
 
@@ -168,6 +170,10 @@ def api_payroll_entries(period_id):
                 + float(e.deductions_total or 0)
             ) if e else 0,
             "net_total": float(e.net_total or 0) if e else 0,
+            "employer_dsmf": float(e.employer_dsmf or 0) if e else 0,
+            "employer_unemployment": float(e.employer_unemployment or 0) if e else 0,
+            "employer_medical": float(e.employer_medical or 0) if e else 0,
+            "employer_cost_total": float(e.employer_cost_total or 0) if e else 0,
             "note": e.note if e else None,
         })
     return jsonify(data)
@@ -379,3 +385,249 @@ def delete_addition(addition_id):
         return jsonify({"success": True})
     flash("Əlavə/tutulma silindi.", "info")
     return redirect(url_for("salary.list_payroll_periods"))
+
+
+# =============================================================================
+# Vergi formulaları (gəlir vergisi, DSMF, işsizlik, İTS) — redaktə oluna
+# bilən skriptlər. Bax: app.services.formula_engine (təhlükəsizlik/icazə
+# verilən sintaksis) və app.models.payroll.tax_formula (default skriptlər).
+# =============================================================================
+
+
+# =============================================================================
+# Vergi formulaları (gəlir vergisi, DSMF, işsizlik, İTS) — TARİXLİ VERSİYALAR
+# kimi saxlanılır (qüvvəyə minmə/bitmə tarixi + tam tarixçə). Bax:
+# app.services.formula_engine (təhlükəsizlik/icazə verilən sintaksis) və
+# app.models.payroll.tax_formula (versiya modeli, default skriptlər).
+# =============================================================================
+
+from datetime import date, timedelta
+from app.utils.parsing import _parse_date
+
+
+def _save_new_formula_version(code, name, script, valid_from, valid_to, user_id, exclude_id=None):
+    """Yeni (tarixli) formula versiyası yaradır/YENİLƏYİR (bax: exclude_id —
+    redaktə zamanı versiyanın ÖZÜ ilə "üst-üstə düşmə" yoxlamasından
+    çıxarılır). Mövcud versiyalarla ÜST-ÜSTƏ DÜŞMƏ olarsa rədd edir —
+    İSTİSNA: yeni versiya indiyə qədər AÇIQ (valid_to=NULL, "hələ də
+    qüvvədədir") olan versiyanı VAXT ETİBARİLƏ davam etdirirsə (yəni
+    sadəcə "qanun dəyişdi, buradan etibarən yeni formula qüvvəyə minir"
+    adi halıdırsa), köhnə versiyanı avtomatik bağlayır (onun valid_to-sunu
+    yeni versiyanın valid_from-undan 1 gün əvvələ təyin edir)."""
+    if valid_to is not None and valid_to < valid_from:
+        raise ValueError("Bitmə tarixi başlama tarixindən əvvəl ola bilməz.")
+
+    new_end = valid_to or date.max
+    query = PayrollTaxFormula.query.filter_by(code=code)
+    if exclude_id is not None:
+        query = query.filter(PayrollTaxFormula.id != exclude_id)
+    for row in query.all():
+        row_end = row.valid_to or date.max
+        overlaps = row.valid_from <= new_end and valid_from <= row_end
+        if not overlaps:
+            continue
+        if row.valid_to is None and valid_from > row.valid_from:
+            # Adi hal: qanun dəyişib, əvvəlki (açıq) versiya bu tarixdə bağlanır.
+            row.valid_to = valid_from - timedelta(days=1)
+            continue
+        raise ValueError(
+            "Bu tarix aralığı artıq mövcud bir versiya ilə üst-üstə düşür: "
+            f"{row.valid_from.isoformat()} — {row.valid_to.isoformat() if row.valid_to else 'indiyədək'}."
+        )
+
+    return PayrollTaxFormula(
+        code=code, name=name, script=script,
+        valid_from=valid_from, valid_to=valid_to, created_by_id=user_id,
+    )
+
+
+@salary_bp.route("/tax-formulas")
+@login_required
+@permission_required(MODULE, "can_view")
+def list_tax_formulas():
+    # Köhnə (versiyalı formaya keçirilməzdən əvvəl yaradılmış) sətirləri
+    # təmir edir — bax: PayrollTaxFormula.heal_legacy_rows(). HEÇ bir
+    # avtomatik "default" sətir YARADILMIR — konfiqurasiya olunmayan kodlar
+    # sadəcə "konfiqurasiya olunmayıb" kimi göstərilir (bax: current=None).
+    PayrollTaxFormula.heal_legacy_rows()
+    employee_items = []
+    employer_items = []
+    for code, name, side, _script in CODES:
+        current = PayrollTaxFormula.current_version(code)
+        history = PayrollTaxFormula.history_for_code(code)
+        item = {
+            "code": code,
+            "name": name,
+            "current": current,
+            "history_count": len(history),
+        }
+        (employee_items if side == "employee" else employer_items).append(item)
+    from flask import render_template
+    return render_template(
+        "salary/tax_formulas.html",
+        employee_items=employee_items, employer_items=employer_items,
+    )
+
+
+@salary_bp.route("/tax-formulas/<string:code>/history")
+@login_required
+@permission_required(MODULE, "can_view")
+def tax_formula_history(code):
+    PayrollTaxFormula.heal_legacy_rows()
+    if code not in CODE_NAMES:
+        from flask import abort
+        abort(404)
+    versions = PayrollTaxFormula.history_for_code(code)
+    return render_form(
+        "salary/tax_formula_history.html",
+        code=code, name=CODE_NAMES[code], versions=versions, today=date.today(),
+    )
+
+
+@salary_bp.route("/tax-formulas/<string:code>/add-version", methods=["GET", "POST"])
+@login_required
+@permission_required(MODULE, "can_edit")
+@log_action(MODULE, "ADD_TAX_FORMULA_VERSION")
+def add_tax_formula_version(code):
+    PayrollTaxFormula.heal_legacy_rows()
+    if code not in CODE_NAMES:
+        from flask import abort
+        abort(404)
+    name = CODE_NAMES[code]
+    current = PayrollTaxFormula.current_version(code)
+    # Skript üçün başlanğıc mətn: mövcud (bu gün qüvvədə olan) versiya
+    # varsa ondan davam edilir; yoxdursa, redaktə etməyə başlamaq üçün
+    # bir NÜMUNƏ (TEMPLATE) göstərilir — bu, SAXLANANDA istifadə olunan
+    # "gizli default" DEYİL, sadəcə boş bir mətn qutusu əvəzinə əlverişli
+    # bir başlanğıc nöqtəsidir.
+    starter_script = current.script if current else TEMPLATE_SCRIPTS[code]
+    # Yeni versiya defolt olaraq SABAHDAN başlayır (bu gündən deyil) —
+    # "bu gün üçün qüvvədə olan" hesablamaların bu redaktə zamanı,
+    # yarımçıq/sınaq mərhələsində qəflətən dəyişməsinin qarşısını almaq
+    # üçün. İstifadəçi istənilən tarixi seçə bilər (o cümlədən keçmiş bir
+    # tarixi — tarixçəyə boşluq doldurmaq üçün).
+    default_valid_from = date.today() + timedelta(days=1)
+
+    if request.method == "POST":
+        script = request.form.get("script", "")
+        valid_from = _parse_date(request.form.get("valid_from"))
+        valid_to = _parse_date(request.form.get("valid_to"))
+        error = None
+        if not valid_from:
+            error = "Başlama tarixi mütləqdir."
+        else:
+            try:
+                validate_formula(script)
+            except FormulaError as e:
+                error = f"Formula saxlanılmadı: {e}"
+        version = None
+        if not error:
+            try:
+                version = _save_new_formula_version(code, name, script, valid_from, valid_to, current_user.id)
+            except ValueError as e:
+                error = str(e)
+        if error:
+            flash(error, "danger")
+            return render_form(
+                "salary/tax_formula_form.html", code=code, name=name,
+                script=script, valid_from=request.form.get("valid_from"),
+                valid_to=request.form.get("valid_to"), version=None,
+            )
+        db.session.add(version)
+        db.session.commit()
+        flash(f"'{name}' üçün yeni formula versiyası əlavə olundu.", "success")
+        return modal_redirect("salary.list_tax_formulas")
+
+    return render_form(
+        "salary/tax_formula_form.html", code=code, name=name,
+        script=starter_script, valid_from=default_valid_from.isoformat(), valid_to="", version=None,
+    )
+
+
+@salary_bp.route("/tax-formulas/version/<int:version_id>/edit", methods=["GET", "POST"])
+@login_required
+@permission_required(MODULE, "can_edit")
+@log_action(MODULE, "EDIT_TAX_FORMULA_VERSION")
+def edit_tax_formula_version(version_id):
+    version = PayrollTaxFormula.query.get_or_404(version_id)
+    code, name = version.code, version.name
+
+    if request.method == "POST":
+        script = request.form.get("script", "")
+        valid_from = _parse_date(request.form.get("valid_from"))
+        valid_to = _parse_date(request.form.get("valid_to"))
+        error = None
+        if not valid_from:
+            error = "Başlama tarixi mütləqdir."
+        else:
+            try:
+                validate_formula(script)
+            except FormulaError as e:
+                error = f"Formula saxlanılmadı: {e}"
+        if not error:
+            try:
+                # exclude_id=version.id: bu versiyanın ÖZÜ ilə "üst-üstə
+                # düşmə" yoxlaması aparılmır — yalnız DİGƏR versiyalarla.
+                _save_new_formula_version(
+                    code, name, script, valid_from, valid_to,
+                    current_user.id, exclude_id=version.id,
+                )
+            except ValueError as e:
+                error = str(e)
+        if error:
+            flash(error, "danger")
+            return render_form(
+                "salary/tax_formula_form.html", code=code, name=name,
+                script=script, valid_from=request.form.get("valid_from"),
+                valid_to=request.form.get("valid_to"), version=version,
+            )
+        version.script = script
+        version.valid_from = valid_from
+        version.valid_to = valid_to
+        version.updated_by_id = current_user.id
+        db.session.commit()
+        flash(f"'{name}' versiyası ({valid_from.strftime('%d.%m.%Y')}) yeniləndi.", "success")
+        return modal_redirect("salary.tax_formula_history", code=code)
+
+    return render_form(
+        "salary/tax_formula_form.html", code=code, name=name,
+        script=version.script,
+        valid_from=version.valid_from.isoformat() if version.valid_from else "",
+        valid_to=version.valid_to.isoformat() if version.valid_to else "",
+        version=version,
+    )
+
+
+@salary_bp.route("/tax-formulas/version/<int:version_id>/delete", methods=["POST"])
+@login_required
+@permission_required(MODULE, "can_delete")
+@log_action(MODULE, "DELETE_TAX_FORMULA_VERSION")
+def delete_tax_formula_version(version_id):
+    version = PayrollTaxFormula.query.get_or_404(version_id)
+    code = version.code
+    db.session.delete(version)
+    db.session.commit()
+    if is_modal_request():
+        return jsonify({"success": True})
+    flash("Formula versiyası silindi.", "info")
+    return redirect(url_for("salary.tax_formula_history", code=code))
+
+
+@salary_bp.route("/tax-formulas/test", methods=["POST"])
+@login_required
+@permission_required(MODULE, "can_edit")
+def test_tax_formula():
+    """"Vergi formulaları" redaktə pəncərəsindəki "Nəticəni hesabla"
+    düyməsi üçün — SAXLAMADAN, cari (hələ yadda saxlanılmamış) skripti
+    nümunə bir GROSS dəyəri ilə sınayır."""
+    script = (request.get_json(silent=True) or {}).get("script", "")
+    gross = (request.get_json(silent=True) or {}).get("gross")
+    try:
+        gross_val = float(gross)
+    except (TypeError, ValueError):
+        return jsonify({"success": False, "error": "Gross ədəd olmalıdır."})
+    try:
+        result = evaluate_formula(script, gross_val)
+    except FormulaError as e:
+        return jsonify({"success": False, "error": str(e)})
+    return jsonify({"success": True, "result": round(result, 2)})

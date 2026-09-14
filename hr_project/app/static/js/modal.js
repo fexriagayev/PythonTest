@@ -350,6 +350,32 @@ function findSaveToolbarItem(toolbarItems) {
   );
 }
 
+// Runs `fn` once the shared modal popup is FULLY visible (its open
+// animation, if any, has completely finished) rather than immediately.
+// Any code that creates a DevExtreme DataGrid (or other widget that
+// measures its container's size once, at creation time) inside the modal
+// body MUST go through this — otherwise, when the modal is opened via a
+// fresh openFormModal() call, the grid gets created while the popup is
+// still mid-animation (its content area not yet at final size), and its
+// computed height gets "stuck" too small until something else (e.g. a
+// window resize) forces a recompute.
+//
+// `reloadModalContentInPlace`-type flows (the popup is already visible,
+// no animation is happening) are handled too: `popup.option("visible")`
+// is already true in that case, so `fn()` just runs immediately.
+function runWhenModalShown(fn) {
+  const popup = getModalPopup();
+  if (!popup || popup.option("visible")) {
+    fn();
+    return;
+  }
+  function onShown() {
+    popup.off("shown", onShown);
+    fn();
+  }
+  popup.on("shown", onShown);
+}
+
 function showModal(title) {
   const popup = getModalPopup();
   if (title) popup.option("title", title);
@@ -414,12 +440,15 @@ function restoreParentModal() {
   );
 
   // Restore the previous view's Save button state exactly as it was
-  // (e.g. still disabled if the parent view was an employee sub-tab)
-  // instead of assuming it should always be enabled.
+  // (e.g. still disabled if the parent view was an employee sub-tab, or
+  // entirely hidden if the parent was a grid-only modal like tabel dövr /
+  // əməkhaqqı əlavələri siyahısı) instead of assuming it should always
+  // be enabled/visible.
   const toolbarItems = popup.option("toolbarItems");
   const saveItem = findSaveToolbarItem(toolbarItems);
   if (saveItem && saveItem.options) {
     saveItem.options.disabled = !!state.saveDisabled;
+    saveItem.options.visible = state.saveVisible !== false;
     saveItem.options.text = state.saveText || t("js_save");
     popup.option("toolbarItems", toolbarItems);
   }
@@ -604,6 +633,16 @@ function upgradeRadioGroup(form) {
   if (!form || form.__dxModalRadioGroupUpgraded) return;
   const groups = {};
   form.querySelectorAll('input[type="radio"]').forEach(function (radio) {
+    // Opt-out: a form can build its OWN purpose-built radio UI (custom
+    // stacked layout, per-option hint text, interpolated values, etc. —
+    // see salary/addition_form.html's "scope" picker) by marking its
+    // radios `data-no-auto-radiogroup`. Without this, the generic
+    // upgrade below still fires (2+ radios sharing a `name`), replaces
+    // them with its own separate DevExtreme widget, and only hides the
+    // native <input> — NOT its surrounding <label>/text — leaving the
+    // custom UI's text sitting next to the auto-generated one as
+    // orphaned, unstyled leftover text.
+    if (radio.hasAttribute("data-no-auto-radiogroup")) return;
     const key = radio.name || ("__radio_" + Math.random());
     (groups[key] ||= []).push(radio);
   });
@@ -891,7 +930,15 @@ function openFormModal(url, onSavedCallback) {
       // wireModalForm below), which is exactly what we need to restore.
       onSavedCallback: window.__currentModalSavedCallback,
       saveDisabled: !!(saveItemNow && saveItemNow.options && saveItemNow.options.disabled),
-      saveText: (saveItemNow && saveItemNow.options && saveItemNow.options.text) || t("js_save")
+      saveText: (saveItemNow && saveItemNow.options && saveItemNow.options.text) || t("js_save"),
+      // BUG FIX: some modals (tabel dövr, əməkhaqqı əlavələri siyahısı)
+      // hide the shared "Yadda saxla" button entirely (visible=false)
+      // because they have no traditional form-submit flow. That was
+      // never captured/restored here — only disabled/text were — so
+      // once such a modal ran, the button stayed invisible for EVERY
+      // form opened afterwards in the whole session (including totally
+      // unrelated ones), since the popup/toolbar is a shared singleton.
+      saveVisible: !(saveItemNow && saveItemNow.options && saveItemNow.options.visible === false)
     });
   }
 
@@ -918,13 +965,19 @@ function openFormModal(url, onSavedCallback) {
 
       // A previous modal session (e.g. an employee sub-tab, or an
       // interrupted save) may have left the shared "Yadda saxla" button
-      // disabled. Since the popup/toolbar instance is reused for every
-      // form in the page session, that stale state otherwise carries
-      // over into this new form. Always reset it for a freshly loaded form.
+      // disabled — or, for grid-only modals like tabel dövr / əməkhaqqı
+      // əlavələri siyahısı, entirely HIDDEN. Since the popup/toolbar
+      // instance is reused for every form in the page session, that
+      // stale state otherwise carries over into this new form. Always
+      // reset it (disabled, text, AND visible) for a freshly loaded
+      // top-level form — if the newly loaded form's own script wants it
+      // hidden again, it runs right after (via executeInjectedScripts)
+      // and re-hides it explicitly.
       const toolbarItems = popup.option("toolbarItems");
       const saveItem = findSaveToolbarItem(toolbarItems);
       if (saveItem && saveItem.options) {
         saveItem.options.disabled = false;
+        saveItem.options.visible = true;
         saveItem.options.text = t("js_save");
         popup.option("toolbarItems", toolbarItems);
       }

@@ -1211,6 +1211,57 @@ table.simple-table th {
   display: block;
 }
 
+/* A conditionally-shown label+input pair (e.g. "amount" vs "percent" rows
+   that toggle based on another field) that should align EXACTLY like any
+   other field in the surrounding 2-column .dx-modal-form-fields grid —
+   NOT the unrelated 3-column .form-grid layout used elsewhere in the app,
+   which squeezes the pair into a narrow left-aligned block instead of the
+   normal label|input columns. `display: contents` makes the wrapper itself
+   disappear from layout, so its <label>/<input> children become direct
+   grid items of .dx-modal-form-fields, same as every other field. JS must
+   toggle between "contents" (shown) and "none" (hidden) — never ""/block. */
+.dx-modal-form-contents-row {
+  display: contents;
+}
+
+/* Radio group (e.g. "this employee only" vs "all employees" on the
+   əlavə/tutulma form) — always ONE option per line, regardless of any
+   surrounding flex/grid context, since relying on an inline
+   flex-direction:column style is fragile (easy to accidentally override
+   or have collide with the .dx-modal-form-single-col block display). */
+.addition-scope-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+/* Selector deliberately scoped as ".addition-scope-picker .addition-scope-option"
+   (two classes) rather than just ".addition-scope-option" (one class) — it
+   must out-specificity the pre-existing ".dx-modal-form-single-col>label
+   { display: block; }" rule above, which would otherwise silently win and
+   collapse each option's radio+text back onto separate lines instead of
+   inline side by side (while the picker itself still stacks the two
+   options vertically via flex-direction:column). */
+.addition-scope-picker .addition-scope-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: normal;
+  margin: 0;
+}
+
+.addition-scope-option input[type="radio"] {
+  width: auto;
+  flex: none;
+}
+
+.addition-scope-hint {
+  color: #888;
+  font-size: 0.8em;
+  margin: 0;
+}
+
 .dx-modal-form-single-col>label {
   display: block;
 }
@@ -1828,4 +1879,155 @@ body.app-theme-sandstone .app-topbar {
 
 .employee-modal-subpage .toolbar {
   margin-bottom: 10px;
+}
+
+/* --- Vergi formulaları (salary/tax_formulas.html, tax_formula_form.html) --- */
+
+.tax-formula-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.tax-formula-card {
+  border: 1px solid var(--bs-border-color, #ccd3de);
+  border-radius: 6px;
+  padding: 14px 16px;
+  background: var(--bs-body-bg, #fff);
+}
+
+.tax-formula-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.tax-formula-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.tax-formula-card-title {
+  font-weight: 600;
+  font-size: 1em;
+}
+
+.tax-formula-card-meta {
+  color: #888;
+  font-size: 0.8em;
+  margin-top: 2px;
+}
+
+.tax-formula-preview {
+  margin: 0;
+  padding: 10px 12px;
+  background: var(--bs-tertiary-bg, #f5f6f8);
+  border-radius: 4px;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 0.85em;
+  white-space: pre-wrap;
+  overflow-x: auto;
+  max-height: 160px;
+  overflow-y: auto;
+}
+
+.tax-formula-hint {
+  grid-column: 1/-1;
+  color: #888;
+  font-size: 0.8em;
+  margin: -4px 0 4px;
+  white-space: pre-line;
+}
+
+.tax-formula-script-input {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 0.9em;
+  line-height: 1.4;
+  tab-size: 4;
+  resize: vertical;
+  min-height: 220px;
+}
+
+.tax-formula-test-panel {
+  margin-top: 4px;
+}
+
+.tax-formula-test-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tax-formula-test-row input[type="number"] {
+  max-width: 140px;
+  flex: none;
+}
+
+.tax-formula-test-result {
+  font-weight: 600;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
+.tax-formula-test-result-ok {
+  color: var(--bs-success, #1e7e34);
+}
+
+.tax-formula-test-result-error {
+  color: var(--bs-danger, #c0392b);
+  font-family: inherit;
+  font-weight: normal;
+  font-size: 0.85em;
+}
+
+.tax-formula-history-item {
+  border: 1px solid var(--bs-border-color, #ccd3de);
+  border-radius: 6px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+
+.tax-formula-history-item-current {
+  border-color: var(--bs-success, #1e7e34);
+  background: rgba(30, 126, 52, 0.05);
+}
+
+.tax-formula-history-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+
+.tax-formula-history-item-range {
+  font-weight: 600;
+}
+
+.tax-formula-history-item-meta {
+  color: #888;
+  font-size: 0.8em;
+}
+
+.tax-formula-section-title {
+  margin: 22px 0 4px;
+}
+
+.tax-formula-list + .tax-formula-section-title {
+  margin-top: 26px;
+}
+
+.tax-formula-section-hint {
+  color: #888;
+  font-size: 0.82em;
+  margin: 0 0 10px;
+}
+
+.tax-formula-card-employer {
+  border-left: 3px solid var(--bs-warning, #d4a017);
 }

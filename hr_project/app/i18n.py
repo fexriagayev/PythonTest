@@ -722,6 +722,10 @@ TRANSLATIONS = {
     "payroll_col_medical": {"az": "Tibbi sığ.", "en": "Medical Ins."},
     "payroll_col_total_deductions": {"az": "Cəmi tutulma", "en": "Total Deductions"},
     "payroll_col_net": {"az": "Net", "en": "Net"},
+    "payroll_col_employer_dsmf": {"az": "DSMF (şirkət payı)", "en": "DSMF (employer)"},
+    "payroll_col_employer_unemployment": {"az": "İşsizlik (şirkət payı)", "en": "Unemployment (employer)"},
+    "payroll_col_employer_medical": {"az": "İTS (şirkət payı)", "en": "Medical (employer)"},
+    "payroll_col_employer_cost_total": {"az": "Şirkət xərci (cəmi)", "en": "Total company cost"},
     # --- Əməkhaqqı əlavələri/tutulmaları — əməkdaş kontekstində
     # (salary/employee_additions.html, addition_form.html). Ayrıca ümumi
     # "Əlavələr" menyusu YOXDUR — bax: payroll_period.html "Dəyiş" düyməsi.
@@ -741,13 +745,55 @@ TRANSLATIONS = {
     "additions_col_active": {"az": "Aktiv", "en": "Active"},
     "addition_form_title_add": {"az": "Yeni əlavə/tutulma", "en": "New Addition/Deduction"},
     "addition_form_title_edit": {"az": "Əlavə/tutulmanı dəyiş", "en": "Edit Addition/Deduction"},
-    "addition_field_scope": {"az": "Kimə aiddir", "en": "Applies To"},
     "addition_scope_individual": {"az": "Yalnız bu əməkdaşa", "en": "This employee only"},
     "addition_scope_all": {"az": "Bütün əməkdaşlara", "en": "All employees"},
     "addition_scope_hint": {
         "az": "\"Bütün əməkdaşlara\" seçilsə, bu əlavə/tutulma HƏR əməkdaşın əməkhaqqısına tətbiq olunur və yalnız burada (yaratdığınız zaman) idarə oluna bilər — ayrı-ayrı əməkdaşların pəncərəsindən sonradan redaktə/silinə bilməz.",
         "en": "If \"All employees\" is selected, this addition/deduction applies to EVERY employee's payroll and can only be managed here (at creation) — it can't later be edited/deleted from an individual employee's window.",
     },
+
+    # --- Vergi formulaları (tax_formulas.html, tax_formula_form.html) ---------
+    "tax_formulas_page_title": {"az": "Vergi formulaları", "en": "Tax Formulas"},
+    "tax_formulas_page_hint": {
+        "az": "Gəlir vergisi, DSMF, işsizlikdən sığorta və İTS tutulmalarının düsturları. Hər biri GROSS (bruto) məbləğ əsasında hesablanır və aşağıda skript kimi redaktə oluna bilər.",
+        "en": "Formulas for income tax, DSMF, unemployment insurance, and mandatory medical insurance deductions. Each is calculated from the GROSS amount and can be edited below as a script.",
+    },
+    "tax_formulas_section_employee": {"az": "Əməkdaşın gəlirindən tutulmalar", "en": "Deductions from employee's income"},
+    "tax_formulas_section_employee_hint": {
+        "az": "Bu tutulmalar əməkdaşın GROSS məbləğindən çıxılır və NET əməkhaqqısını azaldır.",
+        "en": "These are subtracted from the employee's GROSS amount and reduce their NET pay.",
+    },
+    "tax_formulas_section_employer": {"az": "Şirkətin hesabından ödənişlər", "en": "Payments from the company's account"},
+    "tax_formulas_section_employer_hint": {
+        "az": "Bunlar əməkdaşın NET əməkhaqqısına TƏSİR ETMİR — şirkətin əməkdaşa əlavə xərci kimi GROSS-un üzərinə gəlir (bax: əməkhaqqı siyahısında \"Şirkət xərci\" sütunu). DİQQƏT: default dərəcələr TƏXMİNİDİR, real (cari qanunvericiliyə uyğun) dərəcələri mütləq yoxlayıb lazım gəldikcə redaktə edin.",
+        "en": "These do NOT affect the employee's NET pay — they're an additional cost to the company on top of GROSS (see the \"Company cost\" column in the payroll list). NOTE: the default rates are approximate placeholders — please verify and edit them to match current law.",
+    },
+    "tax_formula_valid_range": {"az": "Qüvvədə olma dövrü", "en": "Effective period"},
+    "tax_formula_ongoing": {"az": "indiyədək", "en": "ongoing"},
+    "tax_formula_no_current_version": {"az": "Bu gün üçün qüvvədə olan versiya yoxdur", "en": "No version currently in effect"},
+    "tax_formula_history_btn": {"az": "Tarixçə", "en": "History"},
+    "tax_formula_history_title": {"az": "Formula tarixçəsi", "en": "Formula History"},
+    "tax_formula_add_version_btn": {"az": "+ Yeni versiya", "en": "+ New Version"},
+    "tax_formula_add_version_title": {"az": "Yeni formula versiyası", "en": "New Formula Version"},
+    "tax_formula_edit_version_title": {"az": "Formula versiyasını dəyiş", "en": "Edit Formula Version"},
+    "tax_formula_delete_version_btn": {"az": "Bu versiyanı sil", "en": "Delete This Version"},
+    "tax_formula_no_history": {"az": "Hələ heç bir versiya əlavə olunmayıb.", "en": "No version has been added yet."},
+    "tax_formula_valid_from": {"az": "Başlama tarixi", "en": "Valid From"},
+    "tax_formula_valid_to": {"az": "Bitmə tarixi", "en": "Valid To"},
+    "tax_formula_valid_to_hint": {
+        "az": "Boş buraxsanız, bu versiya YENİ versiya əlavə edilənə qədər (indiyədək) qüvvədə qalır. Başlama tarixi əvvəlki qüvvədə olan versiyadan sonradırsa, o versiya avtomatik bağlanır.",
+        "en": "Leave blank to keep this version in effect until a newer one is added. If the start date is after the currently active version, that version is closed automatically.",
+    },
+    "tax_formula_script_label": {"az": "Skript", "en": "Script"},
+    "tax_formula_syntax_hint": {
+        "az": "Giriş dəyişəni: gross (GROSS məbləği). Nəticəni 'result' dəyişəninə yazın. İcazə verilir: if/elif/else, for x in range(...), riyazi/müqayisə əməliyyatları, round/min/max/abs/int/float/range funksiyaları. Digər hər şey (import, funksiya/sinif tərifi, atribut girişi, while) TƏHLÜKƏSİZLİK ÜÇÜN qadağandır.",
+        "en": "Input variable: gross (the GROSS amount). Write the result to a 'result' variable. Allowed: if/elif/else, for x in range(...), math/comparison operators, round/min/max/abs/int/float/range functions. Everything else (imports, function/class definitions, attribute access, while loops) is blocked for safety.",
+    },
+    "tax_formula_test_label": {"az": "Sına", "en": "Test"},
+    "tax_formula_test_gross_placeholder": {"az": "Gross", "en": "Gross"},
+    "tax_formula_test_btn": {"az": "Nəticəni hesabla", "en": "Calculate"},
+    "tax_formula_test_network_error": {"az": "Şəbəkə xətası.", "en": "Network error."},
+
     "addition_field_addition_type": {"az": "Əlavə/tutulma növü", "en": "Addition/Deduction Type"},
     "addition_type_hint": {
         "az": "Növlərin siyahısını \"Məlumat kitabçaları → SALARY → salary_addition_type\" bölməsindən idarə edə bilərsiniz.",

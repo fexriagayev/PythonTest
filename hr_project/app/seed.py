@@ -133,7 +133,7 @@ def seed_data():
     db.create_all()
 
     # Mövcud (əvvəllər yaradılmış) DB-lərə modeldə yeni əlavə olunan
-    # sütunları (məs. is_sick_leave, payment_amount) tamamlayır — bax:
+    # sütunları (məs. is_sick_leave, valid_from) tamamlayır — bax:
     # app/utils/db_sync.py. db.create_all() YALNIZ çatışmayan cədvəlləri
     # yaradır, mövcud cədvələ yeni sütun əlavə ETMİR.
     from app.utils.db_sync import sync_missing_columns

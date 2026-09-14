@@ -1,0 +1,90 @@
+{% extends "modal_form_base.html" %}
+{% set form_title = t('tax_formula_history_title') ~ ' — ' ~ name %}
+{% set form_action = "#" %}
+{% set form_no_wrapper_card = true %}
+
+{% block form_actions %}{% endblock %}
+
+{% block form_fields %}
+<div class="dx-modal-form-single-col">
+  {% if current_user.has_perm('SALARY', 'can_edit') %}
+  <button type="button" id="taxFormulaHistoryAddBtn" class="btn btn-sm" data-code="{{ code }}" style="margin-bottom:10px;">{{ t('tax_formula_add_version_btn') }}</button>
+  {% endif %}
+  {% for v in versions %}
+  <div class="tax-formula-history-item {{ 'tax-formula-history-item-current' if not v.valid_to or v.valid_to >= today }}">
+    <div class="tax-formula-history-item-header">
+      <span class="tax-formula-history-item-range">
+        {{ v.valid_from.strftime('%d.%m.%Y') }} —
+        {{ v.valid_to.strftime('%d.%m.%Y') if v.valid_to else t('tax_formula_ongoing') }}
+      </span>
+      <span class="tax-formula-history-item-meta">
+        {% if v.created_at %}{{ v.created_at.strftime('%d.%m.%Y %H:%M') }}{% endif %}
+        {% if v.created_by %} · {{ v.created_by.full_name or v.created_by.username }}{% endif %}
+      </span>
+      {% if current_user.has_perm('SALARY', 'can_edit') %}
+      <button type="button" class="btn btn-sm tax-formula-history-edit-btn" data-version-id="{{ v.id }}">{{ t('edit') }}</button>
+      {% endif %}
+    </div>
+    <pre class="tax-formula-preview">{{ v.script }}</pre>
+  </div>
+  {% else %}
+  <p style="color:#888;">{{ t('tax_formula_no_history') }}</p>
+  {% endfor %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  const popup = getModalPopup();
+  if (popup) {
+    const toolbarItems = popup.option("toolbarItems");
+    const saveItem = findSaveToolbarItem(toolbarItems);
+    if (saveItem) {
+      saveItem.options.disabled = true;
+      saveItem.options.visible = false;
+      popup.option("toolbarItems", toolbarItems);
+    }
+  }
+
+  // Bu tarixçə pəncərəsini (özünü, yerində) yenidən yükləyir — "+ Yeni
+  // versiya" və ya "Dəyiş" ilə nəsə dəyişəndə (silmə daxil olmaqla, bax:
+  // tax_formula_form.html) ana siyahını da (bax: notifyParent) xəbərdar edir.
+  const selfUrl = "{{ url_for('salary.tax_formula_history', code=code) }}";
+
+  function notifyParent() {
+    if (typeof window.__currentModalSavedCallback === "function") {
+      window.__currentModalSavedCallback();
+    }
+  }
+
+  function reloadSelfInPlace() {
+    const body = getModalBody();
+    return fetch(selfUrl, { headers: { "X-Requested-With": "XMLHttpRequest" } })
+      .then(function (r) { return r.text(); })
+      .then(function (html) {
+        body.innerHTML = html;
+        relocateModalFlash(body);
+        const title = getModalTitleFromHtml(html);
+        if (title) popup.option("title", title);
+        executeInjectedScripts(body);
+        wireModalForm(window.__currentModalSavedCallback);
+        notifyParent();
+      });
+  }
+
+  const addBtn = document.getElementById("taxFormulaHistoryAddBtn");
+  if (addBtn) {
+    addBtn.addEventListener("click", function () {
+      openFormModal("/salary/tax-formulas/" + addBtn.dataset.code + "/add-version", reloadSelfInPlace);
+    });
+  }
+
+  document.querySelectorAll(".tax-formula-history-edit-btn").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      openFormModal("/salary/tax-formulas/version/" + btn.dataset.versionId + "/edit", reloadSelfInPlace);
+    });
+  });
+})();
+</script>
+{% endblock %}

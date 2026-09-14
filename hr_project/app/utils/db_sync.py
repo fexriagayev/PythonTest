@@ -3,7 +3,7 @@ Yüngül "poor man's migration" — Alembic/flask-migrate əvəzinə YOX, ona
 ƏLAVƏ olaraq. Bu layihədə DB sxemi əsasən `db.create_all()` (bax:
 app/seed.py) ilə qurulur, bu isə YALNIZ ÇATIŞMAYAN CƏDVƏLLƏRİ yaradır —
 artıq mövcud olan bir cədvələ sonradan əlavə olunan sütunları (məs. bu
-layihədə `LeaveReason.is_sick_leave`, `LeaveRequest.payment_amount`)
+layihədə `LeaveReason.is_sick_leave`, `PayrollTaxFormula.valid_from`)
 ƏLAVƏ ETMİR. Nəticədə inkişaf zamanı modelə yeni sütun əlavə edildikdə,
 əvvəlcədən yaradılmış (developer-in öz komputerindəki) verilənlər bazası
 "no such column" xətası ilə qırılır.

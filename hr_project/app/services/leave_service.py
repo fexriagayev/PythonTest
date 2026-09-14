@@ -65,6 +65,25 @@ def compute_end_date(start_date, day_count, counting_method):
         cur += timedelta(days=1)
 
 
+def months_between(start_date, end_date):
+    """[start_date, end_date] aralığının toxunduğu HƏR (year, month) cütünü
+    xronoloji sırayla qaytarır — 1 aylıq bir iş buraxması üçün tək element,
+    ay sərhədini keçən (məs. 20.07 — 02.08) bir iş buraxması üçün bir neçə
+    element. Bax: LeaveRequestMonthlyPayment — hər elementin öz ödəniş
+    məbləği ayrıca daxil edilir (leave_request_form.html)."""
+    if not start_date or not end_date:
+        return []
+    months = []
+    y, m = start_date.year, start_date.month
+    while (y, m) <= (end_date.year, end_date.month):
+        months.append((y, m))
+        m += 1
+        if m > 12:
+            m = 1
+            y += 1
+    return months
+
+
 def validate_leave_request(employee, start_date, end_date, exclude_id=None):
     """Returns an error string if this date range overlaps any other İş
     buraxması of the same employee, else None."""

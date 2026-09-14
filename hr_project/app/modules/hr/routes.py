@@ -25,6 +25,7 @@ from app.models import (
     LeaveReason,
     Holiday,
     LeaveRequest,
+    LeaveRequestMonthlyPayment,
     VacationCompensation,
     InsurancePolicy,
     SalaryCard,
@@ -47,6 +48,7 @@ from app.services.leave_service import (
     get_remaining_vacation_days_live,
     compute_end_date,
     validate_leave_request,
+    months_between,
 )
 from app.utils.date_overlap import find_overlapping
 from app.utils.parsing import _parse_date, _parse_int, _parse_decimal
@@ -1428,6 +1430,12 @@ def api_leave_balance(emp_id):
     return jsonify(get_leave_balance(employee))
 
 
+AZ_MONTH_NAMES = [
+    "", "Yanvar", "Fevral", "Mart", "Aprel", "May", "İyun",
+    "İyul", "Avqust", "Sentyabr", "Oktyabr", "Noyabr", "Dekabr",
+]
+
+
 @hr_bp.route("/<int:emp_id>/leave-requests/api/end-date")
 @login_required
 @permission_required(MODULE, "can_view")
@@ -1436,10 +1444,52 @@ def api_compute_end_date(emp_id):
     day_count = _parse_int(request.args.get("day_count"))
     reason_id = _parse_int(request.args.get("leave_reason_id"))
     reason = LeaveReason.query.get(reason_id) if reason_id else None
+    record_id = _parse_int(request.args.get("record_id"))
     if not start or not day_count or not reason:
-        return jsonify({"end_date": None})
+        return jsonify({"end_date": None, "months": []})
     end = compute_end_date(start, day_count, reason.counting_method)
-    return jsonify({"end_date": end.isoformat() if end else None})
+
+    # Ay sərhədini keçən (məs. 20.07 — 02.08) bir iş buraxması üçün HƏR ay
+    # öz ödəniş sahəsini alır (bax: leave_request_form.html) — YALNIZ
+    # məzuniyyət/xəstəlik səbəbləri üçün, digərlərində ödəniş sahəsi
+    # ümumiyyətlə göstərilmir.
+    months = []
+    if reason.is_annual_leave or reason.is_sick_leave:
+        existing = {}
+        if record_id:
+            record = LeaveRequest.query.filter_by(id=record_id, employee_id=emp_id).first()
+            if record:
+                existing = {(p.year, p.month): float(p.amount or 0) for p in record.monthly_payments}
+        for y, m in months_between(start, end):
+            months.append({
+                "year": y, "month": m,
+                "label": f"{AZ_MONTH_NAMES[m]} {y}",
+                "amount": existing.get((y, m)),
+            })
+
+    return jsonify({"end_date": end.isoformat() if end else None, "months": months})
+
+
+def _save_leave_monthly_payments(record, months_spanned):
+    """`record.monthly_payments`-i formdan gələn `payment_amount_{year}_{month}`
+    sahələri ilə tam sinxronlaşdırır (mövcud olmayanlar silinir, qalanlar
+    yenilənir/yaradılır) — bax: LeaveRequestMonthlyPayment."""
+    wanted = {}
+    for y, m in months_spanned:
+        amount = _parse_decimal(request.form.get(f"payment_amount_{y}_{m}"))
+        wanted[(y, m)] = amount or 0
+
+    existing_by_ym = {(p.year, p.month): p for p in record.monthly_payments}
+    for ym, payment in list(existing_by_ym.items()):
+        if ym not in wanted:
+            db.session.delete(payment)
+    for (y, m), amount in wanted.items():
+        if (y, m) in existing_by_ym:
+            existing_by_ym[(y, m)].amount = amount
+        else:
+            db.session.add(LeaveRequestMonthlyPayment(
+                leave_request_id=record.id, year=y, month=m, amount=amount,
+            ))
 
 
 def _leave_request_form_choices():
@@ -1493,13 +1543,11 @@ def add_leave_request(emp_id):
             end_date=end,
             order_id=_parse_int(request.form.get("order_id")),
             note=request.form.get("note", "").strip(),
-            payment_amount=(
-                _parse_decimal(request.form.get("payment_amount"))
-                if reason.is_annual_leave or reason.is_sick_leave
-                else None
-            ),
         )
         db.session.add(record)
+        db.session.flush()  # `record.id` lazımdır (aşağıda LeaveRequestMonthlyPayment üçün)
+        if reason.is_annual_leave or reason.is_sick_leave:
+            _save_leave_monthly_payments(record, months_between(start, end))
         recompute_employee_from_history(employee)
         db.session.commit()
         flash("İş buraxması əlavə olundu.", "success")
@@ -1564,11 +1612,11 @@ def edit_leave_request(emp_id, record_id):
         record.end_date = end
         record.order_id = _parse_int(request.form.get("order_id"))
         record.note = request.form.get("note", "").strip()
-        record.payment_amount = (
-            _parse_decimal(request.form.get("payment_amount"))
-            if reason.is_annual_leave or reason.is_sick_leave
-            else None
-        )
+        if reason.is_annual_leave or reason.is_sick_leave:
+            _save_leave_monthly_payments(record, months_between(start, end))
+        else:
+            for p in list(record.monthly_payments):
+                db.session.delete(p)
         recompute_employee_from_history(employee)
         db.session.commit()
         flash("İş buraxması yeniləndi.", "success")

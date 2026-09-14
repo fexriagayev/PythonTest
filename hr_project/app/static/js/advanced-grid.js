@@ -1187,36 +1187,25 @@ function stripSystemColumnsFromState(state) {
   return state;
 }
 
-function createAdvancedGrid(elementId, baseKey, tabulatorOptions, meta) {
+/* ---------------------------------------------------------------------------
+   Full DevExtreme column list (conversion + standard prefix columns)
+   --------------------------------------------------------------------------- */
+
+// Converts Tabulator-style column defs into DevExtreme's own format AND
+// prepends the same "row number" / "column chooser corner" columns that
+// createAdvancedGrid() adds at creation time. Extracted into its own
+// function so that grids which need to REBUILD their columns later (e.g.
+// tabel-matrix.js when the day-count changes between months) can reuse the
+// EXACT same logic instead of hand-rolling a partial version that forgets
+// the conversion step — which is exactly what caused the tabel matrix to
+// render as a totally empty grid whenever the selected month had a
+// different number of days than the previous one (columns were being set
+// directly in the raw Tabulator format, which DevExtreme does not
+// understand: no `dataField` means nothing binds to any row data).
+function buildGridColumns(tabulatorColumns, meta) {
   meta = meta || {};
-  tabulatorOptions = tabulatorOptions || {};
+  const columns = convertColumnsToDevExtreme(tabulatorColumns || []);
 
-  if (
-    typeof DevExpress === "undefined" ||
-    !DevExpress.ui ||
-    !DevExpress.ui.dxDataGrid
-  ) {
-    throw new Error(
-      "DevExtreme DataGrid is not loaded. Load DevExtreme before advanced-grid.js."
-    );
-  }
-
-  const numericFields = meta.numericFields || [];
-  const settings = defaultGridSettings();
-
-  let applyingLoadedSettings = true;
-  let gridSettingsLoaded = false;
-  let gridSettingsDirty = false;
-
-  const columns = convertColumnsToDevExtreme(
-    tabulatorOptions.columns || []
-  );
-
-  // Every grid gets a leading row-number column by default (independent of
-  // which page/module calls createAdvancedGrid) — plain sequential "1, 2,
-  // 3, ..." across the whole dataset, not just the current page, and not
-  // to be confused with a data "ID" column some grids also show. Opt out
-  // per-grid with `meta.showRowNumber = false`.
   if (meta.showRowNumber !== false) {
     columns.unshift({
       name: "rowNumber",
@@ -1234,20 +1223,14 @@ function createAdvancedGrid(elementId, baseKey, tabulatorOptions, meta) {
       fixed: true,
       fixedPosition: "left",
       cellTemplate: function (container, options) {
-        const grid = options.component;
-        const pageIndex = grid.pageIndex();
-        const pageSize = grid.pageSize();
+        const gridInstance = options.component;
+        const pageIndex = gridInstance.pageIndex();
+        const pageSize = gridInstance.pageSize();
         container.text(String(pageIndex * pageSize + options.rowIndex + 1));
       }
     });
   }
 
-  // A narrow "indicator" column pinned before everything else (VCL/Delphi
-  // DBGrid style) whose header holds nothing but the column-chooser
-  // trigger — replaces DevExtreme's own default toolbar button for this
-  // purpose (see onToolbarPreparing below, which hides that toolbar
-  // entirely). Body cells are intentionally left blank. Opt out per-grid
-  // with `meta.showColumnChooserCorner = false`.
   if (meta.showColumnChooserCorner !== false) {
     columns.unshift({
       name: "columnChooserCorner",
@@ -1279,6 +1262,33 @@ function createAdvancedGrid(elementId, baseKey, tabulatorOptions, meta) {
       }
     });
   }
+
+  return columns;
+}
+
+
+function createAdvancedGrid(elementId, baseKey, tabulatorOptions, meta) {
+  meta = meta || {};
+  tabulatorOptions = tabulatorOptions || {};
+
+  if (
+    typeof DevExpress === "undefined" ||
+    !DevExpress.ui ||
+    !DevExpress.ui.dxDataGrid
+  ) {
+    throw new Error(
+      "DevExtreme DataGrid is not loaded. Load DevExtreme before advanced-grid.js."
+    );
+  }
+
+  const numericFields = meta.numericFields || [];
+  const settings = defaultGridSettings();
+
+  let applyingLoadedSettings = true;
+  let gridSettingsLoaded = false;
+  let gridSettingsDirty = false;
+
+  const columns = buildGridColumns(tabulatorOptions.columns, meta);
 
   // Snapshot of the server-translated (current-language) default caption
   // per field, captured BEFORE any saved custom title is restored onto

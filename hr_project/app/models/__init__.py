@@ -8,7 +8,7 @@ from .dictionaries.dictionary import DictionaryItem
 from .hr.employee import Employee
 from .hr.employment import EmploymentRecord
 from .hr.order import Order
-from .hr.leave import LeaveCategory, LeaveReason, LeaveRequest, VacationCompensation
+from .hr.leave import LeaveCategory, LeaveReason, LeaveRequest, LeaveRequestMonthlyPayment, VacationCompensation
 from .hr.insurance import InsurancePolicy
 from .hr.education import EmployeeEducation
 from .hr.employment_contract_notification import EmploymentContractNotification
@@ -22,6 +22,7 @@ from .payroll.salary import (
     PayrollRun,
     PayrollEntry,
 )
+from .payroll.tax_formula import PayrollTaxFormula
 
 from .tabel.tabel import TabelPeriod, TabelEmployeeRow
 

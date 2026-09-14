@@ -1,6 +1,27 @@
-- Bayram gunleri siyahisinda tarix evezine başlama ve bitme tarixi olmaidirş cunki bezi bayramlar 1 nece gun cekirş bundan elave bezi bayramlar her il tekrarlanirş bunu her il yeniden yigmamaq ucun teklf verir
-- Yeni tabel acilanda cari dovr ucre generasiya olunmuş tabel avtomatik yuklənir (məsələn sentyabr 2026), amma dövrü dəyişəndə proses dayanır (məsələn avqust 2026). Baxmayaraq ki avqust ucun de tabel generasiya olub. 
-- əməkhaqqı siyahısında dövrün ay və il hissəsi 2 sətirdədir, amma 1 sətirdə olmalıdır
-- əməkhaqqı siyahısında Əməkhaqqı əlavələri (dəyiş) sütunu ləğv olunmalıdır. Əvəzində context menyuya əlavə olunsun. Və açılan pəncərə modal olsun. Həmin modalda yalnız həmin əməkdaşa və bir də hamıya aid olan əlavə və tutulmalar görünsün.
-- Əməkhaqqına əlavə tutulma daxil edərkən bunun cari əməkdaşa və ya hamıya aid olması barədə ticket olsun 
-- Əvəzində əməkhaqları (manual) menyusu və funksionallığı tamamilə silinsin
+-tabel generasiya olduqda eger ayin 1-i həftəsonudursa o xanaya I yazılır, lakin həmin gun hansisa bir işburaxma , bayram və ya matəm varsa onda I əvəzinə müvafiq tabel kodu yazılmalıdır.
+-Şirkət hesabından tutulmalarda (DSMF, İTS, İşsizlik) xəstəlik pulu nəzərə alınmamalıdır. Ümumiyyətlə vergi tutulmalarında yazdığım formulalarda bunu nəzərə almaq mümkün olsun. Gələcəkdə buna oxşar istisnalar olarsa onu formulaya əlavə etmək üçün. məsələn (DSMF formulasinda 
+
+if (gross-sick) <= 200:
+    result = (gross-sick) * 0.03
+else:
+    result = 6 + ((gross-sick) - 200) * 0.10
+    
+    )
+
+yaza bilim ve program bunu basa duşsün
+
+-Yeni tabel dövrü seçəndə tabel avtomatik generasiya olunur, lakin tabeli təsdiqlə düyməsi görünmür. Bunun üçün gərək tabeli manual generasiya edim. Təsdiq düyməsi avtomatik generasiyadan sonra da görünsün
+-əgər əmək haqqı hesablanıbsa və təsdiq olunubsa, həmin dövrə aid tabeli dəyişmək olmasın.
+-əgər əməkhaqqı təsdiq olunmayıbsa həmin dövrə aid tabel dəyişdikdə alert çxısın ki, bu dövrə aid əməkhaqqı 0-lanacaq
+-əgər tabel təsdiqlənibsə, həmin dövr tabelə təsir edəcək dəyişikliklərə icazə verilməsin. (Məsələn həmin dövrə bayram/matəm əlavə etmək, iş buraxmaları əlavə etmək, maaşı dəyişmək, işçinin iş yeri məlumatlarını dəyişmək və s)
+bu barədə alert çıxsın ki, tabel təsdiqlənib 
+-əməkhaqqı hesablananda bəzi ödənişlər ayın sonu yox, ortasında ödənilir. Məsələn Məzuniyyət pulu hər məzuniyyətə çxdığı tarixdə (əgər 2-3 dəfə çıxıbsa ödəniş də 2-3 dəfə olur), xəstəlik pulu, mükafat, Avans və sair.
+Və buna uyğun olaraq da əməkhaqqı ayda 1 neçə dəfə hesablana bilər. hər hesablanmanın nəticəsi banka ödəniş siyahısı göndərilir. Buna görə də Net məbləğ 1 neçə yerə bölünməlidir.
+Net məzuniyyət, Net mukafat, net avans, net xestelik, net maaş, net kompensasiya ve s və net yekun (butun net-lərin cemi). 
+-növbəti net-gross hesablamasina keçməzdən əvvəl bizə bəzi dictionary-lər lazım olacaq. ONların strukturunu və funksionalını hazırlayaq. Tikinti şirkətində işçilər briqadalar şəklində müxtəlif obyektlərdə işləyirlər və
+ay ərzində gördükləri işə əsasən net maaşları formalaşır. Buna gorə bizə əvvəlcə obyektlər və briqadaları formalaşdırmaq lazımdır: 
+
+-Obyekt (id, name, start_date, end_date, is_active, priority, fk_owner)
+-Briqada (id, header (fk_employee), member (fk_employee), member (text),start_date, end_date, is_active, priority )
+mən strukturu təxmini Çəkdim, 
+-Briqada yaradanda onun header-i mütləq olmalıdır (əməkdaş siyahısından seçilir). Lakin member bəzən mövcüd əməkdaş siyahısından seçilir, bəzən isə boş saxlanılır və əl ilə daxil edilir

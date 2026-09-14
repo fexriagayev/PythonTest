@@ -13,15 +13,13 @@ class PayrollSettings(db.Model):
         sonra normal qaydada həmin GROSS-dan yenidən NET tapılacaq.
 
     `vacation_pay_mode` / `sick_pay_mode`:
-      - manual: məbləğ əməkdaşın "İcazələri" pəncərəsində həmin İş
-        buraxması qeydinə birbaşa daxil edilir (LeaveRequest.payment_amount)
-        və əməkhaqqı hesablanarkən oradan olduğu kimi götürülür.
+      - manual: məbləğ əməkdaşın "İcazələri" pəncərəsində, HƏR AY üçün
+        AYRICA (bax: LeaveRequestMonthlyPayment — ay sərhədini keçən bir
+        iş buraxması üçün hər ayın öz sahəsi var) daxil edilir və
+        əməkhaqqı hesablanarkən oradan olduğu kimi götürülür.
       - auto: sistemin özü hesablayır (bax: payroll_service.py
         `_auto_vacation_pay` — orta gündəlik qazanc əsasında, TƏXMİNİ
         düstur; qanunvericiliyə uyğun dəqiqləşdirmə tələb edir).
-
-    `sector`: gəlir vergisi/DSMF/İTS düsturunun hansı sektor üçün
-      tətbiq olunacağını təyin edir (bax: payroll_service.py TAX_TABLES).
     """
 
     __tablename__ = "payroll_settings"
@@ -34,16 +32,11 @@ class PayrollSettings(db.Model):
         ("manual", "Manual (İcazələr pəncərəsindən)"),
         ("auto", "Avtomatik hesablanır"),
     ]
-    SECTORS = [
-        ("private_non_oil", "Qeyri-neft-qaz / qeyri-dövlət sektoru"),
-        ("state_oil_gas", "Neft-qaz sahəsi / dövlət sektoru"),
-    ]
 
     id = db.Column(db.Integer, primary_key=True)
     calc_method = db.Column(db.String(20), nullable=False, default="gross_to_net")
     vacation_pay_mode = db.Column(db.String(10), nullable=False, default="manual")
     sick_pay_mode = db.Column(db.String(10), nullable=False, default="manual")
-    sector = db.Column(db.String(20), nullable=False, default="private_non_oil")
 
     @classmethod
     def get(cls):
@@ -259,6 +252,15 @@ class PayrollEntry(db.Model):
     unemployment_amount = db.Column(db.Numeric(12, 2), default=0)
     medical_amount = db.Column(db.Numeric(12, 2), default=0)
     net_total = db.Column(db.Numeric(12, 2), default=0)  # tutulmalar çıxıldıqdan sonrakı yekun net
+
+    # --- İşəgötürənin (şirkətin) ƏLAVƏ ödədiyi haqlar -------------------------
+    # Bunlar əməkdaşın NET-inə TƏSİR ETMİR — GROSS-un üzərinə şirkətin əlavə
+    # xərci kimi gəlir (bax: payroll_service.calculate_gross_to_net,
+    # PayrollTaxFormula employer_dsmf/employer_unemployment/employer_medical).
+    employer_dsmf = db.Column(db.Numeric(12, 2), default=0)
+    employer_unemployment = db.Column(db.Numeric(12, 2), default=0)
+    employer_medical = db.Column(db.Numeric(12, 2), default=0)
+    employer_cost_total = db.Column(db.Numeric(12, 2), default=0)  # gross_total + yuxarıdakı 3-ü
 
     note = db.Column(db.Text)
     updated_at = db.Column(
