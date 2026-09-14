@@ -133,11 +133,17 @@ def seed_data():
     db.create_all()
 
     # Mövcud (əvvəllər yaradılmış) DB-lərə modeldə yeni əlavə olunan
-    # sütunları (məs. is_sick_leave, payment_amount) tamamlayır — bax:
+    # sütunları (məs. is_sick_leave, valid_from) tamamlayır — bax:
     # app/utils/db_sync.py. db.create_all() YALNIZ çatışmayan cədvəlləri
     # yaradır, mövcud cədvələ yeni sütun əlavə ETMİR.
-    from app.utils.db_sync import sync_missing_columns
+    from app.utils.db_sync import sync_missing_columns, migrate_legacy_leave_payments
     sync_missing_columns(db)
+
+    # Bir dəfəlik köçürmə: köhnə (silinmiş) LeaveRequest.payment_amount
+    # sütununda qalmış məlumatı (varsa) yeni, AY ÜZRƏ ayrı-ayrı cədvələ
+    # (LeaveRequestMonthlyPayment) daşıyır ki, əvvəllər daxil edilmiş
+    # xəstəlik/məzuniyyət ödənişləri yoxa çıxmasın — bax: db_sync.py.
+    migrate_legacy_leave_payments(db)
 
     modules = {}
     for code, name_az, name_en in MODULES:

@@ -1,6 +1,6 @@
 {% extends "modal_form_base.html" %}
-{% set form_title = t('holiday_form_title_edit') if holiday else t('holiday_form_title_add') %}
-{% set form_action = url_for('hr.edit_holiday', holiday_id=holiday.id) if holiday else url_for('hr.add_holiday') %}
+{% set form_title = t('holiday_form_title_edit') if holiday and holiday.id else t('holiday_form_title_add') %}
+{% set form_action = url_for('hr.edit_holiday', holiday_id=holiday.id) if holiday and holiday.id else url_for('hr.add_holiday') %}
 {% set cancel_url = url_for('hr.list_holidays') %}
 {% set form_max_width = '420px' %}
 

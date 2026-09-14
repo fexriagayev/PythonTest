@@ -1,5 +1,5 @@
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from flask import (
     Blueprint,
@@ -25,7 +25,9 @@ from app.models import (
     LeaveReason,
     Holiday,
     LeaveRequest,
+    LeaveRequestMonthlyPayment,
     VacationCompensation,
+    TabelPeriod,
     InsurancePolicy,
     SalaryCard,
 )
@@ -36,6 +38,7 @@ from app.utils.uploads import (
     uploaded_file_path,
 )
 from app.services.document_service import delete_all_documents_for_owner
+from app.services.tabel_service import approved_period_covering, month_bounds
 from app.services.hr_service import (
     recompute_employee_from_history,
     recompute_employee_contract_from_bildiris,
@@ -47,6 +50,7 @@ from app.services.leave_service import (
     get_remaining_vacation_days_live,
     compute_end_date,
     validate_leave_request,
+    months_between,
 )
 from app.utils.date_overlap import find_overlapping
 from app.utils.parsing import _parse_date, _parse_int, _parse_decimal
@@ -1205,6 +1209,27 @@ def _validate_holiday(holiday):
         return "Bitmə tarixi mütləqdir."
     if holiday.end_date < holiday.start_date:
         return "Bitmə tarixi başlama tarixindən əvvəl ola bilməz."
+    locked = _holiday_locks_approved_period(holiday)
+    if locked:
+        return (
+            f"'{locked.label}' dövrünün tabeli artıq TƏSDİQLƏNİB — bu bayram "
+            "günü həmin dövrə təsir edəcəyi üçün əlavə/dəyişdirilə bilməz. "
+            "Əvvəlcə həmin dövrün tabel təsdiqini geri almalısınız."
+        )
+    return None
+
+
+def _holiday_locks_approved_period(holiday):
+    """Bu bayram (təkrarlanan olsun-olmasın — bax: Holiday.covers(),
+    illər üzrə təkrarı özü nəzərə alır) artıq TƏSDİQLƏNMİŞ hər hansı bir
+    tabel dövrünə TOXUNURMU? Toxunursa, həmin TabelPeriod-u qaytarır."""
+    for p in TabelPeriod.query.filter_by(is_approved=True).all():
+        p_start, p_end, _ = month_bounds(p.year, p.month)
+        d = p_start
+        while d <= p_end:
+            if holiday.covers(d):
+                return p
+            d += timedelta(days=1)
     return None
 
 
@@ -1428,6 +1453,12 @@ def api_leave_balance(emp_id):
     return jsonify(get_leave_balance(employee))
 
 
+AZ_MONTH_NAMES = [
+    "", "Yanvar", "Fevral", "Mart", "Aprel", "May", "İyun",
+    "İyul", "Avqust", "Sentyabr", "Oktyabr", "Noyabr", "Dekabr",
+]
+
+
 @hr_bp.route("/<int:emp_id>/leave-requests/api/end-date")
 @login_required
 @permission_required(MODULE, "can_view")
@@ -1436,10 +1467,52 @@ def api_compute_end_date(emp_id):
     day_count = _parse_int(request.args.get("day_count"))
     reason_id = _parse_int(request.args.get("leave_reason_id"))
     reason = LeaveReason.query.get(reason_id) if reason_id else None
+    record_id = _parse_int(request.args.get("record_id"))
     if not start or not day_count or not reason:
-        return jsonify({"end_date": None})
+        return jsonify({"end_date": None, "months": []})
     end = compute_end_date(start, day_count, reason.counting_method)
-    return jsonify({"end_date": end.isoformat() if end else None})
+
+    # Ay sərhədini keçən (məs. 20.07 — 02.08) bir iş buraxması üçün HƏR ay
+    # öz ödəniş sahəsini alır (bax: leave_request_form.html) — YALNIZ
+    # məzuniyyət/xəstəlik səbəbləri üçün, digərlərində ödəniş sahəsi
+    # ümumiyyətlə göstərilmir.
+    months = []
+    if reason.is_annual_leave or reason.is_sick_leave:
+        existing = {}
+        if record_id:
+            record = LeaveRequest.query.filter_by(id=record_id, employee_id=emp_id).first()
+            if record:
+                existing = {(p.year, p.month): float(p.amount or 0) for p in record.monthly_payments}
+        for y, m in months_between(start, end):
+            months.append({
+                "year": y, "month": m,
+                "label": f"{AZ_MONTH_NAMES[m]} {y}",
+                "amount": existing.get((y, m)),
+            })
+
+    return jsonify({"end_date": end.isoformat() if end else None, "months": months})
+
+
+def _save_leave_monthly_payments(record, months_spanned):
+    """`record.monthly_payments`-i formdan gələn `payment_amount_{year}_{month}`
+    sahələri ilə tam sinxronlaşdırır (mövcud olmayanlar silinir, qalanlar
+    yenilənir/yaradılır) — bax: LeaveRequestMonthlyPayment."""
+    wanted = {}
+    for y, m in months_spanned:
+        amount = _parse_decimal(request.form.get(f"payment_amount_{y}_{m}"))
+        wanted[(y, m)] = amount or 0
+
+    existing_by_ym = {(p.year, p.month): p for p in record.monthly_payments}
+    for ym, payment in list(existing_by_ym.items()):
+        if ym not in wanted:
+            db.session.delete(payment)
+    for (y, m), amount in wanted.items():
+        if (y, m) in existing_by_ym:
+            existing_by_ym[(y, m)].amount = amount
+        else:
+            db.session.add(LeaveRequestMonthlyPayment(
+                leave_request_id=record.id, year=y, month=m, amount=amount,
+            ))
 
 
 def _leave_request_form_choices():
@@ -1468,8 +1541,15 @@ def add_leave_request(emp_id):
         else:
             end = compute_end_date(start, day_count, reason.counting_method)
             overlap_error = validate_leave_request(employee, start, end)
+            locked = approved_period_covering(start, end)
             if overlap_error:
                 error = overlap_error
+            elif locked:
+                error = (
+                    f"'{locked.label}' dövrünün tabeli artıq TƏSDİQLƏNİB — bu tarix "
+                    "aralığı həmin dövrə təsir edəcəyi üçün iş buraxması əlavə "
+                    "edilə bilməz. Əvvəlcə həmin dövrün tabel təsdiqini geri almalısınız."
+                )
             elif reason.is_annual_leave and day_count > balance["total"]:
                 error = (
                     f"Kifayət qədər məzuniyyət günü yoxdur. Qalıq: "
@@ -1493,13 +1573,11 @@ def add_leave_request(emp_id):
             end_date=end,
             order_id=_parse_int(request.form.get("order_id")),
             note=request.form.get("note", "").strip(),
-            payment_amount=(
-                _parse_decimal(request.form.get("payment_amount"))
-                if reason.is_annual_leave or reason.is_sick_leave
-                else None
-            ),
         )
         db.session.add(record)
+        db.session.flush()  # `record.id` lazımdır (aşağıda LeaveRequestMonthlyPayment üçün)
+        if reason.is_annual_leave or reason.is_sick_leave:
+            _save_leave_monthly_payments(record, months_between(start, end))
         recompute_employee_from_history(employee)
         db.session.commit()
         flash("İş buraxması əlavə olundu.", "success")
@@ -1538,8 +1616,23 @@ def edit_leave_request(emp_id, record_id):
             overlap_error = validate_leave_request(
                 employee, start, end, exclude_id=record.id
             )
+            # Həm YENİ (təklif olunan), həm də KÖHNƏ (bu qeydin hazırkı)
+            # tarix aralığını yoxlayırıq — əks halda artıq təsdiqlənmiş
+            # bir dövrə aid olan qeydi "yeni" tarixlərlə (kilidlənməmiş
+            # bir dövrə) köçürüb, əslində köhnə (təsdiqlənmiş) dövrü
+            # sükutla dəyişdirmiş olardıq.
+            locked = (
+                approved_period_covering(record.start_date, record.end_date)
+                or approved_period_covering(start, end)
+            )
             if overlap_error:
                 error = overlap_error
+            elif locked:
+                error = (
+                    f"'{locked.label}' dövrünün tabeli artıq TƏSDİQLƏNİB — bu iş "
+                    "buraxması həmin dövrə aid olduğu üçün dəyişdirilə bilməz. "
+                    "Əvvəlcə həmin dövrün tabel təsdiqini geri almalısınız."
+                )
             elif reason.is_annual_leave:
                 # allow the days already allocated to THIS record back into the balance before checking
                 available = balance["total"] + record.day_count
@@ -1564,11 +1657,11 @@ def edit_leave_request(emp_id, record_id):
         record.end_date = end
         record.order_id = _parse_int(request.form.get("order_id"))
         record.note = request.form.get("note", "").strip()
-        record.payment_amount = (
-            _parse_decimal(request.form.get("payment_amount"))
-            if reason.is_annual_leave or reason.is_sick_leave
-            else None
-        )
+        if reason.is_annual_leave or reason.is_sick_leave:
+            _save_leave_monthly_payments(record, months_between(start, end))
+        else:
+            for p in list(record.monthly_payments):
+                db.session.delete(p)
         recompute_employee_from_history(employee)
         db.session.commit()
         flash("İş buraxması yeniləndi.", "success")
@@ -1592,6 +1685,17 @@ def delete_leave_request(emp_id, record_id):
     record = LeaveRequest.query.filter_by(
         id=record_id, employee_id=emp_id
     ).first_or_404()
+    locked = approved_period_covering(record.start_date, record.end_date)
+    if locked:
+        error = (
+            f"'{locked.label}' dövrünün tabeli artıq TƏSDİQLƏNİB — bu iş "
+            "buraxması həmin dövrə aid olduğu üçün silinə bilməz. Əvvəlcə "
+            "həmin dövrün tabel təsdiqini geri almalısınız."
+        )
+        if is_modal_request():
+            return jsonify({"success": False, "error": error}), 400
+        flash(error, "danger")
+        return redirect(url_for("hr.leave_requests", emp_id=emp_id))
     db.session.delete(record)
     recompute_employee_from_history(employee)
     db.session.commit()

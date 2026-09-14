@@ -6,9 +6,11 @@ Generation flow (see generate_period()):
      stint overlapping the period.
   2. For each calendar day of the month, decide the automatic mark:
        - A Holiday-table date -> "B" (bayram) or "M" (matəm).
-       - Otherwise, Saturday/Sunday -> REST_DAY_CODE ("İ").
        - Otherwise, an İş buraxması (LeaveRequest) covering that day ->
-         that reason's `tabel_code`.
+         that reason's `tabel_code` (bu, Saturday/Sunday yoxlamasından
+         ƏVVƏL gəlir — əks halda, məs. şənbə gününə düşən bir xəstəlik
+         günü səssizcə "İ" ilə əvəz olunardı).
+       - Otherwise, Saturday/Sunday -> REST_DAY_CODE ("İ").
        - Otherwise (an ordinary work day) -> DEFAULT_WORK_MARK ("+"),
          i.e. the employee is assumed present by default.
      A day the employee wasn't active on at all (before hire / after
@@ -29,6 +31,7 @@ from app.models import (
     Holiday,
     LeaveRequest,
     TabelEmployeeRow,
+    TabelPeriod,
 )
 from app.services.leave_service import get_employment_stints
 
@@ -127,6 +130,24 @@ def _contract_number_at(employee, as_of_date):
     return latest.contract_number if latest else None
 
 
+def approved_period_covering(start_date, end_date=None):
+    """Verilmiş [start_date, end_date] tarix aralığına toxunan TƏSDİQLƏNMİŞ
+    (is_approved=True) TabelPeriod-u (varsa) qaytarır, yoxdursa None.
+
+    Digər modullardan (bayram/matəm, iş buraxmaları, maaş/iş yeri
+    dəyişiklikləri və s.) İSTİFADƏ OLUNUR ki, artıq təsdiqlənmiş bir
+    tabel dövrünə TƏSİR EDƏ BİLƏCƏK dəyişikliklər əvvəlcədən BLOKLANSIN
+    (bax: hr/routes.py add_holiday/edit_holiday, add_leave_request/
+    edit_leave_request/delete_leave_request)."""
+    end_date = end_date or start_date
+    periods = TabelPeriod.query.filter_by(is_approved=True).all()
+    for p in periods:
+        p_start, p_end, _ = month_bounds(p.year, p.month)
+        if p_start <= end_date and start_date <= p_end:
+            return p
+    return None
+
+
 def generate_period(period):
     """Populates TabelEmployeeRow rows for `period` (overwrites any
     existing rows for this period — safe to call again). Does not
@@ -176,10 +197,16 @@ def _build_all_day_marks(year, month):
                 continue  # inactive -> no key -> blank/grey, non-editable
             if day in holiday_marks:
                 day_marks[str(day)] = holiday_marks[day]
+            elif day in leave_marks:
+                # DÜZƏLİŞ: iş buraxması (leave_marks) İ (həftəsonu) yoxlamasından
+                # ƏVVƏL yoxlanılmalıdır — əks halda, məs. şənbə/bazar günü ilə
+                # üst-üstə düşən bir xəstəlik/məzuniyyət günü SƏSSİZCƏ "İ" ilə
+                # ƏVƏZ OLUNURDU, halbuki iş buraxmasının öz kodu (məs. "X")
+                # göstərilməli idi. Bayram/matəm (holiday_marks) isə YENƏ DƏ
+                # ƏN YÜKSƏK prioritetdə qalır (şirkət səviyyəli, sabit).
+                day_marks[str(day)] = leave_marks[day]
             elif day in weekend_days:
                 day_marks[str(day)] = REST_DAY_CODE
-            elif day in leave_marks:
-                day_marks[str(day)] = leave_marks[day]
             else:
                 day_marks[str(day)] = DEFAULT_WORK_MARK  # adi iş günü -> default "+"
         result.append((employee, day_marks))

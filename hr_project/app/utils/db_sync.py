@@ -3,7 +3,7 @@ Yüngül "poor man's migration" — Alembic/flask-migrate əvəzinə YOX, ona
 ƏLAVƏ olaraq. Bu layihədə DB sxemi əsasən `db.create_all()` (bax:
 app/seed.py) ilə qurulur, bu isə YALNIZ ÇATIŞMAYAN CƏDVƏLLƏRİ yaradır —
 artıq mövcud olan bir cədvələ sonradan əlavə olunan sütunları (məs. bu
-layihədə `LeaveReason.is_sick_leave`, `LeaveRequest.payment_amount`)
+layihədə `LeaveReason.is_sick_leave`, `PayrollTaxFormula.valid_from`)
 ƏLAVƏ ETMİR. Nəticədə inkişaf zamanı modelə yeni sütun əlavə edildikdə,
 əvvəlcədən yaradılmış (developer-in öz komputerindəki) verilənlər bazası
 "no such column" xətası ilə qırılır.
@@ -70,3 +70,54 @@ def sync_missing_columns(db):
                 print(f"[db_sync] Sütun əlavə olundu: {table.name}.{column.name}")
             except Exception as exc:  # pragma: no cover — dev-time convenience only
                 print(f"[db_sync] {table.name}.{column.name} əlavə edilmədi: {exc}")
+
+
+def migrate_legacy_leave_payments(db):
+    """BİR DƏFƏLİK, idempotent köçürmə: `LeaveRequest.payment_amount`
+    sütunu modeldən TAMAMİLƏ silinib (bax: LeaveRequestMonthlyPayment —
+    hər ay üçün ayrıca ödəniş məbləği), amma bu sütun ƏVVƏLKİ bir
+    inkişaf mərhələsində DB-də fiziki olaraq yaradılmış ola bilər (bax
+    yuxarı qeyd: sync_missing_columns() sütunları YALNIZ ƏLAVƏ edir,
+    SİLMİR — köhnə sütun DB-də hələ də qala bilər, sadəcə model artıq
+    onu tanımır).
+
+    Belə bir sütun VARSA və içində məlumat varsa, hər sətrin köhnə
+    `payment_amount`-unu, əgər həmin İş buraxması üçün HƏLƏ heç bir
+    LeaveRequestMonthlyPayment yoxdursa, YENİ cədvələ (başlama tarixinin
+    ilinə/ayına aid tək bir sətir kimi) köçürür — beləliklə əvvəllər
+    daxil edilmiş xəstəlik/məzuniyyət ödənişləri "yoxa çıxmır". Ay
+    sərhədini keçən köhnə qeydlər üçün bu, YALNIZ TƏXMİNİ bir bərpadır
+    (bütün məbləğ başlama ayına yazılır) — belə qeydləri "İş
+    buraxmaları" pəncərəsindən açıb aylar üzrə düzgün bölmək tövsiyə
+    olunur."""
+    engine = db.engine
+    inspector = inspect(engine)
+    if "leave_requests" not in inspector.get_table_names():
+        return
+    columns = {c["name"] for c in inspector.get_columns("leave_requests")}
+    if "payment_amount" not in columns:
+        return  # təzə DB — bu köhnə sütun heç yaranmayıb, ediləcək iş yoxdur
+
+    with engine.begin() as conn:
+        rows = conn.execute(text(
+            "SELECT id, start_date, payment_amount FROM leave_requests "
+            "WHERE payment_amount IS NOT NULL AND payment_amount != 0"
+        )).fetchall()
+        migrated = 0
+        for row in rows:
+            existing = conn.execute(text(
+                "SELECT COUNT(*) FROM leave_request_monthly_payments WHERE leave_request_id = :id"
+            ), {"id": row.id}).scalar()
+            if existing:
+                continue  # bu qeyd üçün artıq (yeni formadan) aylıq bölgü var — toxunma
+            start = row.start_date
+            if not start:
+                continue
+            year, month = int(str(start)[:4]), int(str(start)[5:7])
+            conn.execute(text(
+                "INSERT INTO leave_request_monthly_payments (leave_request_id, year, month, amount) "
+                "VALUES (:lr_id, :year, :month, :amount)"
+            ), {"lr_id": row.id, "year": year, "month": month, "amount": row.payment_amount})
+            migrated += 1
+        if migrated:
+            print(f"[db_sync] {migrated} köhnə xəstəlik/məzuniyyət ödənişi yeni (ay üzrə) cədvələ köçürüldü.")

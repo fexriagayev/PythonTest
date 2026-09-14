@@ -3,16 +3,37 @@
 
 Hazırkı mərhələdə YALNIZ "gross → net" istiqaməti dəstəklənir
 (PayrollSettings.calc_method == "gross_to_net"). Hər əməkdaşın maaşı GROSS
-(bruto) qəbul edilir və aşağıdakı 4 tutulma bu məbləğdən çıxılaraq NET
+(bruto) qəbul edilir və aşağıdakı tutulmalar bu məbləğdən çıxılaraq NET
 tapılır:
 
     Net = Gross - (Gəlir vergisi + DSMF + İşsizlikdən sığorta + İTS)
 
-Dərəcələr 2026-cı il üçün Azərbaycan qanunvericiliyinə uyğundur (mənbə:
-Vergi Məcəlləsi 101-ci maddə, "Sosial sığorta haqqında" və "Tibbi sığorta
-haqqında" qanunlar — bax TAX_TABLES aşağıda). Qanunvericilik hər il dəyişə
-bildiyi üçün bu ədədlər BURADA, tək yerdə saxlanılır ki, növbəti il üçün
-yenilənməsi asan olsun.
+Bu tutulmaların (və işəgötürənin ƏLAVƏ ödədiyi, əməkdaşın NET-inə təsir
+ETMƏYƏN DSMF/işsizlik/İTS "şirkət payı" haqlarının) DÜSTURLARI burada
+sabit Python kodu kimi YOX, "Vergi formulaları" səhifəsindən redaktə
+oluna bilən SKRİPT kimi `PayrollTaxFormula` cədvəlində saxlanılır (bax:
+app.models.payroll.tax_formula) və `app.services.formula_engine`-in
+MƏHDUDLAŞDIRILMIŞ (sandboxed) mühərriki ilə icra olunur.
+
+VACİB: heç bir "gizli default" YOXDUR — hər hansı kod (income_tax, dsmf,
+unemployment, medical, employer_dsmf, employer_unemployment,
+employer_medical) üçün "Vergi formulaları" səhifəsindən HEÇ OLMASA bir
+versiya əlavə edilməyibsə, həmin tutulma/haqq 0 kimi hesablanır — bu,
+qəsdəndir (istifadəçi görmədiyi/təsdiqləmədiyi bir rəqəmin SƏSSİZCƏ
+tətbiq olunmasının qarşısını almaq üçün).
+
+Gəlir vergisi üçün YALNIZ 1 formula var (sektor-əsaslı ayrım YOXDUR —
+şirkət daxilində eyni əməkhaqqı siyahısında 2 fərqli gəlir vergisi
+hesablanması olmur).
+
+XƏSTƏLİK PULU — XÜSUSİ VERGİ REJİMİ (bax: calculate_gross_to_net,
+_vacation_and_sick_pay): xəstəlik pulundan YALNIZ gəlir vergisi tutulur —
+DSMF/işsizlik/İTS (nə əməkdaş, nə işəgötürən payı) ONA TƏTBİQ OLUNMUR.
+Gəlir vergisi isə İKİ addımda hesablanıb CƏMLƏNİR: (1) hər bir xəstəlik
+ödənişinin ÖZÜ üzərindən (ayrılıqda, müstəqil), (2) ayın sonunda TAM
+gross (xəstəlik pulu daxil) üzərindən YENƏ. Eyni ayda bir neçə xəstəlik
+ödənişi olarsa, HƏR BİRİ üçün (1)-ci addım AYRI-AYRI hesablanıb sonda
+(2) ilə birlikdə cəmlənir.
 
 "net → gross → net" istiqaməti (PayrollSettings.calc_method ==
 "net_to_gross") HƏLƏLİK İMPLEMENTASİYA OLUNMAYIB — istifadəçi ilə
@@ -24,82 +45,117 @@ from app.models import (
     EmploymentContractNotification,
     LeaveRequest,
     LeaveReason,
+    LeaveRequestMonthlyPayment,
     SalaryAddition,
     PayrollSettings,
     PayrollRun,
     PayrollEntry,
+    PayrollTaxFormula,
     TabelEmployeeRow,
 )
 from app.services.tabel_service import month_bounds, _weekend_days, _holiday_marks
+from app.services.formula_engine import evaluate_formula, FormulaError
 
 # ---------------------------------------------------------------------------
-# Vergi/tutulma cədvəlləri (2026)
+# Vergi/tutulma formulaları — bax modul-səviyyəli qeyd yuxarıda
 # ---------------------------------------------------------------------------
 
 
-def _income_tax_private_non_oil(gross):
-    """Neft-qaz sahəsində fəaliyyəti olmayan və qeyri-dövlət sektoru (2026)."""
-    if gross <= 200:
+def _run_tax_formula(code, variables, as_of_date):
+    """`code` üçün `as_of_date`-də (adətən hesablanan dövrün son günü)
+    QÜVVƏDƏ olan skripti tapıb verilmiş dəyişənlərlə (bax:
+    formula_engine.evaluate_formula — `variables` dict, HƏMİŞƏ ən azı
+    `gross` və `sick` ehtiva edir) icra edir — bax:
+    PayrollTaxFormula.get_script_for_date (köhnə dövr üçün YENİDƏN
+    hesablama aparılanda O DÖVRÜN öz formulası işləyir, indiki YOX).
+    Heç bir versiya konfiqurasiya olunmayıbsa (script=None) — 0 qaytarır
+    (görünməz bir default TƏTBİQ OLUNMUR). Skriptdə xəta olsa (məs. kimsə
+    "Vergi formulaları" səhifəsindən pozğun bir skript yadda saxlayıbsa),
+    hesablamanı SƏSSİZCƏ yanlış davam etdirmək əvəzinə aydın bir istisna
+    qaldırırıq — bu, tabel təsdiqi/əməkhaqqı generasiyası zamanı aşkar
+    görünən bir xəta mesajına çevrilməlidir, gizli səhv məbləğə yox."""
+    script = PayrollTaxFormula.get_script_for_date(code, as_of_date)
+    if script is None:
         return 0.0
-    if gross <= 2500:
-        return (gross - 200) * 0.03
-    if gross <= 8000:
-        return 75 + (gross - 2500) * 0.10
-    return 625 + (gross - 8000) * 0.14
+    try:
+        return evaluate_formula(script, variables)
+    except FormulaError as e:
+        raise FormulaError(f"'{code}' vergi formulası icra edilə bilmədi: {e}")
 
 
-def _income_tax_state_oil_gas(gross):
-    """Neft-qaz sahəsi / dövlət sektoru — güzəştsiz, Vergi Məcəlləsi 101.1."""
-    if gross <= 2500:
-        return gross * 0.14
-    return 350 + (gross - 2500) * 0.25
+def calculate_gross_to_net(gross, as_of_date=None, sick_pay_episodes=None):
+    """Verilmiş GROSS məbləğdən tutulmaları (əməkdaş payı) VƏ işəgötürənin
+    əlavə ödədiyi (şirkət payı, əməkdaşın NET-inə təsir ETMƏYƏN) haqları
+    hesablayır. Mənfi əməkhaqqı (və ya 0) üçün hamısı 0 qaytarılır.
 
+    `as_of_date`: HANSI TARİX üçün qüvvədə olan formulalar işləsin —
+    adətən hesablanan Tabel dövrünün son günü verilir. Buraxılsa (None),
+    BU GÜN üçün qüvvədə olan versiyalar işləyir (məs. sınaq/əl ilə
+    hesablama zamanı münasib defolt).
 
-def _dsmf(gross):
-    """Məcburi dövlət sosial sığorta haqqı — işçi payı (hər iki sektor
-    üçün eynidir; dəyişməyib)."""
-    if gross <= 200:
-        return gross * 0.03
-    return 6 + (gross - 200) * 0.10
+    `sick_pay_episodes`: bu dövrdəki HƏR BİR xəstəlik pulu ödənişinin öz
+    məbləği (cəm YOX, siyahı — eyni ayda bir neçə xəstəlik vərəqəsi ola
+    bilər).
 
+    VACİB — xəstəlik pulunun tutulmalara necə təsir etdiyini artıq
+    SİSTEM YOX, HƏR FORMULANIN ÖZÜ təyin edir: hər formulaya `gross`
+    (TAM, xəstəlik pulu daxil) İLƏ YANAŞI `sick` (bu dövrün xəstəlik
+    pulu cəmi) DƏ ötürülür (bax: formula_engine.evaluate_formula).
+    Formula istəsə `gross - sick` yazıb xəstəlik pulunu bazadan çıxara
+    bilər (məs. DSMF/işsizlik/İTS formulaları üçün adətəndir), istəməsə
+    sadəcə `gross` istifadə edir (məs. gəlir vergisi TAM gross üzərindən
+    hesablanır, `sick`-i işlətmir). GƏLƏCƏKDƏ bənzər istisnalar üçün eyni
+    qaydada yeni dəyişənlər əlavə oluna bilər.
 
-def _unemployment(gross):
-    """İşsizlikdən sığorta haqqı — 0.5% (dəyişməyib)."""
-    return gross * 0.005
-
-
-def _medical(gross):
-    """İcbari tibbi sığorta haqqı — 2500 manatadək 2%, yuxarısı 0.5%."""
-    if gross <= 2500:
-        return gross * 0.02
-    return 50 + (gross - 2500) * 0.005
-
-
-TAX_TABLES = {
-    "private_non_oil": _income_tax_private_non_oil,
-    "state_oil_gas": _income_tax_state_oil_gas,
-}
-
-
-def calculate_gross_to_net(gross, sector="private_non_oil"):
-    """Verilmiş GROSS məbləğdən 4 tutulmanı və NET nəticəni hesablayır.
-    Mənfi əməkhaqqı (və ya 0) üçün hamısı 0 qaytarılır."""
+    Gəlir vergisi ayrıca İKİ addımda hesablanır və CƏMLƏNİR: (1) HƏR bir
+    xəstəlik ödənişinin ÖZÜ (ayrılıqda, müstəqil bir "gross" kimi)
+    üzərindən gəlir vergisi düsturu tətbiq olunur; (2) ayın sonunda TAM
+    gross (xəstəlik pulu daxil olmaqla) üzərindən YENƏ gəlir vergisi
+    düsturu tətbiq olunur. Yekun gəlir vergisi bunların CƏMİDİR (nümunə:
+    340.66 AZN xəstəlik pulu + 927.64 AZN tam gross → 4.22 + 21.83 =
+    26.05 AZN gəlir vergisi)."""
+    if as_of_date is None:
+        from datetime import date
+        as_of_date = date.today()
     gross = max(float(gross or 0), 0.0)
+    sick_pay_episodes = [max(float(x or 0), 0.0) for x in (sick_pay_episodes or [])]
+    sick_pay_total = round(sum(sick_pay_episodes), 2)
+
     if gross == 0:
         return {
             "income_tax": 0.0, "dsmf": 0.0, "unemployment": 0.0,
             "medical": 0.0, "net": 0.0,
+            "employer_dsmf": 0.0, "employer_unemployment": 0.0,
+            "employer_medical": 0.0, "employer_cost_total": 0.0,
         }
 
-    income_tax_fn = TAX_TABLES.get(sector, _income_tax_private_non_oil)
-    income_tax = round(income_tax_fn(gross), 2)
-    dsmf = round(_dsmf(gross), 2)
-    unemployment = round(_unemployment(gross), 2)
-    medical = round(_medical(gross), 2)
+    main_vars = {"gross": gross, "sick": sick_pay_total}
+
+    income_tax_on_full_gross = _run_tax_formula("income_tax", main_vars, as_of_date)
+    income_tax_on_sick_episodes = sum(
+        # Hər epizodun ÖZ məbləği üzərində müstəqil hesablama — burada
+        # `sick`-i sıfır veririk (bu, "bu məbləğdən xəstəlik payını çıx"
+        # demək deyil, artıq elə TAM özü xəstəlik pulu olan bir hesablamadır).
+        _run_tax_formula("income_tax", {"gross": amt, "sick": 0.0}, as_of_date)
+        for amt in sick_pay_episodes
+    )
+    income_tax = round(income_tax_on_full_gross + income_tax_on_sick_episodes, 2)
+
+    dsmf = round(_run_tax_formula("dsmf", main_vars, as_of_date), 2)
+    unemployment = round(_run_tax_formula("unemployment", main_vars, as_of_date), 2)
+    medical = round(_run_tax_formula("medical", main_vars, as_of_date), 2)
     net = round(gross - income_tax - dsmf - unemployment - medical, 2)
+
+    employer_dsmf = round(_run_tax_formula("employer_dsmf", main_vars, as_of_date), 2)
+    employer_unemployment = round(_run_tax_formula("employer_unemployment", main_vars, as_of_date), 2)
+    employer_medical = round(_run_tax_formula("employer_medical", main_vars, as_of_date), 2)
+    employer_cost_total = round(gross + employer_dsmf + employer_unemployment + employer_medical, 2)
+
     return {
         "income_tax": income_tax, "dsmf": dsmf, "unemployment": unemployment,
         "medical": medical, "net": net,
+        "employer_dsmf": employer_dsmf, "employer_unemployment": employer_unemployment,
+        "employer_medical": employer_medical, "employer_cost_total": employer_cost_total,
     }
 
 
@@ -174,22 +230,64 @@ def _auto_vacation_pay(employee, leave_request, period_start, period_end, monthl
     return round(daily_rate * days, 2)
 
 
+def _monthly_payments_for(employee_id, year, month, is_annual=None, is_sick=None):
+    """Bu (year, month) üçün AYRICA daxil edilmiş məzuniyyət/xəstəlik
+    ödənişlərini qaytarır (bax: LeaveRequestMonthlyPayment,
+    leave_request_form.html-dəki "hər ay üçün ödəniş" sahələri). Ay
+    sərhədini keçən (məs. 20.07 — 02.08) bir iş buraxması üçün BU
+    funksiya YALNIZ sorğulanan aya aid məbləği qaytarır — digər ayın
+    məbləği bu ayın hesablamasına HEÇ QARIŞMIR (hər ayın öz PayrollEntry-i
+    yalnız özünə aid hissəni görür)."""
+    q = (
+        LeaveRequestMonthlyPayment.query
+        .join(LeaveRequest, LeaveRequestMonthlyPayment.leave_request_id == LeaveRequest.id)
+        .join(LeaveReason, LeaveRequest.leave_reason_id == LeaveReason.id)
+        .filter(
+            LeaveRequest.employee_id == employee_id,
+            LeaveRequestMonthlyPayment.year == year,
+            LeaveRequestMonthlyPayment.month == month,
+        )
+    )
+    if is_annual is not None:
+        q = q.filter(LeaveReason.is_annual_leave == is_annual)
+    if is_sick is not None:
+        q = q.filter(LeaveReason.is_sick_leave == is_sick)
+    return q.all()
+
+
 def _vacation_and_sick_pay(employee, period_start, period_end, monthly_salary, settings):
+    target_year, target_month = period_start.year, period_start.month
+
     vacation_total = 0.0
-    for lr in _leave_requests_overlapping(employee.id, period_start, period_end, is_annual=True):
-        if settings.vacation_pay_mode == "auto":
+    if settings.vacation_pay_mode == "auto":
+        # Avtomatik rejim AYRI-AY bölgüsü tələb etmir — hər dövr üçün öz
+        # düsturu ilə (orta gündəlik qazanc x bu dövrə düşən gün sayı)
+        # birbaşa hesablanır, ona görə hələ də köhnə (tarix aralığı
+        # üst-üstə düşməsinə əsaslanan) yoxlamadan istifadə edir.
+        for lr in _leave_requests_overlapping(employee.id, period_start, period_end, is_annual=True):
             vacation_total += _auto_vacation_pay(
                 employee, lr, period_start, period_end, monthly_salary
             )
-        else:
-            vacation_total += float(lr.payment_amount or 0)
+    else:
+        vacation_total = sum(
+            float(p.amount or 0)
+            for p in _monthly_payments_for(employee.id, target_year, target_month, is_annual=True)
+        )
 
-    sick_total = 0.0
-    for lr in _leave_requests_overlapping(employee.id, period_start, period_end, is_sick=True):
-        # Xəstəlik pulu hazırda yalnız manual rejimdə dəstəklənir (bax modul qeydi).
-        sick_total += float(lr.payment_amount or 0)
+    # `sick_episodes`: HƏR bir xəstəlik ödənişinin (bu AYA aid hissəsi) öz
+    # məbləği AYRI-AYRI saxlanılır (cəm YOX) — çünki gəlir vergisi
+    # baxımından hər biri MÜSTƏQİL şəkildə vergiyə cəlb olunur (bax:
+    # calculate_gross_to_net-dəki `sick_pay_episodes` izahı). Ay sərhədini
+    # keçən bir xəstəlik vərəqəsi üçün BU ayın məbləği ilə DİGƏR ayın
+    # məbləği ayrı-ayrı LeaveRequestMonthlyPayment sətirləridir — hər biri
+    # YALNIZ öz ayının PayrollEntry-də görünür.
+    sick_episodes = [
+        round(float(p.amount or 0), 2)
+        for p in _monthly_payments_for(employee.id, target_year, target_month, is_sick=True)
+    ]
 
-    return round(vacation_total, 2), round(sick_total, 2)
+    sick_total = round(sum(sick_episodes), 2)
+    return round(vacation_total, 2), sick_total, sick_episodes
 
 
 # ---------------------------------------------------------------------------
@@ -288,7 +386,7 @@ def recalculate_entry(entry):
         monthly_salary * (worked_days / norm_days) if norm_days else 0.0
     )
 
-    vacation_pay, sick_pay = _vacation_and_sick_pay(
+    vacation_pay, sick_pay, sick_episodes = _vacation_and_sick_pay(
         employee, period_start, period_end, monthly_salary, settings
     )
 
@@ -333,12 +431,21 @@ def recalculate_entry(entry):
     )
     entry.gross_total = round(gross_total, 2)
 
-    result = calculate_gross_to_net(gross_total, sector=settings.sector)
+    # `as_of_date=period_end`: bu dövr üçün YENİDƏN hesablama aparılanda
+    # (məs. il sonra bir tabel düzəldilib təsdiqlənəndə) O DÖVRDƏ qüvvədə
+    # olmuş vergi formulaları işləsin, BU GÜNKÜ (sonradan dəyişmiş)
+    # formulalar YOX — bax: PayrollTaxFormula.get_script_for_date.
+    result = calculate_gross_to_net(gross_total, as_of_date=period_end, sick_pay_episodes=sick_episodes)
     entry.income_tax = result["income_tax"]
     entry.dsmf_amount = result["dsmf"]
     entry.unemployment_amount = result["unemployment"]
     entry.medical_amount = result["medical"]
     entry.net_total = round(result["net"] - float(entry.deductions_total or 0), 2)
+
+    entry.employer_dsmf = result["employer_dsmf"]
+    entry.employer_unemployment = result["employer_unemployment"]
+    entry.employer_medical = result["employer_medical"]
+    entry.employer_cost_total = result["employer_cost_total"]
     return entry
 
 

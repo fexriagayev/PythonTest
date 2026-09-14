@@ -116,6 +116,12 @@ document.addEventListener("DOMContentLoaded", function () {
     // Cəmi tutulma — bütün yuxarıdakı tutulmaların cəmi (hesablanır, server-də toplanır):
     { title: "{{ t('payroll_col_total_deductions') }}", field: "total_deductions", width: 130, sorter: "number", bottomCalc: "sum" },
     { title: "{{ t('payroll_col_net') }}", field: "net_total", width: 120, sorter: "number", bottomCalc: "sum" },
+    // Şirkətin ƏLAVƏ ödədiyi haqlar — əməkdaşın NET-inə TƏSİR ETMİR,
+    // gross_total-ın üzərinə şirkətin əlavə xərci kimi gəlir:
+    { title: "{{ t('payroll_col_employer_dsmf') }}", field: "employer_dsmf", width: 130, sorter: "number" },
+    { title: "{{ t('payroll_col_employer_unemployment') }}", field: "employer_unemployment", width: 150, sorter: "number" },
+    { title: "{{ t('payroll_col_employer_medical') }}", field: "employer_medical", width: 120, sorter: "number" },
+    { title: "{{ t('payroll_col_employer_cost_total') }}", field: "employer_cost_total", width: 140, sorter: "number", bottomCalc: "sum" },
     { title: "{{ t('note_label') }}", field: "note", headerFilter: "input" }
   ];
 
@@ -141,7 +147,8 @@ document.addEventListener("DOMContentLoaded", function () {
         "monthly_salary", "norm_days", "worked_days", "base_amount",
         "vacation_pay", "sick_pay", "additions_total", "gross_total",
         "income_tax", "dsmf_amount", "unemployment_amount", "medical_amount",
-        "deductions_total", "total_deductions", "net_total"
+        "deductions_total", "total_deductions", "net_total",
+        "employer_dsmf", "employer_unemployment", "employer_medical", "employer_cost_total"
       ],
       extraRowActions: function (data) {
         if (!canEdit || !data.entry_id || payrollApproved) return [];

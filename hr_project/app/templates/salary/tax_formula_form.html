@@ -1,0 +1,106 @@
+{% extends "modal_form_base.html" %}
+{% set form_title = (t('tax_formula_edit_version_title') if version else t('tax_formula_add_version_title')) ~ ' — ' ~ name %}
+{% set form_action = url_for('salary.edit_tax_formula_version', version_id=version.id) if version else url_for('salary.add_tax_formula_version', code=code) %}
+{% set cancel_url = url_for('salary.tax_formula_history', code=code) if version else url_for('salary.list_tax_formulas') %}
+{% set form_max_width = '700px' %}
+
+{% block form_fields %}
+  <label>{{ t('tax_formula_valid_from') }}</label>
+  <input type="date" name="valid_from" value="{{ valid_from }}" required>
+  <label>{{ t('tax_formula_valid_to') }}</label>
+  <input type="date" name="valid_to" value="{{ valid_to }}">
+  <p class="tax-formula-hint">{{ t('tax_formula_valid_to_hint') }}</p>
+
+  <p class="tax-formula-hint">{{ t('tax_formula_syntax_hint') }}</p>
+
+  <label>{{ t('tax_formula_script_label') }}</label>
+  <textarea name="script" id="taxFormulaScript" class="tax-formula-script-input" rows="14" spellcheck="false">{{ script }}</textarea>
+
+  <div class="dx-modal-form-single-col tax-formula-test-panel">
+    <label>{{ t('tax_formula_test_label') }}</label>
+    <div class="tax-formula-test-row">
+      <input type="number" step="0.01" id="taxFormulaTestGross" value="1000" placeholder="{{ t('tax_formula_test_gross_placeholder') }}">
+      <input type="number" step="0.01" id="taxFormulaTestSick" value="0" placeholder="{{ t('tax_formula_test_sick_placeholder') }}">
+      <button type="button" id="taxFormulaTestBtn" class="btn btn-sm">{{ t('tax_formula_test_btn') }}</button>
+      <span id="taxFormulaTestResult" class="tax-formula-test-result"></span>
+    </div>
+  </div>
+
+  {% if version and current_user.has_perm('SALARY', 'can_delete') %}
+  <div class="dx-modal-form-single-col">
+    <button type="button" id="taxFormulaDeleteBtn" class="btn btn-sm btn-danger">{{ t('tax_formula_delete_version_btn') }}</button>
+  </div>
+  {% endif %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  const testBtn = document.getElementById("taxFormulaTestBtn");
+  const scriptInput = document.getElementById("taxFormulaScript");
+  const grossInput = document.getElementById("taxFormulaTestGross");
+  const sickInput = document.getElementById("taxFormulaTestSick");
+  const resultSpan = document.getElementById("taxFormulaTestResult");
+  if (testBtn) {
+    testBtn.addEventListener("click", function () {
+      resultSpan.textContent = "…";
+      resultSpan.className = "tax-formula-test-result";
+      fetch("/salary/tax-formulas/test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest" },
+        body: JSON.stringify({ script: scriptInput.value, gross: grossInput.value, sick: sickInput.value })
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+          if (data.success) {
+            resultSpan.textContent = data.result;
+            resultSpan.className = "tax-formula-test-result tax-formula-test-result-ok";
+          } else {
+            resultSpan.textContent = data.error;
+            resultSpan.className = "tax-formula-test-result tax-formula-test-result-error";
+          }
+        })
+        .catch(function () {
+          resultSpan.textContent = "{{ t('tax_formula_test_network_error') }}";
+          resultSpan.className = "tax-formula-test-result tax-formula-test-result-error";
+        });
+    });
+  }
+
+  const deleteBtn = document.getElementById("taxFormulaDeleteBtn");
+  if (deleteBtn) {
+    deleteBtn.addEventListener("click", function () {
+      if (!confirm(t("grid_confirm_delete"))) return;
+      fetch("{{ url_for('salary.delete_tax_formula_version', version_id=version.id) if version else '' }}", {
+        method: "POST",
+        headers: { "X-Requested-With": "XMLHttpRequest" }
+      })
+        .then(function (r) {
+          if (!r.ok) throw new Error("Delete failed with status " + r.status);
+          // Eyni məntiq: uğurlu "Yadda saxla"dan sonra istifadə olunan.
+          // Əgər bu forma NƏSƏ (tarixçə pəncərəsi) ÜZƏRİNDƏ açılıbsa, ora
+          // geri qayıt (bağlama!); yoxdursa bağla. Hər iki halda arxa
+          // fondakı çağırıcını (siyahı/tarixçə grid-i) yenilə.
+          if (typeof modalStateStack !== "undefined" && modalStateStack.length) {
+            var restored = restoreParentModal();
+            if (restored && typeof window.__currentModalSavedCallback === "function") {
+              window.__currentModalSavedCallback();
+            }
+          } else {
+            hideModal();
+            if (typeof window.__currentModalSavedCallback === "function") {
+              window.__currentModalSavedCallback();
+            }
+          }
+        })
+        .catch(function (err) {
+          console.error("Delete failed:", err);
+          if (typeof DevExpress !== "undefined" && DevExpress.ui && DevExpress.ui.notify) {
+            DevExpress.ui.notify(t("grid_delete_error"), "error", 3000);
+          }
+        });
+    });
+  }
+})();
+</script>
+{% endblock %}

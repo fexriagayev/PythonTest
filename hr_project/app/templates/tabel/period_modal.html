@@ -27,16 +27,12 @@
       {% if not period or not period.is_approved %}
       <button type="button" id="generateBtn" class="btn">{{ t('tabel_generate_btn') }}</button>
       {% endif %}
-      {% if period %}
-      <button type="button" id="approveBtn" class="btn btn-secondary">
-        {{ t('tabel_unapprove_btn') if period.is_approved else t('tabel_approve_btn') }}
+      <button type="button" id="approveBtn" class="btn btn-secondary" style="{{ '' if period else 'display:none;' }}">
+        {{ t('tabel_unapprove_btn') if period and period.is_approved else t('tabel_approve_btn') }}
       </button>
-      {% endif %}
-      {% if period and period.is_approved %}
-      <button type="button" id="goToPayrollBtn" class="btn btn-secondary">
+      <button type="button" id="goToPayrollBtn" class="btn btn-secondary" style="{{ '' if period and period.is_approved else 'display:none;' }}">
         {{ t('tabel_go_to_payroll_btn') }}
       </button>
-      {% endif %}
     </div>
   </div>
 
@@ -195,6 +191,32 @@
   // (bax: loadForSelectedPeriod aşağıda).
   let currentPeriodId = periodId;
 
+  // DÜZƏLİŞ: əvvəllər approveBtn/goToPayrollBtn server-tərəfdə (Jinja)
+  // "yalnız period mövcuddursa göstər" şərti ilə gated idi — "Yeni dövr"
+  // rejimində (periodId=null ilə başlanır) bu, o düymələrin HEÇ VAXT
+  // DOM-a əlavə OLUNMAMASI demək idi, hətta avtomatik generasiya
+  // sonradan real bir dövr yaratsa belə (server-tərəfli şərt YALNIZ İLK
+  // render-də bir dəfə qiymətləndirilir). İndi düymələr HƏMİŞƏ DOM-dadır
+  // (bax: yuxarıdakı HTML), görünürlüyü isə bu funksiya ilə DİNAMİK
+  // idarə olunur — applyMatrix() (aşağıda) hər dövr dəyişəndə/yaradılanda
+  // bunu çağırır.
+  const approveBtnEl = document.getElementById("approveBtn");
+  const goToPayrollBtnEl = document.getElementById("goToPayrollBtn");
+  const generateBtnEl = document.getElementById("generateBtn");
+  function refreshActionButtons(isApprovedNow) {
+    if (approveBtnEl) {
+      approveBtnEl.style.display = currentPeriodId ? "" : "none";
+      approveBtnEl.textContent = isApprovedNow ? t("tabel_unapprove_btn") : t("tabel_approve_btn");
+    }
+    if (goToPayrollBtnEl) {
+      goToPayrollBtnEl.style.display = (currentPeriodId && isApprovedNow) ? "" : "none";
+    }
+    if (generateBtnEl) {
+      generateBtnEl.style.display = isApprovedNow ? "none" : "";
+    }
+  }
+  refreshActionButtons(isApproved); // statik "edit" rejimi üçün ilkin vəziyyət
+
   // Ay/İl DƏYİŞƏNDƏ (yalnız "Yeni dövr" rejimində, periodId=null olduqda)
   // çağırılır — VƏ modalın İLK açılışında da (bax: runWhenModalShown).
   // Məqsəd: istifadəçi hansı Ay/İl seçsə seçsin (mövcud dövr olsa belə),
@@ -260,6 +282,10 @@
         readOnly,
         preloadedData
       );
+      // `readOnly` bu kontekstdə == "təsdiqlənib" (bax: aşağıdakı çağırışlar) —
+      // Təsdiqlə/Təsdiqi geri al/Əməkhaqqına keç düymələrini yeniləyirik ki,
+      // "Yeni dövr" rejimində belə (avtomatik generasiyadan sonra) düzgün görünsünlər.
+      refreshActionButtons(readOnly);
     }
 
     fetch("/tabel/lookup?year=" + encodeURIComponent(year) + "&month=" + encodeURIComponent(month), {
@@ -378,7 +404,7 @@
   const approveBtn = document.getElementById("approveBtn");
   if (approveBtn) {
     function requestApprove(extra) {
-      return fetch("/tabel/" + periodId + "/approve", {
+      return fetch("/tabel/" + currentPeriodId + "/approve", {
         method: "POST",
         headers: { "X-Requested-With": "XMLHttpRequest", "Content-Type": "application/json" },
         body: JSON.stringify(extra || {})
@@ -392,7 +418,7 @@
         if (typeof window.__currentModalSavedCallback === "function") {
           window.__currentModalSavedCallback();
         }
-        goToPeriod(periodId);
+        goToPeriod(currentPeriodId);
         return;
       }
       if (data.needs_confirmation) {
@@ -404,6 +430,7 @@
       alert(data.error || t("tabel_cell_error"));
     }
     approveBtn.addEventListener("click", function () {
+      if (!currentPeriodId) return; // düymə görünürsə bu baş verməməlidir, amma ehtiyat üçün
       requestApprove({}).then(onApproveResult);
     });
   }
@@ -411,7 +438,13 @@
   const goToPayrollBtn = document.getElementById("goToPayrollBtn");
   if (goToPayrollBtn) {
     goToPayrollBtn.addEventListener("click", function () {
-      window.location.href = "/salary/payroll?year={{ period.year if period }}&month={{ period.month if period }}";
+      // Dinamik il/ay: "Yeni dövr" rejimində {{ period.year }}/{{ period.month }}
+      // HƏMİŞƏ boşdur (server-tərəfdə heç bir dövr yox idi) — bunun əvəzinə
+      // seçici sahələrin CARİ dəyərlərini istifadə edirik (statik "edit"
+      // rejimində də bu sahələr elə server-dən düzgün dəyərlərlə doludur,
+      // sadəcə disabled-dir).
+      window.location.href = "/salary/payroll?year=" + encodeURIComponent(yearInput.value) +
+        "&month=" + encodeURIComponent(monthSelect.value);
     });
   }
 

@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}{{ t('tax_formulas_page_title') }}{% endblock %}
+{% block page_title %}{{ t('tax_formulas_page_title') }}{% endblock %}
+{% block content %}
+
+<p style="color:#888;font-size:0.85em;margin-top:-6px;">
+  {{ t('tax_formulas_page_hint') }}
+</p>
+
+<h4 class="tax-formula-section-title">{{ t('tax_formulas_section_employee') }}</h4>
+<p class="tax-formula-section-hint">{{ t('tax_formulas_section_employee_hint') }}</p>
+<div class="tax-formula-list">
+  {% for item in employee_items %}
+  <div class="tax-formula-card">
+    <div class="tax-formula-card-header">
+      <div>
+        <div class="tax-formula-card-title">{{ item.name }}</div>
+        {% if item.current %}
+        <div class="tax-formula-card-meta">
+          {{ t('tax_formula_valid_range') }}:
+          {{ item.current.valid_from.strftime('%d.%m.%Y') }} —
+          {{ item.current.valid_to.strftime('%d.%m.%Y') if item.current.valid_to else t('tax_formula_ongoing') }}
+        </div>
+        {% else %}
+        <div class="tax-formula-card-meta">{{ t('tax_formula_no_current_version') }}</div>
+        {% endif %}
+      </div>
+      <div class="tax-formula-card-actions">
+        <a class="btn btn-sm btn-secondary" href="{{ url_for('salary.tax_formula_history', code=item.code) }}" data-modal-link>
+          {{ t('tax_formula_history_btn') }} ({{ item.history_count }})
+        </a>
+        {% if current_user.has_perm('SALARY', 'can_edit') %}
+        <button type="button" class="btn btn-sm tax-formula-add-version-btn" data-code="{{ item.code }}">{{ t('tax_formula_add_version_btn') }}</button>
+        {% endif %}
+      </div>
+    </div>
+    {% if item.current %}
+    <pre class="tax-formula-preview">{{ item.current.script }}</pre>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+
+<h4 class="tax-formula-section-title">{{ t('tax_formulas_section_employer') }}</h4>
+<p class="tax-formula-section-hint">{{ t('tax_formulas_section_employer_hint') }}</p>
+<div class="tax-formula-list">
+  {% for item in employer_items %}
+  <div class="tax-formula-card tax-formula-card-employer">
+    <div class="tax-formula-card-header">
+      <div>
+        <div class="tax-formula-card-title">{{ item.name }}</div>
+        {% if item.current %}
+        <div class="tax-formula-card-meta">
+          {{ t('tax_formula_valid_range') }}:
+          {{ item.current.valid_from.strftime('%d.%m.%Y') }} —
+          {{ item.current.valid_to.strftime('%d.%m.%Y') if item.current.valid_to else t('tax_formula_ongoing') }}
+        </div>
+        {% else %}
+        <div class="tax-formula-card-meta">{{ t('tax_formula_no_current_version') }}</div>
+        {% endif %}
+      </div>
+      <div class="tax-formula-card-actions">
+        <a class="btn btn-sm btn-secondary" href="{{ url_for('salary.tax_formula_history', code=item.code) }}" data-modal-link>
+          {{ t('tax_formula_history_btn') }} ({{ item.history_count }})
+        </a>
+        {% if current_user.has_perm('SALARY', 'can_edit') %}
+        <button type="button" class="btn btn-sm tax-formula-add-version-btn" data-code="{{ item.code }}">{{ t('tax_formula_add_version_btn') }}</button>
+        {% endif %}
+      </div>
+    </div>
+    {% if item.current %}
+    <pre class="tax-formula-preview">{{ item.current.script }}</pre>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  document.querySelectorAll(".tax-formula-add-version-btn").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      openFormModal("/salary/tax-formulas/" + btn.dataset.code + "/add-version", function () {
+        window.location.reload();
+      });
+    });
+  });
+  document.querySelectorAll("[data-modal-link]").forEach(function (a) {
+    a.addEventListener("click", function (e) {
+      e.preventDefault();
+      openFormModal(a.getAttribute("href"));
+    });
+  });
+});
+</script>
+{% endblock %}
