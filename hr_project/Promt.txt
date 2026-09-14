@@ -1,12 +1,6 @@
 -əgər tabel təsdiqlənibsə, həmin dövr tabelə təsir edəcək dəyişikliklərə icazə verilməsin. (Məsələn həmin dövrə bayram/matəm əlavə etmək, iş buraxmaları əlavə etmək, maaşı dəyişmək, işçinin iş yeri məlumatlarını dəyişmək və s)
 bu barədə alert çıxsın ki, tabel təsdiqlənib 
--əməkhaqqı hesablananda bəzi ödənişlər ayın sonu yox, ortasında ödənilir. Məsələn Məzuniyyət pulu hər məzuniyyətə çxdığı tarixdə (əgər 2-3 dəfə çıxıbsa ödəniş də 2-3 dəfə olur), xəstəlik pulu, mükafat, Avans və sair.
-Və buna uyğun olaraq da əməkhaqqı ayda 1 neçə dəfə hesablana bilər. hər hesablanmanın nəticəsi banka ödəniş siyahısı göndərilir. Buna görə də Net məbləğ 1 neçə yerə bölünməlidir.
-Net məzuniyyət, Net mukafat, net avans, net xestelik, net maaş, net kompensasiya ve s və net yekun (butun net-lərin cemi). 
--növbəti net-gross hesablamasina keçməzdən əvvəl bizə bəzi dictionary-lər lazım olacaq. ONların strukturunu və funksionalını hazırlayaq. Tikinti şirkətində işçilər briqadalar şəklində müxtəlif obyektlərdə işləyirlər və
-ay ərzində gördükləri işə əsasən net maaşları formalaşır. Buna gorə bizə əvvəlcə obyektlər və briqadaları formalaşdırmaq lazımdır: 
 
--Obyekt (id, name, start_date, end_date, is_active, priority, fk_owner)
--Briqada (id, header (fk_employee), member (fk_employee), member (text),start_date, end_date, is_active, priority )
-mən strukturu təxmini Çəkdim, 
--Briqada yaradanda onun header-i mütləq olmalıdır (əməkdaş siyahısından seçilir). Lakin member bəzən mövcüd əməkdaş siyahısından seçilir, bəzən isə boş saxlanılır və əl ilə daxil edilir
+
+-Obyekt (id, name, start_date, end_date, is_active, priority, fk_owner (obyek cedvelinin ID-sine))
+-Briqada  (id, header_id (fk → Employee, MƏCBURİ), start_date, end_date, is_active, priority , member_name, member_id (fk_employee))
