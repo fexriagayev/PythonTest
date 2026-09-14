@@ -619,6 +619,7 @@ def delete_tax_formula_version(version_id):
 def test_tax_formula():
     """"Vergi formulaları" redaktə pəncərəsindəki "Nəticəni hesabla"
     düyməsi üçün — SAXLAMADAN, cari (hələ yadda saxlanılmamış) skripti
+<<<<<<< HEAD
     nümunə bir GROSS (və xəstəlik pulu) dəyəri ilə sınayır."""
     payload = request.get_json(silent=True) or {}
     script = payload.get("script", "")
@@ -632,6 +633,17 @@ def test_tax_formula():
         sick_val = 0.0
     try:
         result = evaluate_formula(script, {"gross": gross_val, "sick": sick_val})
+=======
+    nümunə bir GROSS dəyəri ilə sınayır."""
+    script = (request.get_json(silent=True) or {}).get("script", "")
+    gross = (request.get_json(silent=True) or {}).get("gross")
+    try:
+        gross_val = float(gross)
+    except (TypeError, ValueError):
+        return jsonify({"success": False, "error": "Gross ədəd olmalıdır."})
+    try:
+        result = evaluate_formula(script, gross_val)
+>>>>>>> 21ca2bddeb86717111e643c6503ac4af309eb6c6
     except FormulaError as e:
         return jsonify({"success": False, "error": str(e)})
     return jsonify({"success": True, "result": round(result, 2)})

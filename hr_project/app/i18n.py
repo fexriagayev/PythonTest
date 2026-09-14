@@ -786,12 +786,20 @@ TRANSLATIONS = {
     },
     "tax_formula_script_label": {"az": "Skript", "en": "Script"},
     "tax_formula_syntax_hint": {
+<<<<<<< HEAD
         "az": "Giriş dəyişənləri: gross (GROSS məbləği) və sick (bu dövrün xəstəlik pulu, 0 ola bilər — istəsəniz 'gross - sick' yazıb xəstəlik pulunu bazadan çıxara bilərsiniz, istəməsəniz sadəcə istifadə etməyin). Nəticəni 'result' dəyişəninə yazın. İcazə verilir: if/elif/else, for x in range(...), riyazi/müqayisə əməliyyatları, round/min/max/abs/int/float/range funksiyaları. Digər hər şey (import, funksiya/sinif tərifi, atribut girişi, while) TƏHLÜKƏSİZLİK ÜÇÜN qadağandır.",
         "en": "Input variables: gross (the GROSS amount) and sick (this period's sick pay, can be 0 — write 'gross - sick' if you want to exclude sick pay from the base, or simply don't use it). Write the result to a 'result' variable. Allowed: if/elif/else, for x in range(...), math/comparison operators, round/min/max/abs/int/float/range functions. Everything else (imports, function/class definitions, attribute access, while loops) is blocked for safety.",
     },
     "tax_formula_test_label": {"az": "Sına", "en": "Test"},
     "tax_formula_test_gross_placeholder": {"az": "Gross", "en": "Gross"},
     "tax_formula_test_sick_placeholder": {"az": "Xəstəlik pulu", "en": "Sick pay"},
+=======
+        "az": "Giriş dəyişəni: gross (GROSS məbləği). Nəticəni 'result' dəyişəninə yazın. İcazə verilir: if/elif/else, for x in range(...), riyazi/müqayisə əməliyyatları, round/min/max/abs/int/float/range funksiyaları. Digər hər şey (import, funksiya/sinif tərifi, atribut girişi, while) TƏHLÜKƏSİZLİK ÜÇÜN qadağandır.",
+        "en": "Input variable: gross (the GROSS amount). Write the result to a 'result' variable. Allowed: if/elif/else, for x in range(...), math/comparison operators, round/min/max/abs/int/float/range functions. Everything else (imports, function/class definitions, attribute access, while loops) is blocked for safety.",
+    },
+    "tax_formula_test_label": {"az": "Sına", "en": "Test"},
+    "tax_formula_test_gross_placeholder": {"az": "Gross", "en": "Gross"},
+>>>>>>> 21ca2bddeb86717111e643c6503ac4af309eb6c6
     "tax_formula_test_btn": {"az": "Nəticəni hesabla", "en": "Calculate"},
     "tax_formula_test_network_error": {"az": "Şəbəkə xətası.", "en": "Network error."},
 

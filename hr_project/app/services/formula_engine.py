@@ -14,6 +14,7 @@ prinsipi ilə işləyir ki, yeni, gözlənilməz Python konstruksiyaları
 default olaraq DAİM bloklu qalsın.
 
 Dəstəklənən skript dili (istifadəçiyə göstərilən qeydlərlə eynidir):
+<<<<<<< HEAD
   - Dəyişənlər: `gross` (GROSS məbləği) HƏMİŞƏ mövcuddur. `sick` (bu
     dövrə aid xəstəlik pulunun məbləği — 0 ola bilər) DƏ HƏMİŞƏ
     mövcuddur, İSTİFADƏ ETMƏK MƏCBURİ DEYİL: formula onu nəzərə almaq
@@ -24,6 +25,9 @@ Dəstəklənən skript dili (istifadəçiyə göstərilən qeydlərlə eynidir):
     dəyişənlər eyni qaydada əlavə oluna bilər (bax: payroll_service.py
     `_run_tax_formula` çağırışları) — köhnə formulalar (yeni dəyişəni
     İSTİFADƏ ETMƏYƏNLƏR) TƏSİR OLUNMUR.
+=======
+  - Dəyişən: `gross` (giriş, GROSS məbləği) HƏMİŞƏ mövcuddur.
+>>>>>>> 21ca2bddeb86717111e643c6503ac4af309eb6c6
   - Skript NƏTİCƏNİ `result` dəyişəninə YAZMALIDIR.
   - `if` / `elif` / `else` şərtləri.
   - `for x in range(...)` dövrləri (YALNIZ `range()` üzərində, iterasiya
@@ -134,6 +138,7 @@ def validate_formula(script):
     _validate(script)
 
 
+<<<<<<< HEAD
 def evaluate_formula(script, variables):
     """Skripti verilmiş dəyişənlərlə TƏHLÜKƏSİZ mühitdə icra edib `result`
     dəyişəninin son qiymətini (float) qaytarır.
@@ -144,6 +149,11 @@ def evaluate_formula(script, variables):
     edin — mövcud skriptlər (yeni dəyişəni istifadə ETMƏYƏNLƏR) heç bir
     şəkildə təsirlənmir, çünki ad sadəcə sandbox-un yerli miqyasında
     ƏLAVƏ bir dəyişən kimi görünür."""
+=======
+def evaluate_formula(script, gross):
+    """Skripti verilmiş `gross` dəyəri ilə TƏHLÜKƏSİZ mühitdə icra edib
+    `result` dəyişəninin son qiymətini (float) qaytarır."""
+>>>>>>> 21ca2bddeb86717111e643c6503ac4af309eb6c6
     tree = _validate(script)
     try:
         code = compile(tree, "<tax_formula>", "exec")
@@ -160,7 +170,11 @@ def evaluate_formula(script, variables):
         "range": _guarded_range,
     }
     sandbox_globals = {"__builtins__": safe_builtins}
+<<<<<<< HEAD
     sandbox_locals = {k: float(v or 0) for k, v in variables.items()}
+=======
+    sandbox_locals = {"gross": float(gross)}
+>>>>>>> 21ca2bddeb86717111e643c6503ac4af309eb6c6
 
     try:
         exec(code, sandbox_globals, sandbox_locals)

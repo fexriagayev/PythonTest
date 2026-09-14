@@ -61,11 +61,17 @@ from app.services.formula_engine import evaluate_formula, FormulaError
 # ---------------------------------------------------------------------------
 
 
+<<<<<<< HEAD
 def _run_tax_formula(code, variables, as_of_date):
     """`code` üçün `as_of_date`-də (adətən hesablanan dövrün son günü)
     QÜVVƏDƏ olan skripti tapıb verilmiş dəyişənlərlə (bax:
     formula_engine.evaluate_formula — `variables` dict, HƏMİŞƏ ən azı
     `gross` və `sick` ehtiva edir) icra edir — bax:
+=======
+def _run_tax_formula(code, gross, as_of_date):
+    """`code` üçün `as_of_date`-də (adətən hesablanan dövrün son günü)
+    QÜVVƏDƏ olan skripti tapıb `gross` ilə icra edir — bax:
+>>>>>>> 21ca2bddeb86717111e643c6503ac4af309eb6c6
     PayrollTaxFormula.get_script_for_date (köhnə dövr üçün YENİDƏN
     hesablama aparılanda O DÖVRÜN öz formulası işləyir, indiki YOX).
     Heç bir versiya konfiqurasiya olunmayıbsa (script=None) — 0 qaytarır
@@ -78,7 +84,11 @@ def _run_tax_formula(code, variables, as_of_date):
     if script is None:
         return 0.0
     try:
+<<<<<<< HEAD
         return evaluate_formula(script, variables)
+=======
+        return evaluate_formula(script, gross)
+>>>>>>> 21ca2bddeb86717111e643c6503ac4af309eb6c6
     except FormulaError as e:
         raise FormulaError(f"'{code}' vergi formulası icra edilə bilmədi: {e}")
 
@@ -95,6 +105,7 @@ def calculate_gross_to_net(gross, as_of_date=None, sick_pay_episodes=None):
 
     `sick_pay_episodes`: bu dövrdəki HƏR BİR xəstəlik pulu ödənişinin öz
     məbləği (cəm YOX, siyahı — eyni ayda bir neçə xəstəlik vərəqəsi ola
+<<<<<<< HEAD
     bilər).
 
     VACİB — xəstəlik pulunun tutulmalara necə təsir etdiyini artıq
@@ -114,6 +125,21 @@ def calculate_gross_to_net(gross, as_of_date=None, sick_pay_episodes=None):
     düsturu tətbiq olunur. Yekun gəlir vergisi bunların CƏMİDİR (nümunə:
     340.66 AZN xəstəlik pulu + 927.64 AZN tam gross → 4.22 + 21.83 =
     26.05 AZN gəlir vergisi)."""
+=======
+    bilər). Xəstəlik pulunun vergi rejimi FƏRQLİDİR (əməkdaşın xahişi
+    əsasında bu funksionallıq belə təyin edilib):
+      - Yalnız GƏLİR VERGİSİ tutulur — DSMF/işsizlik/İTS (nə əməkdaş, nə
+        də işəgötürən payı) xəstəlik pulundan TUTULMUR/hesablanmır — bu
+        3-ü üçün baza `gross - sick_pay_total`-dır (xəstəlik pulu tam
+        çıxılır).
+      - Gəlir vergisi İKİ addımda hesablanır və CƏMLƏNİR: (1) HƏR bir
+        xəstəlik ödənişinin ÖZÜ (ayrılıqda, müstəqil bir "gross" kimi)
+        üzərindən gəlir vergisi düsturu tətbiq olunur; (2) ayın sonunda
+        TAM gross (xəstəlik pulu daxil olmaqla) üzərindən YENƏ gəlir
+        vergisi düsturu tətbiq olunur. Yekun gəlir vergisi bunların
+        CƏMİDİR (nümunə: 340.66 AZN xəstəlik pulu + 927.64 AZN tam gross
+        → 4.22 + 21.83 = 26.05 AZN gəlir vergisi)."""
+>>>>>>> 21ca2bddeb86717111e643c6503ac4af309eb6c6
     if as_of_date is None:
         from datetime import date
         as_of_date = date.today()
@@ -129,6 +155,7 @@ def calculate_gross_to_net(gross, as_of_date=None, sick_pay_episodes=None):
             "employer_medical": 0.0, "employer_cost_total": 0.0,
         }
 
+<<<<<<< HEAD
     main_vars = {"gross": gross, "sick": sick_pay_total}
 
     income_tax_on_full_gross = _run_tax_formula("income_tax", main_vars, as_of_date)
@@ -149,6 +176,27 @@ def calculate_gross_to_net(gross, as_of_date=None, sick_pay_episodes=None):
     employer_dsmf = round(_run_tax_formula("employer_dsmf", main_vars, as_of_date), 2)
     employer_unemployment = round(_run_tax_formula("employer_unemployment", main_vars, as_of_date), 2)
     employer_medical = round(_run_tax_formula("employer_medical", main_vars, as_of_date), 2)
+=======
+    # DSMF/işsizlik/İTS (həm əməkdaş, həm işəgötürən payı) xəstəlik
+    # pulunu ÜMUMİYYƏTLƏ nəzərə ALMIR — baza tam gross-dan xəstəlik pulu
+    # çıxılaraq tapılır.
+    non_sick_base = max(gross - sick_pay_total, 0.0)
+
+    income_tax_on_full_gross = _run_tax_formula("income_tax", gross, as_of_date)
+    income_tax_on_sick_episodes = sum(
+        _run_tax_formula("income_tax", amt, as_of_date) for amt in sick_pay_episodes
+    )
+    income_tax = round(income_tax_on_full_gross + income_tax_on_sick_episodes, 2)
+
+    dsmf = round(_run_tax_formula("dsmf", non_sick_base, as_of_date), 2)
+    unemployment = round(_run_tax_formula("unemployment", non_sick_base, as_of_date), 2)
+    medical = round(_run_tax_formula("medical", non_sick_base, as_of_date), 2)
+    net = round(gross - income_tax - dsmf - unemployment - medical, 2)
+
+    employer_dsmf = round(_run_tax_formula("employer_dsmf", non_sick_base, as_of_date), 2)
+    employer_unemployment = round(_run_tax_formula("employer_unemployment", non_sick_base, as_of_date), 2)
+    employer_medical = round(_run_tax_formula("employer_medical", non_sick_base, as_of_date), 2)
+>>>>>>> 21ca2bddeb86717111e643c6503ac4af309eb6c6
     employer_cost_total = round(gross + employer_dsmf + employer_unemployment + employer_medical, 2)
 
     return {
