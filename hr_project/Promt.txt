@@ -1,18 +1,3 @@
--tabel generasiya olduqda eger ayin 1-i həftəsonudursa o xanaya I yazılır, lakin həmin gun hansisa bir işburaxma , bayram və ya matəm varsa onda I əvəzinə müvafiq tabel kodu yazılmalıdır.
--Şirkət hesabından tutulmalarda (DSMF, İTS, İşsizlik) xəstəlik pulu nəzərə alınmamalıdır. Ümumiyyətlə vergi tutulmalarında yazdığım formulalarda bunu nəzərə almaq mümkün olsun. Gələcəkdə buna oxşar istisnalar olarsa onu formulaya əlavə etmək üçün. məsələn (DSMF formulasinda 
-
-if (gross-sick) <= 200:
-    result = (gross-sick) * 0.03
-else:
-    result = 6 + ((gross-sick) - 200) * 0.10
-    
-    )
-
-yaza bilim ve program bunu basa duşsün
-
--Yeni tabel dövrü seçəndə tabel avtomatik generasiya olunur, lakin tabeli təsdiqlə düyməsi görünmür. Bunun üçün gərək tabeli manual generasiya edim. Təsdiq düyməsi avtomatik generasiyadan sonra da görünsün
--əgər əmək haqqı hesablanıbsa və təsdiq olunubsa, həmin dövrə aid tabeli dəyişmək olmasın.
--əgər əməkhaqqı təsdiq olunmayıbsa həmin dövrə aid tabel dəyişdikdə alert çxısın ki, bu dövrə aid əməkhaqqı 0-lanacaq
 -əgər tabel təsdiqlənibsə, həmin dövr tabelə təsir edəcək dəyişikliklərə icazə verilməsin. (Məsələn həmin dövrə bayram/matəm əlavə etmək, iş buraxmaları əlavə etmək, maaşı dəyişmək, işçinin iş yeri məlumatlarını dəyişmək və s)
 bu barədə alert çıxsın ki, tabel təsdiqlənib 
 -əməkhaqqı hesablananda bəzi ödənişlər ayın sonu yox, ortasında ödənilir. Məsələn Məzuniyyət pulu hər məzuniyyətə çxdığı tarixdə (əgər 2-3 dəfə çıxıbsa ödəniş də 2-3 dəfə olur), xəstəlik pulu, mükafat, Avans və sair.
