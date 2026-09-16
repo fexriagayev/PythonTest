@@ -1263,6 +1263,14 @@ def edit_holiday(holiday_id):
         error = _validate_holiday(holiday)
         if error:
             flash(error, "danger")
+            # VACİB: `holiday` artıq DB-də mövcud (persistent) bir sətirdir
+            # — yuxarıdakı _apply_holiday_form onu YADDAŞDA artıq dəyişdirib.
+            # Aşağıdakı render_form() (naviqasiya/icazə yoxlamaları üçün
+            # current_user.has_perm(...) VASİTƏSİLƏ) DB sorğusu tətikləyir —
+            # SQLAlchemy-nin AUTOFLUSH-u bu ETİBARSIZ dəyişikliyi (məs.
+            # artıq təsdiqlənmiş bir dövrə aid tarix) COMMIT olmadan belə
+            # faktiki DB-yə YAZA bilər. rollback() bunu ehtiyatla geri alır.
+            db.session.rollback()
             return render_form("hr/holiday_form.html", holiday=holiday)
         db.session.commit()
         flash("Bayram günü yeniləndi.", "success")

@@ -2014,6 +2014,39 @@ body.app-theme-sandstone .app-topbar {
   font-size: 0.8em;
 }
 
+/* --- Briqada üzvləri (sites/briqada_form.html) --- */
+
+.briqada-members-section {
+  margin-top: 4px;
+}
+
+.briqada-member-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.briqada-member-row select {
+  flex: 1;
+  min-width: 0;
+}
+
+.briqada-member-row input[type="text"] {
+  flex: 1;
+  min-width: 0;
+}
+
+.briqada-member-row select:disabled,
+.briqada-member-row input:disabled {
+  opacity: 0.5;
+  background: var(--bs-tertiary-bg, #f0f0f0);
+}
+
+.briqada-remove-member-btn {
+  flex: none;
+}
+
 .tax-formula-section-title {
   margin: 22px 0 4px;
 }

@@ -528,6 +528,14 @@ def add_tax_formula_version(code):
                 error = str(e)
         if error:
             flash(error, "danger")
+            # `_save_new_formula_version` (yuxarıda) overlap axtararkən
+            # BAŞQA (artıq DB-də olan) versiyaları avtomatik BAĞLAYA bilər
+            # (bax: funksiyanın öz qeydi) — sonra YENƏ DƏ overlap
+            # tapıb ValueError qaldırsa belə, bu YAN TƏSİR sessiyada
+            # asılı qalır. render_form() (icazə yoxlamaları vasitəsilə)
+            # DB sorğusu tətikləyir — autoflush bunu commit olmadan belə
+            # yaza bilər. rollback() hər ehtimala qarşı təhlükəsizdir.
+            db.session.rollback()
             return render_form(
                 "salary/tax_formula_form.html", code=code, name=name,
                 script=script, valid_from=request.form.get("valid_from"),
@@ -576,6 +584,10 @@ def edit_tax_formula_version(version_id):
                 error = str(e)
         if error:
             flash(error, "danger")
+            # Bax: add_tax_formula_version-dəki eyni qeyd — overlap
+            # axtarışının yan-təsirlərini (avtomatik bağlanan versiyalar)
+            # ehtiyatla geri alırıq.
+            db.session.rollback()
             return render_form(
                 "salary/tax_formula_form.html", code=code, name=name,
                 script=script, valid_from=request.form.get("valid_from"),

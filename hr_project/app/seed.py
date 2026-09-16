@@ -5,6 +5,7 @@ MODULES = [
     ("HR", "HR", "HR"),
     ("TABEL", "Tabel", "Timesheet"),
     ("SALARY", "Salary", "Salary"),
+    ("SITES", "Obyektlər və Briqadalar", "Sites and Brigades"),
 ]
 
 # Initial HR dictionary values — these power every combobox on the

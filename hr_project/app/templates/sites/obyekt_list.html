@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}{{ t('obyekt_page_title') }}{% endblock %}
+{% block page_title %}{{ t('obyekt_page_title') }}{% endblock %}
+{% block content %}
+
+<div class="toolbar">
+  {% if current_user.has_perm('SITES', 'can_add') %}
+  <button type="button" id="addObyektBtn" class="btn">+ {{ t('add') }}</button>
+  {% endif %}
+  <input type="text" id="searchBox" class="form-control" style="max-width:280px;" placeholder="{{ t('search_generic') }}">
+</div>
+
+<div id="obyektGrid"></div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const canEdit = {{ 'true' if current_user.has_perm('SITES', 'can_edit') else 'false' }};
+  const canDelete = {{ 'true' if current_user.has_perm('SITES', 'can_delete') else 'false' }};
+  const canAdd = {{ 'true' if current_user.has_perm('SITES', 'can_add') else 'false' }};
+
+  const table = createAdvancedGrid("obyektGrid", "sites_obyekts", {
+    ajaxURL: "{{ url_for('sites.api_obyekts') }}",
+    pagination: true,
+    paginationSize: 20,
+    placeholder: "{{ t('no_data_generic') }}",
+    columns: [
+      { title: "{{ t('col_id') }}", field: "id", width: 60, sorter: "number" },
+      { title: "{{ t('col_name') }}", field: "name", headerFilter: "input" },
+      { title: "{{ t('obyekt_col_owner') }}", field: "owner_name", headerFilter: "input" },
+      { title: "{{ t('obyekt_col_start_date') }}", field: "start_date", width: 120, sorter: "date" },
+      { title: "{{ t('obyekt_col_end_date') }}", field: "end_date", width: 120, sorter: "date" },
+      { title: "{{ t('obyekt_col_priority') }}", field: "priority", width: 90, sorter: "number" },
+      { title: "{{ t('col_active') }}", field: "is_active", width: 90, formatter: "tickCross" }
+    ]
+  }, {
+    idField: "id",
+    addUrl: canAdd ? "{{ url_for('sites.add_obyekt') }}" : null,
+    editUrlTemplate: canEdit ? "/sites/obyekts/edit/{id}" : null,
+    deleteUrlTemplate: canDelete ? "/sites/obyekts/delete/{id}" : null,
+  });
+
+  wireGlobalSearch(table, document.getElementById("searchBox"), ["name"]);
+
+  const addBtn = document.getElementById("addObyektBtn");
+  if (addBtn) {
+    addBtn.addEventListener("click", function () {
+      openFormModal("{{ url_for('sites.add_obyekt') }}", function () { table.setData(); });
+    });
+  }
+});
+</script>
+{% endblock %}

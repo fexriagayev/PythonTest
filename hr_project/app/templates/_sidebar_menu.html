@@ -34,6 +34,13 @@
 {% if current_user.has_perm('SALARY', 'can_view') %}
 <a href="{{ url_for('salary.list_tax_formulas') }}" class="sub {{ 'active' if request.endpoint in ['salary.list_tax_formulas','salary.add_tax_formula_version','salary.tax_formula_history'] }}">{{ t('tax_formulas_page_title') }}</a>
 {% endif %}
+<a href="{{ url_for('sites.list_obyekts') }}" class="{{ 'active' if request.blueprint=='sites' }}">
+  <i class="bi bi-diagram-3"></i> {{ t('sites_menu_label') }}
+</a>
+{% if current_user.has_perm('SITES', 'can_view') %}
+<a href="{{ url_for('sites.list_obyekts') }}" class="sub {{ 'active' if request.endpoint in ['sites.list_obyekts','sites.add_obyekt','sites.edit_obyekt','sites.delete_obyekt'] }}">{{ t('obyekt_page_title') }}</a>
+<a href="{{ url_for('sites.list_briqadalar') }}" class="sub {{ 'active' if request.endpoint in ['sites.list_briqadalar','sites.add_briqada','sites.edit_briqada','sites.delete_briqada'] }}">{{ t('briqadalar_page_title') }}</a>
+{% endif %}
 <a href="{{ url_for('dictionaries.index') }}" class="{{ 'active' if request.blueprint=='dictionaries' }}">
   <i class="bi bi-journal-bookmark"></i> {{ t('dictionaries') }}
 </a>

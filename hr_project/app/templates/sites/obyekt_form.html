@@ -1,0 +1,31 @@
+{% extends "modal_form_base.html" %}
+{% set form_title = t('obyekt_form_title_edit') if obyekt and obyekt.id else t('obyekt_form_title_add') %}
+{% set form_action = url_for('sites.edit_obyekt', obyekt_id=obyekt.id) if obyekt and obyekt.id else url_for('sites.add_obyekt') %}
+{% set cancel_url = url_for('sites.list_obyekts') %}
+
+{% block form_fields %}
+  <label>{{ t('obyekt_field_name') }}</label>
+  <input type="text" name="name" value="{{ obyekt.name if obyekt else '' }}" required>
+
+  <label>{{ t('obyekt_field_owner') }}</label>
+  <select name="owner_id">
+    <option value="">{{ t('obyekt_field_owner_none') }}</option>
+    {% for o in owners %}
+    <option value="{{ o.id }}" {{ 'selected' if obyekt and obyekt.owner_id == o.id }}>{{ o.name }}</option>
+    {% endfor %}
+  </select>
+
+  <label>{{ t('obyekt_col_start_date') }}</label>
+  <input type="date" name="start_date" value="{{ obyekt.start_date if obyekt else '' }}">
+
+  <label>{{ t('obyekt_col_end_date') }}</label>
+  <input type="date" name="end_date" value="{{ obyekt.end_date if obyekt else '' }}">
+
+  <label>{{ t('obyekt_field_priority') }}</label>
+  <input type="number" name="priority" value="{{ obyekt.priority if obyekt else 0 }}">
+
+  <div class="checkbox-row">
+    <input type="checkbox" name="is_active" id="obyektIsActive" {{ 'checked' if not obyekt or obyekt.is_active }}>
+    <label for="obyektIsActive" style="margin:0;">{{ t('col_active') }}</label>
+  </div>
+{% endblock %}

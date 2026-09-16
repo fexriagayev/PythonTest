@@ -1,0 +1,108 @@
+{% extends "modal_form_base.html" %}
+{% set form_title = t('briqada_form_title_edit') if briqada and briqada.id else t('briqada_form_title_add') %}
+{% set form_action = url_for('sites.edit_briqada', briqada_id=briqada.id) if briqada and briqada.id else url_for('sites.add_briqada') %}
+{% set cancel_url = url_for('sites.list_briqadalar') %}
+{% set form_max_width = '650px' %}
+
+{% block form_fields %}
+  <label>{{ t('briqada_field_header') }}</label>
+  <select name="header_id" required>
+    <option value="">{{ t('briqada_field_header_placeholder') }}</option>
+    {% for e in employees %}
+    <option value="{{ e.id }}" {{ 'selected' if briqada and briqada.header_id == e.id }}>{{ e.full_name }}</option>
+    {% endfor %}
+  </select>
+
+  <label>{{ t('obyekt_col_start_date') }}</label>
+  <input type="date" name="start_date" value="{{ briqada.start_date if briqada else '' }}">
+
+  <label>{{ t('obyekt_col_end_date') }}</label>
+  <input type="date" name="end_date" value="{{ briqada.end_date if briqada else '' }}">
+
+  <label>{{ t('obyekt_field_priority') }}</label>
+  <input type="number" name="priority" value="{{ briqada.priority if briqada else 0 }}">
+
+  <div class="checkbox-row">
+    <input type="checkbox" name="is_active" id="briqadaIsActive" {{ 'checked' if not briqada or briqada.is_active }}>
+    <label for="briqadaIsActive" style="margin:0;">{{ t('col_active') }}</label>
+  </div>
+
+  <div class="dx-modal-form-single-col briqada-members-section">
+    <label>{{ t('briqada_members_label') }}</label>
+    <div id="briqadaMembersContainer"></div>
+    <button type="button" id="briqadaAddMemberBtn" class="btn btn-sm">{{ t('briqada_add_member_btn') }}</button>
+  </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+(function () {
+  const container = document.getElementById("briqadaMembersContainer");
+  const addBtn = document.getElementById("briqadaAddMemberBtn");
+  if (!container) return;
+
+  const employees = {{ employees|map(attribute='id')|list|tojson }};
+  const employeeNames = {{ employees|map(attribute='full_name')|list|tojson }};
+  // Redaktə zamanı mövcud üzvlər (bax: routes.py api_briqadalar/edit_briqada) —
+  // hər biri {member_id, member_name} formatında (bax: Briqada modeli — HƏR ÜZV öz sətridir).
+  const existingMembers = {{ (briqada.members if briqada else [])|map(attribute='member_id')|list|tojson }};
+  const existingNames = {{ (briqada.members if briqada else [])|map(attribute='member_name')|list|tojson }};
+
+  function addMemberRow(employeeId, memberName) {
+    const row = document.createElement("div");
+    row.className = "briqada-member-row";
+
+    const select = document.createElement("select");
+    select.name = "member_employee_id[]";
+    const blankOpt = document.createElement("option");
+    blankOpt.value = "";
+    blankOpt.textContent = "{{ t('briqada_member_employee_placeholder') }}";
+    select.appendChild(blankOpt);
+    employees.forEach(function (id, idx) {
+      const opt = document.createElement("option");
+      opt.value = id;
+      opt.textContent = employeeNames[idx];
+      if (employeeId && String(employeeId) === String(id)) opt.selected = true;
+      select.appendChild(opt);
+    });
+
+    const nameInput = document.createElement("input");
+    nameInput.type = "text";
+    nameInput.name = "member_name[]";
+    nameInput.placeholder = "{{ t('briqada_member_name_placeholder') }}";
+    if (memberName) nameInput.value = memberName;
+
+    // Bir sətirdə YA əməkdaş seçimi, YA sərbəst ad mənalıdır — biri
+    // seçiləndə digərini deaktiv edirik ki, qarışıqlıq yaranmasın.
+    function syncDisabled() {
+      nameInput.disabled = !!select.value;
+      select.disabled = !!nameInput.value.trim();
+    }
+    select.addEventListener("change", syncDisabled);
+    nameInput.addEventListener("input", syncDisabled);
+    syncDisabled();
+
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.className = "btn btn-sm briqada-remove-member-btn";
+    removeBtn.textContent = "{{ t('briqada_remove_member_btn') }}";
+    removeBtn.addEventListener("click", function () { row.remove(); });
+
+    row.appendChild(select);
+    row.appendChild(nameInput);
+    row.appendChild(removeBtn);
+    container.appendChild(row);
+  }
+
+  if (existingMembers.length) {
+    existingMembers.forEach(function (empId, i) {
+      addMemberRow(empId, existingNames[i]);
+    });
+  } else {
+    addMemberRow(null, null);
+  }
+
+  addBtn.addEventListener("click", function () { addMemberRow(null, null); });
+})();
+</script>
+{% endblock %}

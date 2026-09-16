@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}{{ t('briqadalar_page_title') }}{% endblock %}
+{% block page_title %}{{ t('briqadalar_page_title') }}{% endblock %}
+{% block content %}
+
+<div class="toolbar">
+  {% if current_user.has_perm('SITES', 'can_add') %}
+  <button type="button" id="addBriqadaBtn" class="btn">+ {{ t('add') }}</button>
+  {% endif %}
+  <input type="text" id="searchBox" class="form-control" style="max-width:280px;" placeholder="{{ t('search_generic') }}">
+</div>
+
+<div id="briqadaGrid"></div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const canEdit = {{ 'true' if current_user.has_perm('SITES', 'can_edit') else 'false' }};
+  const canDelete = {{ 'true' if current_user.has_perm('SITES', 'can_delete') else 'false' }};
+  const canAdd = {{ 'true' if current_user.has_perm('SITES', 'can_add') else 'false' }};
+
+  const table = createAdvancedGrid("briqadaGrid", "sites_briqadalar", {
+    ajaxURL: "{{ url_for('sites.api_briqadalar') }}",
+    pagination: true,
+    paginationSize: 20,
+    placeholder: "{{ t('no_data_generic') }}",
+    columns: [
+      { title: "{{ t('col_id') }}", field: "id", width: 60, sorter: "number" },
+      { title: "{{ t('briqada_col_header') }}", field: "header_name", headerFilter: "input" },
+      { title: "{{ t('briqada_col_member_count') }}", field: "member_count", width: 100, sorter: "number" },
+      { title: "{{ t('briqada_col_members') }}", field: "members_preview" },
+      { title: "{{ t('obyekt_col_start_date') }}", field: "start_date", width: 120, sorter: "date" },
+      { title: "{{ t('obyekt_col_end_date') }}", field: "end_date", width: 120, sorter: "date" },
+      { title: "{{ t('obyekt_col_priority') }}", field: "priority", width: 90, sorter: "number" },
+      { title: "{{ t('col_active') }}", field: "is_active", width: 90, formatter: "tickCross" }
+    ]
+  }, {
+    idField: "id",
+    addUrl: canAdd ? "{{ url_for('sites.add_briqada') }}" : null,
+    editUrlTemplate: canEdit ? "/sites/briqadalar/edit/{id}" : null,
+    deleteUrlTemplate: canDelete ? "/sites/briqadalar/delete/{id}" : null,
+  });
+
+  wireGlobalSearch(table, document.getElementById("searchBox"), ["header_name", "members_preview"]);
+
+  const addBtn = document.getElementById("addBriqadaBtn");
+  if (addBtn) {
+    addBtn.addEventListener("click", function () {
+      openFormModal("{{ url_for('sites.add_briqada') }}", function () { table.setData(); });
+    });
+  }
+});
+</script>
+{% endblock %}

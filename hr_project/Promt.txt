@@ -1,6 +1,2 @@
 -əgər tabel təsdiqlənibsə, həmin dövr tabelə təsir edəcək dəyişikliklərə icazə verilməsin. (Məsələn həmin dövrə bayram/matəm əlavə etmək, iş buraxmaları əlavə etmək, maaşı dəyişmək, işçinin iş yeri məlumatlarını dəyişmək və s)
 bu barədə alert çıxsın ki, tabel təsdiqlənib 
-
-
--Obyekt (id, name, start_date, end_date, is_active, priority, fk_owner (obyek cedvelinin ID-sine))
--Briqada  (id, header_id (fk → Employee, MƏCBURİ), start_date, end_date, is_active, priority , member_name, member_id (fk_employee))

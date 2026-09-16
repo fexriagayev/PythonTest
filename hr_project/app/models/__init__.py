@@ -14,6 +14,8 @@ from .hr.education import EmployeeEducation
 from .hr.employment_contract_notification import EmploymentContractNotification
 from .hr.holiday import Holiday
 from .hr.salary_card import SalaryCard
+from .hr.obyekt import Obyekt
+from .hr.briqada import Briqada
 
 from .payroll.salary import (
     PayrollSettings,
