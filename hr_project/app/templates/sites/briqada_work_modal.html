@@ -1,0 +1,141 @@
+{% extends "modal_form_base.html" %}
+{% set form_title = period.label if period else t('briqada_work_new_period_title') %}
+{% set form_action = "#" %}
+{% set form_no_wrapper_card = true %}
+
+{% block form_actions %}{% endblock %}
+
+{% block form_fields %}
+<div class="dx-modal-form-single-col briqada-work-modal-body">
+  <div class="toolbar briqada-work-toolbar">
+    <div class="briqada-work-period-group">
+      <select id="bwYearInput" {{ 'disabled' if period }}>
+        {% for y in range(default_year - 3, default_year + 3) %}
+        <option value="{{ y }}" {{ 'selected' if y == default_year }}>{{ y }}</option>
+        {% endfor %}
+      </select>
+      <select id="bwMonthSelect" {{ 'disabled' if period }}>
+        {% for name in month_names[1:] %}
+        <option value="{{ loop.index }}" {{ 'selected' if loop.index == default_month }}>{{ name }}</option>
+        {% endfor %}
+      </select>
+      <select id="bwRunTypeSelect" {{ 'disabled' if period }}>
+        {% for code, name in run_types %}
+        <option value="{{ code }}" {{ 'selected' if period and period.run_type == code }}>{{ name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="briqada-work-actions-group">
+      <button type="button" id="bwResetBtn" class="btn btn-secondary">{{ t('briqada_work_reset_btn') }}</button>
+      <button type="button" id="bwApproveBtn" class="btn btn-secondary">{{ t('tabel_approve_btn') }}</button>
+    </div>
+  </div>
+  <div id="briqadaWorkMatrixGrid"></div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+runWhenModalShown(function () {
+  const yearInput = document.getElementById("bwYearInput");
+  const monthSelect = document.getElementById("bwMonthSelect");
+  const runTypeSelect = document.getElementById("bwRunTypeSelect");
+  const resetBtn = document.getElementById("bwResetBtn");
+  const approveBtn = document.getElementById("bwApproveBtn");
+
+  let currentPeriodId = {{ period.id if period else 'null' }};
+  let loadToken = 0;
+
+  const matrix = initBriqadaWorkMatrix({ elementId: "briqadaWorkMatrixGrid" });
+
+  function refreshActionButtons(isApproved) {
+    approveBtn.textContent = isApproved ? "{{ t('tabel_unapprove_btn') }}" : "{{ t('tabel_approve_btn') }}";
+    resetBtn.style.display = isApproved ? "none" : "";
+  }
+
+  function loadPeriod(id) {
+    currentPeriodId = id;
+    matrix.setSource(
+      "/sites/briqada-work/" + id + "/api/matrix",
+      "/sites/briqada-work/" + id + "/cell"
+    ).then(function (data) {
+      if (data) refreshActionButtons(data.is_approved);
+    });
+  }
+
+  function loadForSelection() {
+    const myToken = ++loadToken;
+    const year = yearInput.value, month = monthSelect.value, runType = runTypeSelect.value;
+    fetch("/sites/briqada-work/lookup?year=" + year + "&month=" + month + "&run_type=" + runType,
+      { headers: { "X-Requested-With": "XMLHttpRequest" } })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (myToken !== loadToken) return;
+        if (data.exists) {
+          loadPeriod(data.period_id);
+          return;
+        }
+        return fetch("/sites/briqada-work/create", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest" },
+          body: JSON.stringify({ year: year, month: month, run_type: runType })
+        })
+          .then(function (r) { return r.json(); })
+          .then(function (createData) {
+            if (myToken !== loadToken) return;
+            if (typeof window.__currentModalSavedCallback === "function") {
+              window.__currentModalSavedCallback();
+            }
+            loadPeriod(createData.period_id);
+          });
+      });
+  }
+
+  if (currentPeriodId) {
+    loadPeriod(currentPeriodId);
+  } else {
+    loadForSelection();
+    yearInput.addEventListener("change", loadForSelection);
+    monthSelect.addEventListener("change", loadForSelection);
+    runTypeSelect.addEventListener("change", loadForSelection);
+  }
+
+  resetBtn.addEventListener("click", function () {
+    if (!currentPeriodId) return;
+    if (!confirm("{{ t('briqada_work_reset_confirm') }}")) return;
+    fetch("/sites/briqada-work/" + currentPeriodId + "/reset", {
+      method: "POST",
+      headers: { "X-Requested-With": "XMLHttpRequest" }
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (!data.success) {
+          alert(data.error || "{{ t('tabel_cell_error') }}");
+          return;
+        }
+        loadPeriod(currentPeriodId);
+      });
+  });
+
+  approveBtn.addEventListener("click", function () {
+    if (!currentPeriodId) return;
+    fetch("/sites/briqada-work/" + currentPeriodId + "/approve", {
+      method: "POST",
+      headers: { "X-Requested-With": "XMLHttpRequest" }
+    })
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        if (!data.success) {
+          alert(data.error || "{{ t('tabel_cell_error') }}");
+          return;
+        }
+        if (typeof window.__currentModalSavedCallback === "function") {
+          window.__currentModalSavedCallback();
+        }
+        refreshActionButtons(data.is_approved);
+        loadPeriod(currentPeriodId);
+      });
+  });
+});
+</script>
+{% endblock %}

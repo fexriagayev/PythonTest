@@ -822,6 +822,16 @@ TRANSLATIONS = {
     "briqada_member_name_placeholder": {"az": "və ya sərbəst ad yazın", "en": "or type a free-text name"},
     "briqada_add_member_btn": {"az": "+ Üzv əlavə et", "en": "+ Add Member"},
     "briqada_remove_member_btn": {"az": "Sil", "en": "Remove"},
+    "briqada_work_page_title": {"az": "Obyektlər üzrə görülən işlər", "en": "Work Done by Site"},
+    "briqada_work_add_period_btn": {"az": "Yeni dövr", "en": "New Period"},
+    "briqada_work_col_period": {"az": "Dövr", "en": "Period"},
+    "briqada_work_col_confirmed": {"az": "Təsdiqlənib", "en": "Confirmed"},
+    "briqada_work_new_period_title": {"az": "Yeni dövr", "en": "New Period"},
+    "briqada_work_reset_btn": {"az": "Hamısını sıfırla", "en": "Reset All"},
+    "briqada_work_reset_confirm": {
+        "az": "Bu dövrün BÜTÜN xanaları sıfırlanacaq. Davam edilsin?",
+        "en": "ALL cells in this period will be reset to zero. Continue?",
+    },
 
     "addition_field_addition_type": {"az": "Əlavə/tutulma növü", "en": "Addition/Deduction Type"},
     "addition_type_hint": {

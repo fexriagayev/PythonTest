@@ -16,6 +16,7 @@ from .hr.holiday import Holiday
 from .hr.salary_card import SalaryCard
 from .hr.obyekt import Obyekt
 from .hr.briqada import Briqada
+from .hr.briqada_work import BriqadaWorkPeriod, BriqadaWorkEntry
 
 from .payroll.salary import (
     PayrollSettings,

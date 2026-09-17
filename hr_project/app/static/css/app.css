@@ -2038,13 +2038,49 @@ body.app-theme-sandstone .app-topbar {
 }
 
 .briqada-member-row select:disabled,
-.briqada-member-row input:disabled {
+.briqada-member-row input:disabled,
+.briqada-member-row .briqada-member-input-dimmed {
   opacity: 0.5;
   background: var(--bs-tertiary-bg, #f0f0f0);
 }
 
 .briqada-remove-member-btn {
   flex: none;
+}
+
+/* --- Briqada Work matrisi (sites/briqada_work_modal.html) --- */
+
+.briqada-work-modal-body {
+  width: 100%;
+}
+
+.briqada-work-toolbar {
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.briqada-work-period-group,
+.briqada-work-actions-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+}
+
+.briqada-work-total-row {
+  font-weight: bold;
+  background: var(--bs-tertiary-bg, #f0f0f0) !important;
+}
+
+.briqada-work-cemi-col {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+.briqada-work-yekun-col {
+  background: rgba(0, 0, 0, 0.06);
+  font-weight: bold;
 }
 
 .tax-formula-section-title {

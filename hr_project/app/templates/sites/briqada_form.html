@@ -72,15 +72,26 @@
     nameInput.placeholder = "{{ t('briqada_member_name_placeholder') }}";
     if (memberName) nameInput.value = memberName;
 
-    // Bir sətirdə YA əməkdaş seçimi, YA sərbəst ad mənalıdır — biri
-    // seçiləndə digərini deaktiv edirik ki, qarışıqlıq yaranmasın.
-    function syncDisabled() {
-      nameInput.disabled = !!select.value;
-      select.disabled = !!nameInput.value.trim();
+    // QEYD (VACİB BUG DÜZƏLİŞİ): əvvəllər burada bir sahə doldurulanda
+    // DİGƏRİ `disabled` edilirdi — amma HTML-də `disabled` olan sahələr
+    // formaya HEÇ ÖTÜRÜLMÜR (FormData-dan tamamilə çıxarılır)! Bu,
+    // server tərəfdə `member_employee_id[]` və `member_name[]`
+    // massivlərinin İNDEKS UYĞUNLUĞUNU pozurdu (məs. 1-ci sətir sərbəst
+    // ad, 2-ci sətir əməkdaş seçimi olsaydı, hər massivdə YALNIZ 1 element
+    // qalırdı, amma FƏRQLİ sətirlərə aid) — nəticədə sərbəst adlar YA
+    // səhv sətirə yapışdırılırdı, YA da tamamilə İTİRİLİRDİ. İndi HEÇ bir
+    // sahə disabled edilmir (hər ikisi HƏMİŞƏ göndərilir) — server tərəf
+    // artıq eyni sətirdə hər ikisi doluysa əməkdaş seçimini üstün tutur
+    // (bax: routes.py _parse_briqada_members_from_form), ona görə bu
+    // kifayətdir; sadəcə vizual işarə üçün "deaktiv" görünüş verilir
+    // (CSS klası, HTML atributu YOX).
+    function syncVisualState() {
+      nameInput.classList.toggle("briqada-member-input-dimmed", !!select.value);
+      select.classList.toggle("briqada-member-input-dimmed", !!nameInput.value.trim());
     }
-    select.addEventListener("change", syncDisabled);
-    nameInput.addEventListener("input", syncDisabled);
-    syncDisabled();
+    select.addEventListener("change", syncVisualState);
+    nameInput.addEventListener("input", syncVisualState);
+    syncVisualState();
 
     const removeBtn = document.createElement("button");
     removeBtn.type = "button";

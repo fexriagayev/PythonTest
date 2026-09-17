@@ -1,11 +1,14 @@
 from flask import Blueprint, request, jsonify, flash
-from flask_login import login_required
+from flask_login import login_required, current_user
+from datetime import datetime
 
 from app import db
-from app.models import Employee, Obyekt, Briqada
+from app.models import Employee, Obyekt, Briqada, BriqadaWorkPeriod
+from app.models.hr.briqada_work import AZ_MONTH_NAMES, RUN_TYPES
 from app.utils.decorators import permission_required, log_action
 from app.utils.modal import render_form, modal_redirect, is_modal_request
-from app.utils.parsing import _parse_date, _parse_int
+from app.utils.parsing import _parse_date, _parse_int, _parse_decimal
+from app.services import briqada_work_service
 
 sites_bp = Blueprint("sites", __name__)
 MODULE = "SITES"
@@ -333,3 +336,148 @@ def delete_briqada(briqada_id):
         return jsonify({"success": True})
     flash("Briqada silindi.", "info")
     return modal_redirect("sites.list_briqadalar")
+
+
+# =============================================================================
+# Obyektlər üzrə görülən işlər (Briqada Work matrisi) — ayda 2 dəfə
+# (avans/yekun) doldurulan, ayrıca təsdiqlənən matris. Bax:
+# app.services.briqada_work_service (struktur/hesablama) və
+# app.models.hr.briqada_work (BriqadaWorkPeriod/BriqadaWorkEntry).
+# =============================================================================
+
+
+@sites_bp.route("/briqada-work")
+@login_required
+@permission_required(MODULE, "can_view")
+def list_briqada_work():
+    from flask import render_template
+    return render_template("sites/briqada_work_list.html")
+
+
+@sites_bp.route("/briqada-work/api/items")
+@login_required
+@permission_required(MODULE, "can_view")
+def api_briqada_work_periods():
+    periods = BriqadaWorkPeriod.query.order_by(
+        BriqadaWorkPeriod.year.desc(), BriqadaWorkPeriod.month.desc(),
+        BriqadaWorkPeriod.run_type,
+    ).all()
+    return jsonify([
+        {
+            "id": p.id,
+            "label": p.label,
+            "year": p.year,
+            "month": p.month,
+            "run_type": p.run_type,
+            "is_approved": p.is_approved,
+        }
+        for p in periods
+    ])
+
+
+@sites_bp.route("/briqada-work/lookup")
+@login_required
+@permission_required(MODULE, "can_view")
+def lookup_briqada_work_period():
+    year = _parse_int(request.args.get("year"))
+    month = _parse_int(request.args.get("month"))
+    run_type = request.args.get("run_type")
+    period = BriqadaWorkPeriod.query.filter_by(year=year, month=month, run_type=run_type).first()
+    return jsonify({"exists": bool(period), "period_id": period.id if period else None})
+
+
+@sites_bp.route("/briqada-work/create", methods=["POST"])
+@login_required
+@permission_required(MODULE, "can_add")
+@log_action(MODULE, "CREATE_BRIQADA_WORK_PERIOD")
+def create_briqada_work_period():
+    payload = request.get_json(silent=True) or {}
+    year = _parse_int(payload.get("year"))
+    month = _parse_int(payload.get("month"))
+    run_type = payload.get("run_type")
+    if not year or not month or run_type not in dict(RUN_TYPES):
+        return jsonify({"success": False, "error": "Il, ay və dövr növü mütləqdir."}), 400
+    existing = BriqadaWorkPeriod.query.filter_by(year=year, month=month, run_type=run_type).first()
+    if existing:
+        return jsonify({"success": True, "period_id": existing.id})
+    period = BriqadaWorkPeriod(year=year, month=month, run_type=run_type)
+    db.session.add(period)
+    db.session.commit()
+    return jsonify({"success": True, "period_id": period.id})
+
+
+@sites_bp.route("/briqada-work/add")
+@login_required
+@permission_required(MODULE, "can_add")
+def add_briqada_work_period():
+    today = datetime.today()
+    return render_form(
+        "sites/briqada_work_modal.html", period=None,
+        default_year=today.year, default_month=today.month,
+        month_names=AZ_MONTH_NAMES, run_types=RUN_TYPES,
+    )
+
+
+@sites_bp.route("/briqada-work/<int:period_id>/edit")
+@login_required
+@permission_required(MODULE, "can_view")
+def edit_briqada_work_period(period_id):
+    period = BriqadaWorkPeriod.query.get_or_404(period_id)
+    return render_form(
+        "sites/briqada_work_modal.html", period=period,
+        default_year=period.year, default_month=period.month,
+        month_names=AZ_MONTH_NAMES, run_types=RUN_TYPES,
+    )
+
+
+@sites_bp.route("/briqada-work/<int:period_id>/api/matrix")
+@login_required
+@permission_required(MODULE, "can_view")
+def api_briqada_work_matrix(period_id):
+    period = BriqadaWorkPeriod.query.get_or_404(period_id)
+    return jsonify(briqada_work_service.matrix_data(period))
+
+
+@sites_bp.route("/briqada-work/<int:period_id>/cell", methods=["POST"])
+@login_required
+@permission_required(MODULE, "can_edit")
+def set_briqada_work_cell(period_id):
+    period = BriqadaWorkPeriod.query.get_or_404(period_id)
+    if period.is_approved:
+        return jsonify({"success": False, "error": "Bu dövr artıq TƏSDİQLƏNİB — dəyişiklik edilə bilməz."}), 400
+    payload = request.get_json(silent=True) or {}
+    briqada_id = _parse_int(payload.get("briqada_id"))
+    obyekt_id = _parse_int(payload.get("obyekt_id"))
+    amount = _parse_decimal(payload.get("amount"))
+    if not briqada_id or not obyekt_id:
+        return jsonify({"success": False, "error": "briqada_id/obyekt_id mütləqdir."}), 400
+    briqada_work_service.set_cell(period, briqada_id, obyekt_id, amount)
+    db.session.commit()
+    return jsonify({"success": True})
+
+
+@sites_bp.route("/briqada-work/<int:period_id>/reset", methods=["POST"])
+@login_required
+@permission_required(MODULE, "can_edit")
+@log_action(MODULE, "RESET_BRIQADA_WORK_PERIOD")
+def reset_briqada_work_period(period_id):
+    period = BriqadaWorkPeriod.query.get_or_404(period_id)
+    if period.is_approved:
+        return jsonify({"success": False, "error": "Bu dövr artıq TƏSDİQLƏNİB — sıfırlana bilməz."}), 400
+    for entry in list(period.entries):
+        db.session.delete(entry)
+    db.session.commit()
+    return jsonify({"success": True})
+
+
+@sites_bp.route("/briqada-work/<int:period_id>/approve", methods=["POST"])
+@login_required
+@permission_required(MODULE, "can_edit")
+@log_action(MODULE, "APPROVE_BRIQADA_WORK_PERIOD")
+def approve_briqada_work_period(period_id):
+    period = BriqadaWorkPeriod.query.get_or_404(period_id)
+    period.is_approved = not period.is_approved
+    period.approved_at = datetime.utcnow() if period.is_approved else None
+    period.approved_by_id = current_user.id if period.is_approved else None
+    db.session.commit()
+    return jsonify({"success": True, "is_approved": period.is_approved})

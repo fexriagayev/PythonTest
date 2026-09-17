@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}{{ t('briqada_work_page_title') }}{% endblock %}
+{% block page_title %}{{ t('briqada_work_page_title') }}{% endblock %}
+{% block content %}
+
+<div class="toolbar">
+  {% if current_user.has_perm('SITES', 'can_add') %}
+  <button type="button" id="addPeriodBtn" class="btn">+ {{ t('briqada_work_add_period_btn') }}</button>
+  {% endif %}
+  <a href="{{ url_for('sites.list_obyekts') }}" class="btn btn-secondary">{{ t('obyekt_page_title') }}</a>
+  <a href="{{ url_for('sites.list_briqadalar') }}" class="btn btn-secondary">{{ t('briqadalar_page_title') }}</a>
+</div>
+
+<div id="briqadaWorkPeriodGrid"></div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const canAdd = {{ 'true' if current_user.has_perm('SITES', 'can_add') else 'false' }};
+  const canView = {{ 'true' if current_user.has_perm('SITES', 'can_view') else 'false' }};
+
+  const table = createAdvancedGrid("briqadaWorkPeriodGrid", "briqada_work_periods", {
+    ajaxURL: "{{ url_for('sites.api_briqada_work_periods') }}",
+    pagination: true,
+    paginationSize: 20,
+    placeholder: "{{ t('no_data_generic') }}",
+    columns: [
+      { title: "{{ t('briqada_work_col_period') }}", field: "label", headerFilter: "input" },
+      { title: "{{ t('briqada_work_col_confirmed') }}", field: "is_approved", width: 110, formatter: "tickCross" }
+    ]
+  }, {
+    idField: "id",
+    addUrl: canAdd ? "{{ url_for('sites.add_briqada_work_period') }}" : null,
+    editUrlTemplate: canView ? "/sites/briqada-work/{id}/edit" : null,
+  });
+
+  const addBtn = document.getElementById("addPeriodBtn");
+  if (addBtn) {
+    addBtn.addEventListener("click", function () {
+      openFormModal("{{ url_for('sites.add_briqada_work_period') }}", function () {
+        table.setData();
+      });
+    });
+  }
+});
+</script>
+{% endblock %}
