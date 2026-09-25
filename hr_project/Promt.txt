@@ -2,44 +2,7 @@
 bu barədə alert çıxsın ki, tabel təsdiqlənib 
 
 Obyekt üzrə görülən işlər aşağıdakılar düzəlməlidir:
--hansı xana 0dan fərqlidirsə font rəngi qırmızı olsun
-- xanalaa mənfi ədəd yazmaq olsun
--Obyektlərdə "əsas" sütunu olmasın
--matrix full ekran olsun
--Briqada siyahısı belə olmalıdır. Soldan ilk 3 sütun işçilər barədə məlumata ayrılmalıdır. 1ci sütun müqavilə nömrəsiç 2ci sütun seçilmiş dövrdə aktiv olan bütün işçilərin ad, familiyası,
-3cü sütunda əgər həmin işçi briqada rəhbəridirsə onun üzvləri sadalanmalıdır. Nümunə: Tutaq ki, seçilmiş dövrdə aktiv olan 5 işçimiz var. 1,2,4-cü işçilər briqada rəhbəri deyil.
- 3cü işçi həm də briqada rəhbəridir və briqadasında 4cü və 5ci işçilər var. 5ci işçi də eyni zamanda briqada rəhbəridir və tabeliyində 2 nəfər işçi olmayan üzv var (test1 və test 2 )
- Bu zaman işçilərin siyahısı belə olmalıdır:
- Müqavilə nömrəsi| Full Name          |Briqada
- ----------------------------------------------------
-11               | 1ci işçi           |
- ----------------------------------------------------
-24               | 2ci işçi           |
- ----------------------------------------------------
-                 |                    |
-                 |                    | --------------
-                 |                    |4cü işçi  
-567              | 3cü işçi           |--------------
-                 |                    |5ci işçi  
-                 |                    | --------------
-                 |                    |Cəmi
- ----------------------------------------------------
-845              | 4cü işçi           |
- ----------------------------------------------------             
-                 |                    |
-                 |                    | --------------  
-                 |                    |*test1
-999              | 5ci işçi           | --------------  
-                 |                    |*test2  
-                 |                    | --------------
-                 |                    |Cəmi 
- ----------------------------------------------------
-Yekun
- ----------------------------------------------------
 
-
--Obyekt üzrə görülən işlər pəncərəsini aşanda Uncaught TypeError: Cannot read properties of undefined (reading 'add') erroru çıxır
--  Əməkdaş olmayan briqada üzvlərinin adlarının qarşısına * işarəsi qoyulur ki, seçilsin 
 - griddə sətirlərin xətti görünsün
 - Briqadalar arasındakı xətt fərqli olsun ki, briqadaları ayırmaq olsun.
 -Hər əsas obyektlər arasında xətt  fərqli olsun ki, əsas obyektləri ayırmaq olsun.

@@ -1395,7 +1395,7 @@ html.modal-scroll-lock body {
    style for every caption, regardless of its length. */
 .dx-popup-title .dx-toolbar-label,
 .dx-popup-title .dx-toolbar-label .dx-item-content,
-.dx-popup-title .dx-toolbar-label .dx-item-content>div {
+.dx-popup-title .dx-toolbar-label .dx-item-content > div {
   overflow: visible !important;
   text-overflow: unset !important;
   white-space: normal !important;
@@ -2084,7 +2084,13 @@ body.app-theme-sandstone .app-topbar {
 }
 
 .briqada-work-nonzero {
-  color: #dc3545;
+  /* !important: `.simple-form input[type=text]` (app.css-də daha əvvəl,
+     DAHA SPESİFİK bir seçici ilə — bax: "Slightly more compact form
+     controls app-wide") rəngi override edirdi, ona görə əl ilə daxil
+     edilən (manual) xanalar heç vaxt qırmızı görünmürdü — yalnız
+     hesablanan (Cəmi/Yekun, plain <td>, həmin qaydaya uyğun gəlməyən)
+     xanalar qırmızı idi. */
+  color: #dc3545 !important;
 }
 
 .briqada-work-table-wrap {
@@ -2162,27 +2168,34 @@ body.app-theme-sandstone .app-topbar {
 }
 
 .briqada-work-amount-input {
-  width: 100%;
+  /* !important hər yerdə: bu xanalar `.simple-form input[type=text]`
+     (app.css-də daha əvvəl, DAHA SPESİFİK bir seçici ilə təyin olunub —
+     bax: "Slightly more compact form controls app-wide") daxilində
+     yerləşir və onsuz həmin qayda buradakı stili üstələyirdi (rəng
+     dəyişmirdi, "yalnız hesablanan xanalar qırmızıdır" şikayətinin əsl
+     səbəbi). */
+  width: 100% !important;
+  max-width: none !important;
   box-sizing: border-box;
-  border: none;
-  background: transparent;
+  border: none !important;
+  background: transparent !important;
   text-align: right;
-  padding: 4px 6px;
-  font-size: 13px;
+  padding: 4px 6px !important;
+  font-size: 13px !important;
   font-family: inherit;
 }
 
 .briqada-work-amount-input:focus {
   outline: 2px solid var(--bs-primary, #0d6efd);
   outline-offset: -2px;
-  background: #fff;
+  background: #fff !important;
 }
 
 .tax-formula-section-title {
   margin: 22px 0 4px;
 }
 
-.tax-formula-list+.tax-formula-section-title {
+.tax-formula-list + .tax-formula-section-title {
   margin-top: 26px;
 }
 
