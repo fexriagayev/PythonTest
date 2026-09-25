@@ -17,6 +17,7 @@ amma bu layihənin indiyədək etdiyi bütün dəyişikliklər (yeni sütun əla
 """
 
 from sqlalchemy import inspect, text
+from sqlalchemy.schema import CreateTable
 
 
 def _column_ddl_type(column, dialect):
@@ -70,6 +71,64 @@ def sync_missing_columns(db):
                 print(f"[db_sync] Sütun əlavə olundu: {table.name}.{column.name}")
             except Exception as exc:  # pragma: no cover — dev-time convenience only
                 print(f"[db_sync] {table.name}.{column.name} əlavə edilmədi: {exc}")
+
+
+def relax_column_nullable(db, table_name, column_name):
+    """BİR DƏFƏLİK, idempotent düzəliş: `column_name` DB-də hələ də
+    NOT NULL-dursa (amma modeldə artıq `nullable=True`-dursa), onu
+    NULL qəbul edən sütuna çevirir. `sync_missing_columns()` yalnız
+    ÇATIŞMAYAN sütunları əlavə edir — MÖVCUD bir sütunun
+    NULL/NOT NULL statusunu DƏYİŞMİR, buna görə bu, ayrıca funksiyadır
+    (bax: BriqadaWorkEntry.briqada_id — indi `employee_id` ilə
+    ALTERNATİV sahib ola bilər, deməli artıq MƏCBURİ deyil).
+
+    Postgres-də sadə `ALTER COLUMN ... DROP NOT NULL`. SQLite bunu
+    dəstəkləmir — standart \"cədvəli yenidən qur\" resepti işlədilir:
+    modeldəki (artıq düzəldilmiş) tərifə görə YENİ table yaradılır,
+    məlumat köçürülür, köhnə table silinir, yenisi adlandırılır."""
+    engine = db.engine
+    inspector = inspect(engine)
+    if table_name not in inspector.get_table_names():
+        return
+    columns = {c["name"]: c for c in inspector.get_columns(table_name)}
+    col = columns.get(column_name)
+    if col is None or col["nullable"]:
+        return  # sütun yoxdur, ya da artıq NULL qəbul edir — ediləcək iş yoxdur
+
+    if engine.dialect.name != "sqlite":
+        try:
+            with engine.begin() as conn:
+                conn.execute(
+                    text(f'ALTER TABLE "{table_name}" ALTER COLUMN "{column_name}" DROP NOT NULL')
+                )
+            print(f"[db_sync] {table_name}.{column_name} artıq NULL qəbul edir.")
+        except Exception as exc:  # pragma: no cover — dev-time convenience only
+            print(f"[db_sync] {table_name}.{column_name} NULL edilmədi: {exc}")
+        return
+
+    table = db.metadata.tables.get(table_name)
+    if table is None:
+        return
+    existing_cols = list(columns.keys())
+    tmp_name = table_name + "__relax_tmp"
+    try:
+        create_sql = str(CreateTable(table).compile(engine)).strip()
+        create_sql = create_sql.replace(f'"{table_name}"', f'"{tmp_name}"', 1)
+        if tmp_name not in create_sql:
+            create_sql = create_sql.replace(table_name, tmp_name, 1)
+        cols_csv = ", ".join(f'"{c}"' for c in existing_cols)
+        with engine.begin() as conn:
+            conn.execute(text("PRAGMA foreign_keys=OFF"))
+            conn.execute(text(create_sql))
+            conn.execute(
+                text(f'INSERT INTO "{tmp_name}" ({cols_csv}) SELECT {cols_csv} FROM "{table_name}"')
+            )
+            conn.execute(text(f'DROP TABLE "{table_name}"'))
+            conn.execute(text(f'ALTER TABLE "{tmp_name}" RENAME TO "{table_name}"'))
+            conn.execute(text("PRAGMA foreign_keys=ON"))
+        print(f"[db_sync] {table_name} cədvəli yenidən quruldu ({column_name} artıq NULL qəbul edir).")
+    except Exception as exc:  # pragma: no cover — dev-time convenience only
+        print(f"[db_sync] {table_name}.{column_name} NULL edilmədi: {exc}")
 
 
 def migrate_legacy_leave_payments(db):

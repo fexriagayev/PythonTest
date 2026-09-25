@@ -44,23 +44,33 @@ class BriqadaWorkPeriod(db.Model):
 
 
 class BriqadaWorkEntry(db.Model):
-    """Matrisin BİR XANASI: bu dövrdə, bu briqada üzvünün (bax:
-    Briqada.id — flat cədvəldə HƏR ÜZV öz sətridir), bu OBYEKTDƏ
-    gördüyü işə görə aldığı məbləğ."""
+    """Matrisin BİR XANASI: bu dövrdə, bu OBYEKTDƏ görülən işə görə
+    ödənilən məbləğ. İKİ MÜMKÜN "sahib" var (məhz BİRİ dolu olmalıdır,
+    heç vaxt hər ikisi):
+      - `briqada_id` — bir briqada rəhbərinin KOMANDA ÜZVÜ (bax:
+        Briqada.id — flat cədvəldə HƏR ÜZV öz sətridir);
+      - `employee_id` — heç bir komandaya (nə rəhbər, nə üzv) daxil
+        OLMAYAN, sadəcə seçilmiş dövrdə AKTİV olan bir əməkdaş (bax:
+        app.services.briqada_work_service.matrix_row_structure)."""
 
     __tablename__ = "briqada_work_entries"
     __table_args__ = (
         db.UniqueConstraint(
             "period_id", "briqada_id", "obyekt_id", name="uq_briqada_work_entry"
         ),
+        db.UniqueConstraint(
+            "period_id", "employee_id", "obyekt_id", name="uq_briqada_work_entry_employee"
+        ),
     )
 
     id = db.Column(db.Integer, primary_key=True)
     period_id = db.Column(db.Integer, db.ForeignKey("briqada_work_periods.id"), nullable=False)
-    briqada_id = db.Column(db.Integer, db.ForeignKey("briqadalar.id"), nullable=False)
+    briqada_id = db.Column(db.Integer, db.ForeignKey("briqadalar.id"), nullable=True)
+    employee_id = db.Column(db.Integer, db.ForeignKey("employees.id"), nullable=True)
     obyekt_id = db.Column(db.Integer, db.ForeignKey("obyekts.id"), nullable=False)
     amount = db.Column(db.Numeric(12, 2), nullable=False, default=0)
 
     period = db.relationship("BriqadaWorkPeriod", back_populates="entries")
     briqada_row = db.relationship("Briqada")
+    employee = db.relationship("Employee")
     obyekt = db.relationship("Obyekt")

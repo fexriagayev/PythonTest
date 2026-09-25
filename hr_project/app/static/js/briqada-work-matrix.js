@@ -1,157 +1,229 @@
 /*
  * "Obyektlər üzrə görülən işlər" matrisi — bax: app.services.briqada_work_service.
  *
- * Sütunlar: hər əsas obyekt öz QRUPU (DevExtreme-in native "grouped
- * columns" — bir sütun tərifinin öz DAXİLİNDƏ `columns: [...]` siyahısı
- * olması) kimi qurulur: [alt-obyektlər..., "Cəmi"]. Bütün qruplardan
- * sonra ayrıca (qrupsuz) "Yekun" sütunu.
+ * ARTIQ DevExtreme dxDataGrid ÜZƏRİNDƏ QURULMUR — sadə (əl ilə qurulan)
+ * <table> istifadə olunur. Səbəb: sol tərəfdəki "Müqavilə N" / "Full
+ * Name" sütunları bir briqada rəhbərinin BÜTÜN BLOKU (öz sətri +
+ * komanda üzvləri + "Cəmi" sətri) boyunca vizual olaraq BİRLƏŞDİRİLİR
+ * (rowspan) — DevExtreme-in "cell" redaktə rejimi bunu dəstəkləmir.
  *
- * Sətirlər: DevExtreme-in group/master-detail xüsusiyyətlərindən İSTİFADƏ
- * OLUNMUR — sadəcə DÜZ (flat) sətir siyahısı qurulur, hər sətrin öz
- * `rowType`-ı var ("member" | "group_total" | "grand_total"),
- * `rowClass`-a görə fərqli stillə göstərilir (bax: app.css
- * .briqada-work-total-row).
+ * SƏTİR STRUKTURU (bax: matrix_row_structure() backend-də):
+ *   - Sadə sətir (is_leader=false): 1 fiziki <tr> — Müqavilə N/Full
+ *     Name/Briqada + obyekt xanaları birbaşa bu əməkdaşa aiddir.
+ *   - Rəhbər bloku (is_leader=true): (üzv sayı + 1) fiziki <tr> —
+ *     Müqavilə N/Full Name yalnız İLK sətirdə (rowspan ilə bütün
+ *     bloku əhatə edir), "Briqada" sütununda hər üzvün adı öz sətrində,
+ *     son sətirdə "Cəmi". Rəhbərin ÖZÜNÜN redaktə oluna bilən xanası
+ *     YOXDUR.
  *
- * Redaktə: YALNIZ "member" sətirlərinin YARPAQ (Cəmi/Yekun olmayan)
- * xanaları redaktə oluna bilər — bax: onEditingStart.
+ * SÜTUN STRUKTURU əvvəlki kimi qalır: hər əsas obyekt öz qrupu
+ * (alt-obyektlər + "Cəmi"), bütün qruplardan sonra ayrıca "Yekun".
  */
 
 function initBriqadaWorkMatrix(config) {
   // config: { elementId, matrixUrl, cellUrl, readOnly }
-  let grid = null;
   let matrixData = null;
   let loadSeq = 0;
+  let root = null;
 
   function fmt(value) {
     const n = Number(value || 0);
     return n.toLocaleString("az-AZ", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
-  function buildColumns(data) {
-    const columns = [
-      {
-        dataField: "row_label",
-        caption: "",
-        width: 220,
-        fixed: true,
-        fixedPosition: "left",
-        allowEditing: false,
-        cellTemplate: function (container, options) {
-          const div = document.createElement("div");
-          div.textContent = options.data.row_label;
-          if (options.data.rowType !== "member") {
-            div.style.fontWeight = "bold";
-          } else if (options.data.indent) {
-            div.style.paddingLeft = "16px";
-          }
-          container.appendChild(div);
-        }
-      }
-    ];
-
-    data.columns.forEach(function (col) {
-      const subCols = col.sub.map(function (s) {
-        return {
-          dataField: "obj_" + s.obyekt_id,
-          caption: s.name,
-          width: 110,
-          alignment: "right",
-          format: { type: "fixedPoint", precision: 2 },
-          allowEditing: true,
-        };
-      });
-      // Əsas obyektin özü də (alt-obyekti olsun-olmasın) birbaşa iş
-      // yazıla bilən bir "yarpaq" sütundur — alt-obyektlərdən ƏVVƏL göstərilir.
-      subCols.unshift({
-        dataField: "obj_" + col.obyekt_id,
-        caption: col.sub.length ? "(əsas)" : col.name,
-        width: 110,
-        alignment: "right",
-        format: { type: "fixedPoint", precision: 2 },
-        allowEditing: true,
-      });
-      subCols.push({
-        dataField: "cemi_" + col.obyekt_id,
-        caption: "Cəmi",
-        width: 110,
-        alignment: "right",
-        allowEditing: false,
-        format: { type: "fixedPoint", precision: 2 },
-        cssClass: "briqada-work-cemi-col",
-      });
-      columns.push({
-        caption: col.name,
-        columns: subCols,
-      });
-    });
-
-    columns.push({
-      dataField: "yekun",
-      caption: "Yekun",
-      width: 120,
-      alignment: "right",
-      allowEditing: false,
-      format: { type: "fixedPoint", precision: 2 },
-      cssClass: "briqada-work-yekun-col",
-    });
-
-    return columns;
+  function parseAmount(raw) {
+    if (raw === null || raw === undefined) return 0;
+    const cleaned = String(raw).trim().replace(",", ".").replace(/\s/g, "");
+    if (cleaned === "" || cleaned === "-") return 0;
+    const n = parseFloat(cleaned);
+    return isNaN(n) ? 0 : n;
   }
 
-  function buildDataSource(data) {
-    const rows = [];
-    let rowSeq = 0;
-    data.rows.forEach(function (grp) {
-      grp.members.forEach(function (m) {
-        const row = {
-          id: "row_" + (++rowSeq),
-          rowType: "member", briqada_id: m.briqada_id,
-          row_label: m.name, indent: true,
-          yekun: m.row_total,
-        };
-        data.columns.forEach(function (col) {
-          row["obj_" + col.obyekt_id] = m.cells[col.obyekt_id] || 0;
-          let groupSum = m.cells[col.obyekt_id] || 0;
-          col.sub.forEach(function (s) {
-            row["obj_" + s.obyekt_id] = m.cells[s.obyekt_id] || 0;
-            groupSum += m.cells[s.obyekt_id] || 0;
-          });
-          row["cemi_" + col.obyekt_id] = Math.round(groupSum * 100) / 100;
-        });
-        rows.push(row);
-      });
-      const totalRow = {
-        id: "row_" + (++rowSeq),
-        rowType: "group_total", briqada_id: null,
-        row_label: (grp.header_name || "—") + " — Cəmi",
-        yekun: grp.group_total,
-      };
-      data.columns.forEach(function (col) {
-        let groupSum = data.rows === undefined ? 0 : (grp.group_totals[col.obyekt_id] || 0);
-        totalRow["obj_" + col.obyekt_id] = grp.group_totals[col.obyekt_id] || 0;
-        col.sub.forEach(function (s) {
-          totalRow["obj_" + s.obyekt_id] = grp.group_totals[s.obyekt_id] || 0;
-        });
-        totalRow["cemi_" + col.obyekt_id] = grp.group_totals[col.obyekt_id] || 0;
-      });
-      rows.push(totalRow);
+  // Sütun "planı": hər əsas obyekt üçün onun yarpaq (redaktə oluna
+  // bilən) obyekt ID-ləri + qrupun öz "Cəmi" sütunu.
+  function buildColumnPlan(data) {
+    return data.columns.map(function (col) {
+      const leafIds = col.sub.length ? col.sub.map(function (s) { return s.obyekt_id; }) : [col.obyekt_id];
+      const leafCaptions = col.sub.length ? col.sub.map(function (s) { return s.name; }) : [col.name];
+      return { name: col.name, obyekt_id: col.obyekt_id, leafIds: leafIds, leafCaptions: leafCaptions };
+    });
+  }
+
+  function groupCemi(cellsOrTotals, group) {
+    let sum = 0;
+    group.leafIds.forEach(function (oid) {
+      sum += Number((cellsOrTotals && cellsOrTotals[oid]) || 0);
+    });
+    return Math.round(sum * 100) / 100;
+  }
+
+  function buildHeader(table, plan) {
+    const thead = document.createElement("thead");
+    const row1 = document.createElement("tr");
+    const row2 = document.createElement("tr");
+
+    ["briqada_work_col_contract", "briqada_work_col_fullname", "briqada_work_col_briqada"].forEach(function (key) {
+      const th = document.createElement("th");
+      th.rowSpan = 2;
+      th.className = "briqada-work-row-header-col";
+      th.textContent = t(key);
+      row1.appendChild(th);
     });
 
-    const yekunRow = {
-      id: "row_" + (++rowSeq),
-      rowType: "grand_total", briqada_id: null,
-      row_label: "Yekun", yekun: data.yekun_total,
-    };
-    data.columns.forEach(function (col) {
-      yekunRow["obj_" + col.obyekt_id] = data.yekun_by_obyekt[col.obyekt_id] || 0;
-      col.sub.forEach(function (s) {
-        yekunRow["obj_" + s.obyekt_id] = data.yekun_by_obyekt[s.obyekt_id] || 0;
-      });
-      yekunRow["cemi_" + col.obyekt_id] = data.yekun_by_obyekt[col.obyekt_id] || 0;
-    });
-    rows.push(yekunRow);
+    plan.forEach(function (group) {
+      const th = document.createElement("th");
+      th.colSpan = group.leafIds.length + 1;
+      th.textContent = group.name;
+      row1.appendChild(th);
 
-    return rows;
+      group.leafCaptions.forEach(function (caption) {
+        const sub = document.createElement("th");
+        sub.textContent = caption;
+        row2.appendChild(sub);
+      });
+      const cemiTh = document.createElement("th");
+      cemiTh.textContent = "Cəmi";
+      cemiTh.className = "briqada-work-cemi-col";
+      row2.appendChild(cemiTh);
+    });
+
+    const yekunTh = document.createElement("th");
+    yekunTh.rowSpan = 2;
+    yekunTh.className = "briqada-work-yekun-col";
+    yekunTh.textContent = "Yekun";
+    row1.appendChild(yekunTh);
+
+    thead.appendChild(row1);
+    thead.appendChild(row2);
+    table.appendChild(thead);
+  }
+
+  function amountCell(value, keyType, keyId, obyektId, opts) {
+    opts = opts || {};
+    const td = document.createElement("td");
+    td.className = "briqada-work-cell" + (opts.cssClass ? " " + opts.cssClass : "");
+    const nonzero = Number(value || 0) !== 0;
+
+    if (config.readOnly || !keyType) {
+      td.textContent = fmt(value);
+      if (nonzero) td.classList.add("briqada-work-nonzero");
+      return td;
+    }
+
+    const input = document.createElement("input");
+    input.type = "text";
+    input.inputMode = "decimal";
+    input.autocomplete = "off";
+    input.className = "briqada-work-amount-input";
+    input.value = fmt(value);
+    if (nonzero) input.classList.add("briqada-work-nonzero");
+
+    input.addEventListener("focus", function () {
+      input.value = value ? String(value) : "";
+      input.select();
+    });
+    input.addEventListener("keydown", function (e) {
+      if (e.key === "Enter") input.blur();
+    });
+    input.addEventListener("focusout", function () {
+      const amount = parseAmount(input.value);
+      input.value = fmt(amount);
+      input.classList.toggle("briqada-work-nonzero", amount !== 0);
+      if (amount === Number(value || 0)) return; // dəyişməyib
+      saveCell(keyType, keyId, obyektId, amount);
+    });
+
+    td.appendChild(input);
+    return td;
+  }
+
+  function labelCell(text, opts) {
+    opts = opts || {};
+    const td = document.createElement("td");
+    td.className = "briqada-work-row-label" + (opts.cssClass ? " " + opts.cssClass : "");
+    if (opts.rowSpan) td.rowSpan = opts.rowSpan;
+    if (opts.indent) td.style.paddingLeft = "16px";
+    td.textContent = text || "";
+    return td;
+  }
+
+  function buildRowCells(tr, plan, cellsSource, keyType, keyId) {
+    plan.forEach(function (group) {
+      group.leafIds.forEach(function (oid) {
+        tr.appendChild(amountCell((cellsSource && cellsSource[oid]) || 0, keyType, keyId, oid));
+      });
+      tr.appendChild(amountCell(
+        groupCemi(cellsSource, group), null, null, null,
+        { cssClass: "briqada-work-cemi-col" }
+      ));
+    });
+  }
+
+  function buildBody(table, data, plan) {
+    const tbody = document.createElement("tbody");
+
+    data.rows.forEach(function (row) {
+      if (row.is_leader) {
+        const blockRows = row.members.length + 1; // + "Cəmi" sətri
+        row.members.forEach(function (m, idx) {
+          const tr = document.createElement("tr");
+          if (idx === 0) {
+            tr.appendChild(labelCell(row.contract_number, { rowSpan: blockRows }));
+            tr.appendChild(labelCell(row.full_name, { rowSpan: blockRows }));
+          }
+          const label = (m.is_freeform ? "* " : "") + m.name;
+          tr.appendChild(labelCell(label, { indent: true }));
+          buildRowCells(tr, plan, m.cells, "briqada", m.briqada_id);
+          tr.appendChild(amountCell(m.row_total, null, null, null, { cssClass: "briqada-work-yekun-col" }));
+          tbody.appendChild(tr);
+        });
+
+        const totalTr = document.createElement("tr");
+        totalTr.classList.add("briqada-work-total-row");
+        totalTr.appendChild(labelCell("Cəmi"));
+        buildRowCells(totalTr, plan, row.group_totals, null, null);
+        totalTr.appendChild(amountCell(row.group_total, null, null, null, { cssClass: "briqada-work-yekun-col" }));
+        tbody.appendChild(totalTr);
+      } else {
+        const tr = document.createElement("tr");
+        tr.appendChild(labelCell(row.contract_number, { rowSpan: 1 }));
+        tr.appendChild(labelCell(row.full_name, { rowSpan: 1 }));
+        tr.appendChild(labelCell(""));
+        buildRowCells(tr, plan, row.cells, "employee", row.employee_id);
+        tr.appendChild(amountCell(row.row_total, null, null, null, { cssClass: "briqada-work-yekun-col" }));
+        tbody.appendChild(tr);
+      }
+    });
+
+    const yekunTr = document.createElement("tr");
+    yekunTr.classList.add("briqada-work-total-row");
+    const yekunLabel = labelCell("Yekun");
+    yekunLabel.colSpan = 3;
+    yekunTr.appendChild(yekunLabel);
+    buildRowCells(yekunTr, plan, data.yekun_by_obyekt, null, null);
+    yekunTr.appendChild(amountCell(data.yekun_total, null, null, null, { cssClass: "briqada-work-yekun-col" }));
+    tbody.appendChild(yekunTr);
+
+    table.appendChild(tbody);
+  }
+
+  function render(data) {
+    const container = document.getElementById(config.elementId);
+    container.innerHTML = "";
+
+    const wrap = document.createElement("div");
+    wrap.className = "briqada-work-table-wrap";
+
+    const table = document.createElement("table");
+    table.className = "briqada-work-table";
+
+    const plan = buildColumnPlan(data);
+    buildHeader(table, plan);
+    buildBody(table, data, plan);
+
+    wrap.appendChild(table);
+    container.appendChild(wrap);
+    root = wrap;
   }
 
   function load() {
@@ -163,80 +235,19 @@ function initBriqadaWorkMatrix(config) {
         if (mySeq !== loadSeq) return null;
         matrixData = data;
         config.readOnly = data.is_approved;
-        const columns = buildColumns(data);
-        const dataSource = buildDataSource(data);
-        if (!grid) {
-          createGrid(columns, dataSource);
-        } else {
-          grid.option("editing.allowUpdating", !config.readOnly);
-          grid.option("columns", columns);
-          grid.option("dataSource", dataSource);
-        }
+        render(data);
         if (typeof config.onLoaded === "function") config.onLoaded(data);
         return data;
       });
   }
 
-  function createGrid(columns, dataSource) {
-    // DevExtreme-in "cell" redaktə rejimi Store-suz (sadə massiv) data
-    // source üçün belə işləyir, amma hər sətrin öz UNİKAL açarı (key)
-    // olmalıdır — məhz bunun üçün hər sətrə sintetik `id` (sıra nömrəsi)
-    // əlavə edirik (bax: buildDataSource).
-    grid = $("#" + config.elementId).dxDataGrid({
-      dataSource: dataSource,
-      columns: columns,
-      keyExpr: "id",
-      showBorders: true,
-      columnAutoWidth: false,
-      allowColumnResizing: true,
-      scrolling: { mode: "standard", useNative: true },
-      paging: { enabled: false },
-      editing: {
-        mode: "cell",
-        allowUpdating: !config.readOnly,
-        selectTextOnEditStart: true,
-      },
-      onEditingStart: function (e) {
-        // YALNIZ "member" sətirlərinin yarpaq (Cəmi/Yekun olmayan)
-        // xanaları redaktə oluna bilər.
-        if (config.readOnly || e.data.rowType !== "member" || !e.column.allowEditing) {
-          e.cancel = true;
-        }
-      },
-      onRowUpdating: function (e) {
-        // `e.newData` YALNIZ DƏYİŞƏN sahələri ehtiva edir (tək bir "obj_"
-        // sahəsi) — bax: DevExtreme sənədləri. Dəyəri serverə göndəririk,
-        // sonra (Cəmi/Yekun HƏMİŞƏ server-hesablanmış, doğru qalsın deyə)
-        // BÜTÜN matrisi yenidən yükləyirik.
-        const changedField = Object.keys(e.newData).find(function (k) {
-          return k.indexOf("obj_") === 0;
-        });
-        if (!changedField) {
-          e.cancel = true;
-          return;
-        }
-        const obyektId = parseInt(changedField.slice(4), 10);
-        const briqadaId = e.oldData.briqada_id;
-        const amount = e.newData[changedField];
-        // Lokal (dərhal görünən) yeniləmədən sonra serverə göndəririk;
-        // server cavabı gələndə bütün grid (düzgün Cəmi/Yekun ilə)
-        // yenidən qurulur.
-        saveCell(briqadaId, obyektId, amount);
-      },
-      onCellPrepared: function (e) {
-        if (e.rowType !== "data") return;
-        if (e.data.rowType !== "member") {
-          e.cellElement.classList.add("briqada-work-total-row");
-        }
-      }
-    }).dxDataGrid("instance");
-  }
-
-  function saveCell(briqadaId, obyektId, amount) {
+  function saveCell(keyType, keyId, obyektId, amount) {
+    const body = { obyekt_id: obyektId, amount: amount };
+    body[keyType === "briqada" ? "briqada_id" : "employee_id"] = keyId;
     return fetch(config.cellUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-Requested-With": "XMLHttpRequest" },
-      body: JSON.stringify({ briqada_id: briqadaId, obyekt_id: obyektId, amount: amount })
+      body: JSON.stringify(body)
     })
       .then(function (r) { return r.json(); })
       .then(function (data) {
@@ -257,6 +268,6 @@ function initBriqadaWorkMatrix(config) {
       return load();
     },
     saveCell: saveCell,
-    getGrid: function () { return grid; }
+    getGrid: function () { return root; }
   };
 }

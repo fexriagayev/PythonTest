@@ -4,20 +4,37 @@ hansı obyektdə gördükləri işə görə nə qədər pul aldıqlarını qeyd 
 üçün. Ay ərzində İKİ DƏFƏ doldurulur (avans/yekun — bax:
 BriqadaWorkPeriod) və hər dəfə AYRICA təsdiqlənir.
 
-Struktur (bax: matrix_structure()):
+Struktur (bax: matrix_data()):
   - SÜTUNLAR: hər ƏSAS obyekt (owner_id=None) öz qrupu — daxilində
     prioritet üzrə ALT obyektləri, sonda o qrupun "Cəmi" sütunu. Bütün
     qruplardan sonra ümumi "Yekun" sütunu.
-  - SƏTİRLƏR: hər briqada (group_no üzrə qruplaşdırılıb) — daxilində
-    üzvləri, sonda o briqadanın "Cəmi" sətri. Bütün briqadalardan sonra
-    ümumi "Yekun" sətri.
-  - XANALAR: YALNIZ (adi üzv sətri) x (yarpaq obyekt sütunu) xanaları
-    əl ilə redaktə olunur — "Cəmi"/"Yekun" sətir və sütunları HƏMİŞƏ
-    avtomatik hesablanır (bax: _compute_totals()).
+  - SƏTİRLƏR: dövrün ili/ayında AKTİV olan HƏR ƏMƏKDAŞ öz sətri (bax:
+    matrix_row_structure() — bu, tabel_service-in "aktiv əməkdaş"
+    təyinatı ilə EYNİDİR, ardıcıllıq üçün). Əgər həmin əməkdaş bir
+    briqadanın RƏHBƏRİDİRSƏ (bax: Briqada.header_id), onun sətri bir
+    BLOKA çevrilir: öz adı/müqavilə N-i o blokun bütün sətirləri
+    boyunca (vizual olaraq) yayılır, blokun daxilində isə komandasının
+    HƏR ÜZVÜ öz sətri + sonda "Cəmi" sətri göstərilir. Rəhbərin ÖZÜNÜN
+    ayrıca redaktə oluna bilən xanası YOXDUR — yalnız komandasının
+    məbləğləri.
+  - XANALAR: YALNIZ (adi əməkdaş sətri) VƏ YA (komanda üzvü sətri) x
+    (yarpaq obyekt sütunu) xanaları əl ilə redaktə olunur — "Cəmi"/
+    "Yekun" sətir və sütunları HƏMİŞƏ avtomatik hesablanır.
+
+Xananın "sahibi" iki cür ola bilər (bax: BriqadaWorkEntry):
+  - bir komanda üzvü sətri  -> ("briqada", Briqada.id)
+  - heç bir komandaya daxil olmayan, sadəcə aktiv bir əməkdaş sətri
+    -> ("employee", Employee.id)
 """
 
 from app import db
 from app.models import Obyekt, Briqada, BriqadaWorkEntry
+from app.services.tabel_service import (
+    month_bounds,
+    _employees_with_current_stint,
+    _active_days,
+    _contract_number_at,
+)
 
 
 def obyekt_column_structure():
@@ -39,28 +56,6 @@ def obyekt_column_structure():
     return result
 
 
-def briqada_row_structure():
-    """[{group_no, header, members: [briqada_row, ...]}, ...] — briqadalar
-    prioritetə görə, hər birinin üzvləri (boş "yer tutucu" sətirlər
-    xaric — bax: Briqada modeli). Yalnız aktiv (is_active=True)
-    briqadalar."""
-    rows = (
-        Briqada.query.filter_by(is_active=True)
-        .order_by(Briqada.priority.desc(), Briqada.group_no.desc(), Briqada.id)
-        .all()
-    )
-    groups = {}
-    order = []
-    for r in rows:
-        if not (r.member_id or r.member_name):
-            continue  # boş yer tutucu — matriksdə sətir kimi görünmür
-        if r.group_no not in groups:
-            groups[r.group_no] = {"group_no": r.group_no, "header": r.header, "members": []}
-            order.append(r.group_no)
-        groups[r.group_no]["members"].append(r)
-    return [groups[g] for g in order]
-
-
 def leaf_obyekt_ids(columns):
     """Sütun strukturundakı BÜTÜN yarpaq (redaktə olunan) obyekt ID-lərini
     düz siyahı kimi qaytarır (əsas obyektin özü DƏ yarpaqdır — alt-
@@ -73,25 +68,81 @@ def leaf_obyekt_ids(columns):
     return ids
 
 
+def _active_employees_for_period(period):
+    """Dövrün ili/ayında ən azı bir aktiv günü olan bütün əməkdaşlar,
+    tam ad üzrə sıralanıb — tabel_service-dəki "aktiv əməkdaş" məntiqi
+    ilə EYNİ (bax: app.services.tabel_service._employees_with_current_stint /
+    _active_days), ki, hər iki modulda "aktiv" eyni şey demək olsun."""
+    period_start, period_end, _ = month_bounds(period.year, period.month)
+    employees = sorted(_employees_with_current_stint(), key=lambda e: e.full_name or "")
+    return [e for e in employees if _active_days(e, period_start, period_end)]
+
+
+def _leader_groups():
+    """{header_id: [Briqada üzv sətri, ...]} — YALNIZ aktiv briqadalar,
+    boş "yer tutucu" sətirlər xaric (bax: Briqada modeli), prioritetə
+    görə sıralanıb."""
+    rows = (
+        Briqada.query.filter_by(is_active=True)
+        .order_by(Briqada.priority.desc(), Briqada.group_no.desc(), Briqada.id)
+        .all()
+    )
+    groups = {}
+    for r in rows:
+        if not (r.member_id or r.member_name):
+            continue  # boş yer tutucu — matriksdə sətir kimi görünmür
+        groups.setdefault(r.header_id, []).append(r)
+    return groups
+
+
+def matrix_row_structure(period):
+    """Dövr üçün sətir strukturu: hər aktiv əməkdaş üçün bir "blok":
+      {"employee": Employee, "members": None}                — adi sətir
+      {"employee": Employee, "members": [Briqada üzv sətri, ...]} — rəhbər bloku
+    """
+    employees = _active_employees_for_period(period)
+    leader_groups = _leader_groups()
+    return [
+        {"employee": emp, "members": leader_groups.get(emp.id) or None}
+        for emp in employees
+    ]
+
+
+def _leaf_row_keys(rows):
+    """Bütün redaktə oluna bilən sətir açarlarını ("briqada"|"employee", id)
+    düz siyahı kimi qaytarır — Cəmi/Yekun hesablamaları üçün."""
+    keys = []
+    for row in rows:
+        if row["members"]:
+            keys.extend(("briqada", m.id) for m in row["members"])
+        else:
+            keys.append(("employee", row["employee"].id))
+    return keys
+
+
 def matrix_data(period):
     """Bu dövr üçün TAM matris məlumatını (frontend-ə JSON kimi
     ötürüləcək formada) qaytarır: sütun/sətir strukturu + hər xananın
     dəyəri + avtomatik hesablanan Cəmi/Yekun."""
     columns = obyekt_column_structure()
-    rows = briqada_row_structure()
     leaf_ids = leaf_obyekt_ids(columns)
+    rows = matrix_row_structure(period)
+
+    _, period_end, _ = month_bounds(period.year, period.month)
 
     entries = (
         BriqadaWorkEntry.query.filter_by(period_id=period.id).all()
         if period.id else []
     )
-    values = {(e.briqada_id, e.obyekt_id): float(e.amount or 0) for e in entries}
+    values = {}
+    for e in entries:
+        if e.briqada_id is not None:
+            values[("briqada", e.briqada_id, e.obyekt_id)] = float(e.amount or 0)
+        elif e.employee_id is not None:
+            values[("employee", e.employee_id, e.obyekt_id)] = float(e.amount or 0)
 
-    def cell(briqada_id, obyekt_id):
-        return values.get((briqada_id, obyekt_id), 0.0)
-
-    def row_cemi(briqada_id):
-        return round(sum(cell(briqada_id, oid) for oid in leaf_ids), 2)
+    def cell(kind, key_id, obyekt_id):
+        return values.get((kind, key_id, obyekt_id), 0.0)
 
     out_columns = []
     for col in columns:
@@ -105,29 +156,49 @@ def matrix_data(period):
     out_rows = []
     yekun_by_obyekt = {oid: 0.0 for oid in leaf_ids}
     yekun_total = 0.0
-    for grp in rows:
-        member_rows = []
-        group_totals_by_obyekt = {oid: 0.0 for oid in leaf_ids}
-        for m in grp["members"]:
-            row_cells = {oid: cell(m.id, oid) for oid in leaf_ids}
+    for row in rows:
+        emp = row["employee"]
+        contract_number = _contract_number_at(emp, period_end)
+        if row["members"]:
+            member_rows = []
+            group_totals = {oid: 0.0 for oid in leaf_ids}
+            for m in row["members"]:
+                row_cells = {oid: cell("briqada", m.id, oid) for oid in leaf_ids}
+                for oid, v in row_cells.items():
+                    group_totals[oid] += v
+                    yekun_by_obyekt[oid] += v
+                row_total = round(sum(row_cells.values()), 2)
+                yekun_total += row_total
+                member_rows.append({
+                    "briqada_id": m.id,
+                    "name": m.member_display_name(),
+                    "is_freeform": m.member_id is None,
+                    "cells": row_cells,
+                    "row_total": row_total,
+                })
+            out_rows.append({
+                "employee_id": emp.id,
+                "contract_number": contract_number,
+                "full_name": emp.full_name,
+                "is_leader": True,
+                "members": member_rows,
+                "group_totals": {oid: round(v, 2) for oid, v in group_totals.items()},
+                "group_total": round(sum(group_totals.values()), 2),
+            })
+        else:
+            row_cells = {oid: cell("employee", emp.id, oid) for oid in leaf_ids}
             for oid, v in row_cells.items():
-                group_totals_by_obyekt[oid] += v
                 yekun_by_obyekt[oid] += v
             row_total = round(sum(row_cells.values()), 2)
             yekun_total += row_total
-            member_rows.append({
-                "briqada_id": m.id,
-                "name": m.member_display_name(),
+            out_rows.append({
+                "employee_id": emp.id,
+                "contract_number": contract_number,
+                "full_name": emp.full_name,
+                "is_leader": False,
                 "cells": row_cells,
                 "row_total": row_total,
             })
-        out_rows.append({
-            "group_no": grp["group_no"],
-            "header_name": grp["header"].full_name if grp["header"] else None,
-            "members": member_rows,
-            "group_totals": {oid: round(v, 2) for oid, v in group_totals_by_obyekt.items()},
-            "group_total": round(sum(group_totals_by_obyekt.values()), 2),
-        })
 
     return {
         "columns": out_columns,
@@ -138,18 +209,22 @@ def matrix_data(period):
     }
 
 
-def set_cell(period, briqada_id, obyekt_id, amount):
-    """Bu dövrdə (briqada_id, obyekt_id) xanasının dəyərini yazır (upsert).
-    Dövr təsdiqlənibsə, çağıran tərəf (route) bunu ƏVVƏLCƏDƏN yoxlamalıdır
-    — bu funksiya özü təsdiq statusunu yoxlamır (test/skript istifadəsi
-    üçün sərbəst saxlanılıb, HTTP-səviyyəli qorunma routes.py-dədir)."""
-    entry = BriqadaWorkEntry.query.filter_by(
-        period_id=period.id, briqada_id=briqada_id, obyekt_id=obyekt_id
-    ).first()
+def set_cell(period, key_type, key_id, obyekt_id, amount):
+    """Bu dövrdə (key_type, key_id, obyekt_id) xanasının dəyərini yazır
+    (upsert). `key_type` "briqada" (komanda üzvü — Briqada.id) VƏ YA
+    "employee" (heç bir komandaya daxil olmayan aktiv əməkdaş —
+    Employee.id) ola bilər. Dövr təsdiqlənibsə, çağıran tərəf (route)
+    bunu ƏVVƏLCƏDƏN yoxlamalıdır — bu funksiya özü təsdiq statusunu
+    yoxlamır (test/skript istifadəsi üçün sərbəst saxlanılıb,
+    HTTP-səviyyəli qorunma routes.py-dədir)."""
+    filters = {"period_id": period.id, "obyekt_id": obyekt_id}
+    if key_type == "briqada":
+        filters["briqada_id"] = key_id
+    else:
+        filters["employee_id"] = key_id
+    entry = BriqadaWorkEntry.query.filter_by(**filters).first()
     amount = round(float(amount or 0), 2)
     if entry:
         entry.amount = amount
     else:
-        db.session.add(BriqadaWorkEntry(
-            period_id=period.id, briqada_id=briqada_id, obyekt_id=obyekt_id, amount=amount,
-        ))
+        db.session.add(BriqadaWorkEntry(amount=amount, **filters))

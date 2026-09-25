@@ -1395,7 +1395,7 @@ html.modal-scroll-lock body {
    style for every caption, regardless of its length. */
 .dx-popup-title .dx-toolbar-label,
 .dx-popup-title .dx-toolbar-label .dx-item-content,
-.dx-popup-title .dx-toolbar-label .dx-item-content > div {
+.dx-popup-title .dx-toolbar-label .dx-item-content>div {
   overflow: visible !important;
   text-overflow: unset !important;
   white-space: normal !important;
@@ -2083,11 +2083,106 @@ body.app-theme-sandstone .app-topbar {
   font-weight: bold;
 }
 
+.briqada-work-nonzero {
+  color: #dc3545;
+}
+
+.briqada-work-table-wrap {
+  width: 100%;
+  max-height: calc(100vh - 230px);
+  overflow: auto;
+  border: 1px solid var(--bs-border-color, #dee2e6);
+}
+
+.briqada-work-table {
+  border-collapse: collapse;
+  width: max-content;
+  min-width: 100%;
+  font-size: 13px;
+}
+
+.briqada-work-table th,
+.briqada-work-table td {
+  border: 1px solid var(--bs-border-color, #dee2e6);
+  padding: 4px 6px;
+  white-space: nowrap;
+}
+
+.briqada-work-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--bs-tertiary-bg, #f0f0f0);
+  text-align: center;
+}
+
+.briqada-work-table thead tr:first-child th {
+  top: 0;
+}
+
+.briqada-work-table thead tr:last-child th {
+  top: 29px;
+}
+
+.briqada-work-row-header-col {
+  min-width: 90px;
+}
+
+.briqada-work-row-label {
+  background: #fff;
+  position: sticky;
+  z-index: 2;
+  vertical-align: middle;
+  min-width: 130px;
+}
+
+.briqada-work-table th:nth-child(1),
+.briqada-work-table td:nth-child(1) {
+  left: 0;
+  position: sticky;
+  z-index: 2;
+}
+
+.briqada-work-table th:nth-child(2),
+.briqada-work-table td:nth-child(2) {
+  left: 91px;
+  position: sticky;
+  z-index: 2;
+}
+
+.briqada-work-table thead th:nth-child(1),
+.briqada-work-table thead th:nth-child(2) {
+  z-index: 4;
+}
+
+.briqada-work-cell {
+  padding: 0;
+  text-align: right;
+  min-width: 100px;
+}
+
+.briqada-work-amount-input {
+  width: 100%;
+  box-sizing: border-box;
+  border: none;
+  background: transparent;
+  text-align: right;
+  padding: 4px 6px;
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.briqada-work-amount-input:focus {
+  outline: 2px solid var(--bs-primary, #0d6efd);
+  outline-offset: -2px;
+  background: #fff;
+}
+
 .tax-formula-section-title {
   margin: 22px 0 4px;
 }
 
-.tax-formula-list + .tax-formula-section-title {
+.tax-formula-list+.tax-formula-section-title {
   margin-top: 26px;
 }
 

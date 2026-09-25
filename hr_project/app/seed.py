@@ -137,8 +137,17 @@ def seed_data():
     # sütunları (məs. is_sick_leave, valid_from) tamamlayır — bax:
     # app/utils/db_sync.py. db.create_all() YALNIZ çatışmayan cədvəlləri
     # yaradır, mövcud cədvələ yeni sütun əlavə ETMİR.
-    from app.utils.db_sync import sync_missing_columns, migrate_legacy_leave_payments
+    from app.utils.db_sync import (
+        sync_missing_columns,
+        migrate_legacy_leave_payments,
+        relax_column_nullable,
+    )
     sync_missing_columns(db)
+
+    # BriqadaWorkEntry.briqada_id indi MƏCBURİ deyil (bax: model faylındakı
+    # qeyd) — köhnə DB-lərdə hələ NOT NULL qalmış ola bilər, ADD COLUMN
+    # bunu düzəltmir.
+    relax_column_nullable(db, "briqada_work_entries", "briqada_id")
 
     # Bir dəfəlik köçürmə: köhnə (silinmiş) LeaveRequest.payment_amount
     # sütununda qalmış məlumatı (varsa) yeni, AY ÜZRƏ ayrı-ayrı cədvələ

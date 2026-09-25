@@ -447,11 +447,14 @@ def set_briqada_work_cell(period_id):
         return jsonify({"success": False, "error": "Bu dövr artıq TƏSDİQLƏNİB — dəyişiklik edilə bilməz."}), 400
     payload = request.get_json(silent=True) or {}
     briqada_id = _parse_int(payload.get("briqada_id"))
+    employee_id = _parse_int(payload.get("employee_id"))
     obyekt_id = _parse_int(payload.get("obyekt_id"))
     amount = _parse_decimal(payload.get("amount"))
-    if not briqada_id or not obyekt_id:
-        return jsonify({"success": False, "error": "briqada_id/obyekt_id mütləqdir."}), 400
-    briqada_work_service.set_cell(period, briqada_id, obyekt_id, amount)
+    if not obyekt_id or not (briqada_id or employee_id):
+        return jsonify({"success": False, "error": "briqada_id/employee_id və obyekt_id mütləqdir."}), 400
+    key_type = "briqada" if briqada_id else "employee"
+    key_id = briqada_id if briqada_id else employee_id
+    briqada_work_service.set_cell(period, key_type, key_id, obyekt_id, amount)
     db.session.commit()
     return jsonify({"success": True})
 

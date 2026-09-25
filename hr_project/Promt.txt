@@ -37,6 +37,8 @@ Obyekt üzrə görülən işlər aşağıdakılar düzəlməlidir:
 Yekun
  ----------------------------------------------------
 
+
+-Obyekt üzrə görülən işlər pəncərəsini aşanda Uncaught TypeError: Cannot read properties of undefined (reading 'add') erroru çıxır
 -  Əməkdaş olmayan briqada üzvlərinin adlarının qarşısına * işarəsi qoyulur ki, seçilsin 
 - griddə sətirlərin xətti görünsün
 - Briqadalar arasındakı xətt fərqli olsun ki, briqadaları ayırmaq olsun.
