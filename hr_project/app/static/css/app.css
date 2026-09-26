@@ -2069,17 +2069,21 @@ body.app-theme-sandstone .app-topbar {
   flex-wrap: nowrap;
 }
 
+.briqada-work-action-btn {
+  min-width: 150px;
+}
+
 .briqada-work-total-row {
   font-weight: bold;
-  background: var(--bs-tertiary-bg, #f0f0f0) !important;
+  background: #d8dce0 !important;
 }
 
 .briqada-work-cemi-col {
-  background: rgba(0, 0, 0, 0.03);
+  background: rgba(0, 0, 0, 0.08);
 }
 
 .briqada-work-yekun-col {
-  background: rgba(0, 0, 0, 0.06);
+  background: rgba(0, 0, 0, 0.14);
   font-weight: bold;
 }
 
@@ -2091,6 +2095,24 @@ body.app-theme-sandstone .app-topbar {
      hesablanan (Cəmi/Yekun, plain <td>, həmin qaydaya uyğun gəlməyən)
      xanalar qırmızı idi. */
   color: #dc3545 !important;
+}
+
+/* Briqadaları (əməkdaş bloklarını) bir-birindən ayıran qalın üst xətt. */
+.briqada-work-block-start > td {
+  border-top: 3px solid #495057 !important;
+}
+
+/* Rəhbərin öz sətri — komanda siyahısının İLK sətri, adı ilə seçilsin. */
+.briqada-work-leader-self {
+  font-style: italic;
+  font-weight: 600;
+}
+
+/* Hər əsas obyekt qrupunu (alt-obyektlər + öz Cəmi-si) digərindən ayıran
+   qalın sağ xətt — Cəmi sütunundan dərhal sonra (növbəti qrupun ilk
+   sütunundan əvvəl). */
+.briqada-work-group-sep {
+  border-right: 3px solid #495057 !important;
 }
 
 .briqada-work-table-wrap {

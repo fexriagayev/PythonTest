@@ -74,6 +74,7 @@ function initBriqadaWorkMatrix(config) {
       const th = document.createElement("th");
       th.colSpan = group.leafIds.length + 1;
       th.textContent = group.name;
+      th.className = "briqada-work-group-sep";
       row1.appendChild(th);
 
       group.leafCaptions.forEach(function (caption) {
@@ -83,7 +84,7 @@ function initBriqadaWorkMatrix(config) {
       });
       const cemiTh = document.createElement("th");
       cemiTh.textContent = "Cəmi";
-      cemiTh.className = "briqada-work-cemi-col";
+      cemiTh.className = "briqada-work-cemi-col briqada-work-group-sep";
       row2.appendChild(cemiTh);
     });
 
@@ -154,7 +155,7 @@ function initBriqadaWorkMatrix(config) {
       });
       tr.appendChild(amountCell(
         groupCemi(cellsSource, group), null, null, null,
-        { cssClass: "briqada-work-cemi-col" }
+        { cssClass: "briqada-work-cemi-col briqada-work-group-sep" }
       ));
     });
   }
@@ -162,18 +163,27 @@ function initBriqadaWorkMatrix(config) {
   function buildBody(table, data, plan) {
     const tbody = document.createElement("tbody");
 
-    data.rows.forEach(function (row) {
+    data.rows.forEach(function (row, blockIdx) {
+      // Hər briqada (əməkdaş bloku) arasında qalın xətt — birinci blokdan
+      // ƏVVƏL yox (cədvəlin öz üst kənarı artıq var).
+      const blockStartClass = blockIdx > 0 ? " briqada-work-block-start" : "";
+
       if (row.is_leader) {
-        const blockRows = row.members.length + 1; // + "Cəmi" sətri
+        const blockRows = row.members.length + 1; // (rəhbər + üzvlər) + "Cəmi" sətri
         row.members.forEach(function (m, idx) {
           const tr = document.createElement("tr");
           if (idx === 0) {
+            tr.className = blockStartClass.trim();
             tr.appendChild(labelCell(row.contract_number, { rowSpan: blockRows }));
             tr.appendChild(labelCell(row.full_name, { rowSpan: blockRows }));
           }
           const label = (m.is_freeform ? "* " : "") + m.name;
-          tr.appendChild(labelCell(label, { indent: true }));
-          buildRowCells(tr, plan, m.cells, "briqada", m.briqada_id);
+          const labelOpts = { indent: true };
+          if (m.is_leader_self) labelOpts.cssClass = "briqada-work-leader-self";
+          tr.appendChild(labelCell(label, labelOpts));
+          const keyType = m.is_leader_self ? "employee" : "briqada";
+          const keyId = m.is_leader_self ? m.employee_id : m.briqada_id;
+          buildRowCells(tr, plan, m.cells, keyType, keyId);
           tr.appendChild(amountCell(m.row_total, null, null, null, { cssClass: "briqada-work-yekun-col" }));
           tbody.appendChild(tr);
         });
@@ -186,6 +196,7 @@ function initBriqadaWorkMatrix(config) {
         tbody.appendChild(totalTr);
       } else {
         const tr = document.createElement("tr");
+        tr.className = blockStartClass.trim();
         tr.appendChild(labelCell(row.contract_number, { rowSpan: 1 }));
         tr.appendChild(labelCell(row.full_name, { rowSpan: 1 }));
         tr.appendChild(labelCell(""));
@@ -196,7 +207,7 @@ function initBriqadaWorkMatrix(config) {
     });
 
     const yekunTr = document.createElement("tr");
-    yekunTr.classList.add("briqada-work-total-row");
+    yekunTr.classList.add("briqada-work-total-row", "briqada-work-block-start");
     const yekunLabel = labelCell("Yekun");
     yekunLabel.colSpan = 3;
     yekunTr.appendChild(yekunLabel);

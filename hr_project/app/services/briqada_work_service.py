@@ -13,10 +13,9 @@ Struktur (bax: matrix_data()):
     təyinatı ilə EYNİDİR, ardıcıllıq üçün). Əgər həmin əməkdaş bir
     briqadanın RƏHBƏRİDİRSƏ (bax: Briqada.header_id), onun sətri bir
     BLOKA çevrilir: öz adı/müqavilə N-i o blokun bütün sətirləri
-    boyunca (vizual olaraq) yayılır, blokun daxilində isə komandasının
-    HƏR ÜZVÜ öz sətri + sonda "Cəmi" sətri göstərilir. Rəhbərin ÖZÜNÜN
-    ayrıca redaktə oluna bilən xanası YOXDUR — yalnız komandasının
-    məbləğləri.
+    boyunca (vizual olaraq) yayılır; blokun İLK sətri RƏHBƏRİN ÖZÜNÜN
+    (redaktə oluna bilən) sətridir, sonra komandasının HƏR ÜZVÜ öz
+    sətrində, ən sonda "Cəmi" sətri.
   - XANALAR: YALNIZ (adi əməkdaş sətri) VƏ YA (komanda üzvü sətri) x
     (yarpaq obyekt sütunu) xanaları əl ilə redaktə olunur — "Cəmi"/
     "Yekun" sətir və sütunları HƏMİŞƏ avtomatik hesablanır.
@@ -78,10 +77,14 @@ def _active_employees_for_period(period):
     return [e for e in employees if _active_days(e, period_start, period_end)]
 
 
-def _leader_groups():
+def _leader_groups(active_employee_ids):
     """{header_id: [Briqada üzv sətri, ...]} — YALNIZ aktiv briqadalar,
     boş "yer tutucu" sətirlər xaric (bax: Briqada modeli), prioritetə
-    görə sıralanıb."""
+    görə sıralanıb. `member_id`-si olan (sistemdəki əməkdaşa bağlı) bir
+    üzv bu dövrdə AKTİV DEYİLSƏ (işdən çıxıb və s. — bax:
+    _active_employees_for_period), SİYAHIDAN ÇIXARILIR ki, təsadüfən
+    işdən çıxmış əməkdaşa iş/maya yazılmasın. Sərbəst (member_name,
+    sistemdə əməkdaş qeydi olmayan) üzvlər bu yoxlamaya tabe deyil."""
     rows = (
         Briqada.query.filter_by(is_active=True)
         .order_by(Briqada.priority.desc(), Briqada.group_no.desc(), Briqada.id)
@@ -91,6 +94,8 @@ def _leader_groups():
     for r in rows:
         if not (r.member_id or r.member_name):
             continue  # boş yer tutucu — matriksdə sətir kimi görünmür
+        if r.member_id is not None and r.member_id not in active_employee_ids:
+            continue  # işdən çıxmış/bu dövrdə aktiv olmayan əməkdaş — göstərilmir
         groups.setdefault(r.header_id, []).append(r)
     return groups
 
@@ -101,7 +106,8 @@ def matrix_row_structure(period):
       {"employee": Employee, "members": [Briqada üzv sətri, ...]} — rəhbər bloku
     """
     employees = _active_employees_for_period(period)
-    leader_groups = _leader_groups()
+    active_ids = {e.id for e in employees}
+    leader_groups = _leader_groups(active_ids)
     return [
         {"employee": emp, "members": leader_groups.get(emp.id) or None}
         for emp in employees
@@ -162,6 +168,27 @@ def matrix_data(period):
         if row["members"]:
             member_rows = []
             group_totals = {oid: 0.0 for oid in leaf_ids}
+
+            # Rəhbərin ÖZ sətri — siyahının BİRİNCİ sətri. Onun heç bir
+            # Briqada üzv sətri (Briqada.id) yoxdur, ona görə "employee"
+            # açarı ilə saxlanılır (bax: standalone əməkdaş sətirləri
+            # ilə EYNİ mexanizm — set_cell(..., "employee", emp.id, ...)).
+            leader_cells = {oid: cell("employee", emp.id, oid) for oid in leaf_ids}
+            for oid, v in leader_cells.items():
+                group_totals[oid] += v
+                yekun_by_obyekt[oid] += v
+            leader_row_total = round(sum(leader_cells.values()), 2)
+            yekun_total += leader_row_total
+            member_rows.append({
+                "briqada_id": None,
+                "employee_id": emp.id,
+                "name": emp.full_name,
+                "is_freeform": False,
+                "is_leader_self": True,
+                "cells": leader_cells,
+                "row_total": leader_row_total,
+            })
+
             for m in row["members"]:
                 row_cells = {oid: cell("briqada", m.id, oid) for oid in leaf_ids}
                 for oid, v in row_cells.items():
@@ -171,8 +198,10 @@ def matrix_data(period):
                 yekun_total += row_total
                 member_rows.append({
                     "briqada_id": m.id,
+                    "employee_id": None,
                     "name": m.member_display_name(),
                     "is_freeform": m.member_id is None,
+                    "is_leader_self": False,
                     "cells": row_cells,
                     "row_total": row_total,
                 })

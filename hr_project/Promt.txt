@@ -2,11 +2,3 @@
 bu barədə alert çıxsın ki, tabel təsdiqlənib 
 
 Obyekt üzrə görülən işlər aşağıdakılar düzəlməlidir:
-
-- griddə sətirlərin xətti görünsün
-- Briqadalar arasındakı xətt fərqli olsun ki, briqadaları ayırmaq olsun.
--Hər əsas obyektlər arasında xətt  fərqli olsun ki, əsas obyektləri ayırmaq olsun.
-- Yekun sətir və sütununu ayırmaq olsun (stil fərqli olsun) 
-- Əgər seçilmiş dövrdə hansısa briqada üzvü olan əməkdaş işdən çıxıbsa o siyahıda görünməməlidir ki, təsadüfən ona maaş yazılmasın.
--Pəncərədə yadda saxla düyməsinə ehtiyac yoxdur, çünki rəqəmlər yazılan kimi yadda saxlanılır.
--təsdiqlə, sıfırla düymələri eyni ölşüdə olsun.
