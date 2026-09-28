@@ -24,6 +24,7 @@ from .payroll.salary import (
     SalaryAdditionEmployee,
     PayrollRun,
     PayrollEntry,
+    PayrollPayment,
 )
 from .payroll.tax_formula import PayrollTaxFormula
 

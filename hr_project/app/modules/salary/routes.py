@@ -16,11 +16,11 @@ MODULE = "SALARY"
 # Əməkhaqqı hesablanması (Payroll) — təsdiqlənmiş Tabel dövrləri üzrə
 # =============================================================================
 
-from app.models import TabelPeriod, PayrollRun, PayrollEntry, SalaryAddition, Order, DictionaryItem, PayrollTaxFormula
+from app.models import TabelPeriod, PayrollRun, PayrollEntry, PayrollPayment, SalaryAddition, Order, DictionaryItem, PayrollTaxFormula
 from app.models.payroll.tax_formula import CODES, CODE_NAMES, TEMPLATE_SCRIPTS, SIDE_BY_CODE
 from app.services import payroll_service
 from app.services.formula_engine import evaluate_formula, validate_formula, FormulaError
-from app.utils.parsing import _parse_decimal
+from app.utils.parsing import _parse_decimal, _parse_date
 
 
 @salary_bp.route("/payroll")
@@ -76,9 +76,21 @@ def generate_payroll(period_id):
     if existing_run and existing_run.is_finalized:
         flash("Bu dövrün əməkhaqqısı artıq təsdiqlənib, yenidən hesablana bilməz.", "danger")
         return redirect_target
-    payroll_service.generate_or_refresh_payroll(period)
+    run = payroll_service.generate_or_refresh_payroll(period)
     db.session.commit()
     flash("Əməkhaqqı hesablandı.", "success")
+    # Təsdiqlənmiş obyekt işi məbləği olub, amma əməkhaqqıya düşməyənlər
+    # (sistemdə əməkdaşı olmayan briqada üzvləri / bu ayın tabelində olmayanlar).
+    skipped = payroll_service.object_work_unallocated(
+        period.year, period.month, [e.employee_id for e in run.entries]
+    )
+    if skipped:
+        labels = {"avans": "avans", "yekun": "yekun"}
+        flash(
+            "Obyekt işləri modulunda təsdiqlənmiş, lakin əməkhaqqıya düşməyən məbləğlər: "
+            + "; ".join(f"{n} — {labels.get(rt, rt)} {a:.2f} AZN" for n, rt, a in skipped),
+            "warning",
+        )
     return redirect_target
 
 
@@ -156,6 +168,7 @@ def api_payroll_entries(period_id):
             "worked_days": e.worked_days if e else 0,
             "base_amount": float(e.base_amount or 0) if e else 0,
             "vacation_pay": float(e.vacation_pay or 0) if e else 0,
+            "work_gross": float(e.work_gross or 0) if e else 0,
             "sick_pay": float(e.sick_pay or 0) if e else 0,
             "additions_total": float(e.additions_total or 0) if e else 0,
             "deductions_total": float(e.deductions_total or 0) if e else 0,
@@ -177,6 +190,71 @@ def api_payroll_entries(period_id):
             "note": e.note if e else None,
         })
     return jsonify(data)
+
+
+def _payment_to_dict(p, entry=None):
+    entry = entry or p.entry
+    return {
+        "id": p.id,
+        "entry_id": p.payroll_entry_id,
+        "employee_id": entry.employee_id,
+        "employee": entry.full_name_snapshot,
+        "position": entry.position_snapshot,
+        "pay_date": p.pay_date.isoformat() if p.pay_date else "",
+        "kind": p.kind_label(),
+        "kind_code": p.kind,
+        "label": p.label,
+        "gross_amount": float(p.gross_amount or 0),
+        "income_tax": float(p.income_tax or 0),
+        "dsmf_amount": float(p.dsmf_amount or 0),
+        "unemployment_amount": float(p.unemployment_amount or 0),
+        "medical_amount": float(p.medical_amount or 0),
+        "deductions_amount": float(p.deductions_amount or 0),
+        "net_amount": float(p.net_amount or 0),
+        "target_net": float(p.target_net) if p.target_net is not None else None,
+    }
+
+
+@salary_bp.route("/payroll/<int:period_id>/api/payments")
+@login_required
+@permission_required(MODULE, "can_view")
+def api_payroll_payments(period_id):
+    """Dövrün BÜTÜN ödənişləri (bütün əməkdaşlar, hər növ və tarix üzrə
+    AYRI sətir, hər birinin öz NET məbləği ilə) — banka göndəriləcək siyahı.
+    Süzgəc: `?employee_id=`, `?kind=`, `?date_from=`, `?date_to=`."""
+    period = TabelPeriod.query.get_or_404(period_id)
+    run = PayrollRun.query.filter_by(period_id=period.id).first()
+    if not run:
+        return jsonify([])
+    query = (
+        PayrollPayment.query.join(PayrollEntry)
+        .filter(PayrollEntry.payroll_run_id == run.id)
+    )
+    employee_id = _parse_int(request.args.get("employee_id"))
+    if employee_id:
+        query = query.filter(PayrollEntry.employee_id == employee_id)
+    kind = request.args.get("kind")
+    if kind:
+        query = query.filter(PayrollPayment.kind == kind)
+    date_from = _parse_date(request.args.get("date_from"))
+    if date_from:
+        query = query.filter(PayrollPayment.pay_date >= date_from)
+    date_to = _parse_date(request.args.get("date_to"))
+    if date_to:
+        query = query.filter(PayrollPayment.pay_date <= date_to)
+    payments = query.order_by(
+        PayrollPayment.pay_date, PayrollEntry.row_no, PayrollPayment.sort_no
+    ).all()
+    return jsonify([_payment_to_dict(p) for p in payments])
+
+
+@salary_bp.route("/payroll/entry/<int:entry_id>/payments")
+@login_required
+@permission_required(MODULE, "can_view")
+def entry_payments(entry_id):
+    """Bir əməkdaşın bu ayki bütün ödənişləri (tarix, növ, hər birinin NET-i)."""
+    entry = PayrollEntry.query.get_or_404(entry_id)
+    return render_form("salary/entry_payments.html", entry=entry, payments=entry.payments)
 
 
 # =============================================================================
@@ -220,6 +298,7 @@ def api_employee_additions(entry_id):
         "scope": a.scope_label(),
         "valid_from": a.valid_from.isoformat() if a.valid_from else "",
         "valid_to": a.valid_to.isoformat() if a.valid_to else "",
+        "pay_date": a.pay_date.isoformat() if a.pay_date else "",
         "order": a.order.label() if a.order else "",
         "is_active": a.is_active,
         "note": a.note,
@@ -244,8 +323,19 @@ def _apply_addition_form(addition, form, employee):
     addition.scope = scope if scope in ("individual", "all") else "individual"
     addition.employees = [employee] if addition.scope == "individual" and employee else []
 
-    addition.valid_from = _parse_date(form.get("valid_from"))
-    addition.valid_to = _parse_date(form.get("valid_to"))
+    # Ödəniş tarixi verilibsə — bu əlavə (məs. mükafat) BİR DƏFƏLİK, məhz
+    # həmin tarixdə ödənilir və yalnız o tarixin ayına aiddir: qüvvədə olma
+    # aralığı avtomatik həmin ayın 1-i — son günü təyin olunur (formdakı
+    # valid_from/valid_to nəzərə alınmır). Boşdursa — əvvəlki davranış.
+    addition.pay_date = _parse_date(form.get("pay_date"))
+    if addition.pay_date:
+        import calendar as _calendar
+        pd = addition.pay_date
+        addition.valid_from = pd.replace(day=1)
+        addition.valid_to = pd.replace(day=_calendar.monthrange(pd.year, pd.month)[1])
+    else:
+        addition.valid_from = _parse_date(form.get("valid_from"))
+        addition.valid_to = _parse_date(form.get("valid_to"))
     addition.order_id = _parse_int(form.get("order_id"))
     addition.note = form.get("note", "").strip()
     addition.is_active = bool(form.get("is_active"))

@@ -715,6 +715,7 @@ TRANSLATIONS = {
     "payroll_col_base_amount": {"az": "Baza məbləğ", "en": "Base Amount"},
     "payroll_col_vacation_pay": {"az": "Məzuniyyət pulu", "en": "Vacation Pay"},
     "payroll_col_sick_pay": {"az": "Xəstəlik pulu", "en": "Sick Pay"},
+    "payroll_col_work_gross": {"az": "Obyekt işi (gross)", "en": "Object work (gross)"},
     "payroll_col_additions": {"az": "Əlavələr", "en": "Additions"},
     "payroll_col_gross": {"az": "Gross", "en": "Gross"},
     "payroll_col_income_tax": {"az": "Gəlir vergisi", "en": "Income Tax"},
@@ -727,6 +728,25 @@ TRANSLATIONS = {
     "payroll_col_employer_unemployment": {"az": "İşsizlik (şirkət payı)", "en": "Unemployment (employer)"},
     "payroll_col_employer_medical": {"az": "İTS (şirkət payı)", "en": "Medical (employer)"},
     "payroll_col_employer_cost_total": {"az": "Şirkət xərci (cəmi)", "en": "Total company cost"},
+    # --- Ödənişlər (hər növ üzrə, tarixlə AYRI-AYRI; PayrollPayment) ------------
+    "payroll_payments_section_title": {"az": "Ödənişlər (tarixlərlə)", "en": "Payments (by date)"},
+    "payroll_payments_menu": {"az": "Ödənişlər", "en": "Payments"},
+    "payroll_payments_hint": {
+        "az": "Hər ödəniş (məzuniyyət, xəstəlik, mükafat, əsas əməkhaqqı) ayrıca, öz tarixi ilə hesablanır və ayrıca ödənilir. Əməkdaşın yekun net məbləği bu ödənişlərin cəmidir.",
+        "en": "Each payment (vacation, sick pay, bonus, base salary) is calculated and paid separately on its own date. The employee's final net is the sum of these payments.",
+    },
+    "payment_col_date": {"az": "Ödəniş tarixi", "en": "Payment Date"},
+    "payment_col_kind": {"az": "Növ", "en": "Type"},
+    "payment_col_label": {"az": "Təsvir", "en": "Description"},
+    "payment_col_net": {"az": "Net (ödənilən)", "en": "Net (paid)"},
+    "payment_col_target_net": {"az": "Daxil edilən net", "en": "Entered net"},
+    "payment_total_label": {"az": "Cəmi", "en": "Total"},
+    "payment_kind_salary": {"az": "Əsas əməkhaqqı", "en": "Base salary"},
+    "payment_kind_vacation": {"az": "Məzuniyyət pulu", "en": "Vacation pay"},
+    "payment_kind_sick": {"az": "Xəstəlik pulu", "en": "Sick pay"},
+    "payment_kind_addition": {"az": "Əlavə / mükafat", "en": "Addition / bonus"},
+    "payment_filter_all_kinds": {"az": "Bütün növlər", "en": "All types"},
+    "payment_no_data": {"az": "Bu əməkdaş üçün hələ ödəniş hesablanmayıb.", "en": "No payments have been calculated for this employee yet."},
     # --- Əməkhaqqı əlavələri/tutulmaları — əməkdaş kontekstində
     # (salary/employee_additions.html, addition_form.html). Ayrıca ümumi
     # "Əlavələr" menyusu YOXDUR — bax: payroll_period.html "Dəyiş" düyməsi.
@@ -742,6 +762,7 @@ TRANSLATIONS = {
     "additions_col_scope": {"az": "Əhatə", "en": "Scope"},
     "additions_col_valid_from": {"az": "Qüvvəyə minmə", "en": "Valid From"},
     "additions_col_valid_to": {"az": "Qüvvədən düşmə", "en": "Valid To"},
+    "additions_col_pay_date": {"az": "Ödəniş tarixi", "en": "Payment Date"},
     "additions_col_order": {"az": "Əmr", "en": "Order"},
     "additions_col_active": {"az": "Aktiv", "en": "Active"},
     "addition_form_title_add": {"az": "Yeni əlavə/tutulma", "en": "New Addition/Deduction"},
@@ -850,6 +871,11 @@ TRANSLATIONS = {
     "addition_valid_to_hint": {
         "az": "Boş buraxsanız, cari dövrədək (müddətsiz) qüvvədə sayılır. Doldursanız, öz ayının son günü olmalıdır.",
         "en": "Leave empty for ongoing (through the current period). If set, must be the last day of a month.",
+    },
+    "addition_field_pay_date": {"az": "Ödəniş tarixi", "en": "Payment Date"},
+    "addition_pay_date_hint": {
+        "az": "İxtiyari. Doldursanız (məs. mükafat), bu məbləğ məhz həmin tarixdə ayrıca ödənilir və yalnız o ayın əməkhaqqısına aid olur (qüvvəyə minmə/düşmə tarixləri avtomatik təyin olunur). Boş buraxsanız, əməkhaqqı ilə birlikdə ay sonunda ödənilir.",
+        "en": "Optional. If set (e.g. a bonus), this amount is paid separately on exactly that date and applies to that month's payroll only (valid from/to are set automatically). If empty, it is paid with the salary at month end.",
     },
     "addition_field_order": {"az": "Əsas əmr", "en": "Justifying Order"},
     "addition_field_active": {"az": "Aktiv", "en": "Active"},

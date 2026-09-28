@@ -55,6 +55,12 @@
 
 <div id="payrollEntryGrid"></div>
 
+{% if tabel_exists %}
+<h3 class="payroll-payments-title">{{ t('payroll_payments_section_title') }}</h3>
+<p class="payroll-hint payroll-hint-info">{{ t('payroll_payments_hint') }}</p>
+<div id="payrollPaymentsGrid"></div>
+{% endif %}
+
 {% endblock %}
 
 {% block extra_scripts %}
@@ -75,6 +81,8 @@
   .payroll-hint { color:#a15c00; font-size:0.9em; background:#fff6e8; border:1px solid #ffe1ad; padding:8px 12px; border-radius:6px; margin:0 0 12px; }
   .payroll-hint-danger { color:#a3221f; background:#fdeceb; border-color:#f6c6c3; }
   .payroll-hint-success { color:#1c6b2c; background:#eaf7ec; border-color:#c3e8c9; }
+  .payroll-hint-info { color:#2a5b86; background:#eef5fb; border-color:#cfe2f3; }
+  .payroll-payments-title { margin: 24px 0 8px; font-size: 1.05em; }
 </style>
 <script>
 document.addEventListener("DOMContentLoaded", function () {
@@ -104,6 +112,7 @@ document.addEventListener("DOMContentLoaded", function () {
     { title: "{{ t('payroll_col_base_amount') }}", field: "base_amount", width: 120, sorter: "number" },
     { title: "{{ t('payroll_col_vacation_pay') }}", field: "vacation_pay", width: 130, sorter: "number" },
     { title: "{{ t('payroll_col_sick_pay') }}", field: "sick_pay", width: 120, sorter: "number" },
+    { title: "{{ t('payroll_col_work_gross') }}", field: "work_gross", width: 130, sorter: "number" },
     // Əlavələr — GROSS-dan ƏVVƏL (ona daxil olur):
     { title: "{{ t('payroll_col_additions') }}", field: "additions_total", width: 110, sorter: "number" },
     { title: "{{ t('payroll_col_gross') }}", field: "gross_total", width: 120, sorter: "number", bottomCalc: "sum" },
@@ -133,6 +142,7 @@ document.addEventListener("DOMContentLoaded", function () {
   // təsdiqlənmiş sətirlərdə isə dəyişiklik artıq qadağandır (bax:
   // routes.py add_addition finalized yoxlaması).
   let payrollTable = null;
+  let paymentsTable = null;
 
   if (tabelExists) {
     payrollTable = createAdvancedGrid("payrollEntryGrid", "payroll_entries", {
@@ -145,22 +155,64 @@ document.addEventListener("DOMContentLoaded", function () {
       idField: "entry_id",
       numericFields: [
         "monthly_salary", "norm_days", "worked_days", "base_amount",
-        "vacation_pay", "sick_pay", "additions_total", "gross_total",
+        "vacation_pay", "sick_pay", "work_gross", "additions_total", "gross_total",
         "income_tax", "dsmf_amount", "unemployment_amount", "medical_amount",
         "deductions_total", "total_deductions", "net_total",
         "employer_dsmf", "employer_unemployment", "employer_medical", "employer_cost_total"
       ],
       extraRowActions: function (data) {
-        if (!canEdit || !data.entry_id || payrollApproved) return [];
-        return [{
-          label: "{{ t('emp_additions_page_title') }}",
+        if (!data.entry_id) return [];
+        // "Ödənişlər" — bu əməkdaşın ayın bütün ödənişləri (tarixlə, növlə,
+        // hər birinin NET-i) — yalnız oxumaq üçün, təsdiqlənmiş dövrdə də açılır.
+        const actions = [{
+          label: "{{ t('payroll_payments_menu') }}",
           action: function () {
-            openFormModal("/salary/payroll/entry/" + data.entry_id + "/additions", function () {
-              payrollTable.setData();
-            });
+            openFormModal("/salary/payroll/entry/" + data.entry_id + "/payments");
           }
         }];
+        if (canEdit && !payrollApproved) {
+          actions.push({
+            label: "{{ t('emp_additions_page_title') }}",
+            action: function () {
+              openFormModal("/salary/payroll/entry/" + data.entry_id + "/additions", function () {
+                payrollTable.setData();
+                if (paymentsTable) paymentsTable.setData();
+              });
+            }
+          });
+        }
+        return actions;
       }
+    });
+
+    // Bütün ödənişlər — hər növ/tarix üzrə AYRI sətir (əməkdaş süzgəci,
+    // tarix üzrə sıralama, Excel export grid-in özündə). Yekun NET (alt sətir)
+    // yuxarıdakı əməkhaqqı cədvəlinin Net cəminə bərabərdir.
+    paymentsTable = createAdvancedGrid("payrollPaymentsGrid", "payroll_payments", {
+      ajaxURL: "{{ url_for('salary.api_payroll_payments', period_id=period.id) }}",
+      pagination: true,
+      paginationSize: 30,
+      placeholder: "{{ t('no_data_generic') }}",
+      columns: [
+        { title: "{{ t('payment_col_date') }}", field: "pay_date", width: 130, sorter: "date", headerFilter: "input" },
+        { title: "{{ t('payroll_col_employee') }}", field: "employee", width: 200, headerFilter: "input" },
+        { title: "{{ t('payment_col_kind') }}", field: "kind", width: 150, headerFilter: "input" },
+        { title: "{{ t('payment_col_label') }}", field: "label", width: 280, headerFilter: "input" },
+        { title: "{{ t('payroll_col_gross') }}", field: "gross_amount", width: 110, sorter: "number", bottomCalc: "sum" },
+        { title: "{{ t('payroll_col_income_tax') }}", field: "income_tax", width: 110, sorter: "number", bottomCalc: "sum" },
+        { title: "{{ t('payroll_col_dsmf') }}", field: "dsmf_amount", width: 100, sorter: "number", bottomCalc: "sum" },
+        { title: "{{ t('payroll_col_unemployment') }}", field: "unemployment_amount", width: 120, sorter: "number", bottomCalc: "sum" },
+        { title: "{{ t('payroll_col_medical') }}", field: "medical_amount", width: 110, sorter: "number", bottomCalc: "sum" },
+        { title: "{{ t('emp_additions_col_deductions_total') }}", field: "deductions_amount", width: 110, sorter: "number", bottomCalc: "sum" },
+        { title: "{{ t('payment_col_net') }}", field: "net_amount", width: 130, sorter: "number", bottomCalc: "sum" },
+        { title: "{{ t('payment_col_target_net') }}", field: "target_net", width: 140, sorter: "number" }
+      ]
+    }, {
+      idField: "id",
+      numericFields: [
+        "gross_amount", "income_tax", "dsmf_amount", "unemployment_amount",
+        "medical_amount", "deductions_amount", "net_amount", "target_net"
+      ]
     });
   }
 });

@@ -87,6 +87,15 @@ class SalaryAddition(db.Model):
     valid_from = db.Column(db.Date, nullable=False)
     valid_to = db.Column(db.Date)  # NULL = müddətsiz (cari dövrədək qüvvədədir)
 
+    # Ödəniş tarixi (ixtiyari). DOLDURULUBSA — bu əlavə (məs. mükafat) BİR
+    # DƏFƏLİK, məhz bu tarixdə ayrıca ödənilir (ay ərzində bir neçə mükafat
+    # varsa, hər biri öz tarixi ilə ayrı sətir olur) və yalnız bu tarixin
+    # ayına aiddir (valid_from/valid_to həmin ayın 1-i/son günü kimi avtomatik
+    # təyin olunur — bax: salary/routes.py _apply_addition_form). BOŞDURSA —
+    # əvvəlki kimi hər ay tətbiq olunur və ayın SON günü, əməkhaqqı ilə
+    # eyni vaxtda ödənilir.
+    pay_date = db.Column(db.Date)
+
     order_id = db.Column(db.Integer, db.ForeignKey("orders.id"))
     note = db.Column(db.Text)
     is_active = db.Column(db.Boolean, default=True, nullable=False)
@@ -230,6 +239,11 @@ class PayrollEntry(db.Model):
     worked_days = db.Column(db.Integer, default=0)  # faktiki işlənmiş gün ("+")
     base_amount = db.Column(db.Numeric(12, 2), default=0)  # monthly_salary * worked/norm
 
+    # --- Obyektlər üzrə görülən işlər (bax: BriqadaWorkEntry) --------------------
+    # Modulda daxil edilən NET (avans + yekun) məbləğlərdən tərs hesablanmış
+    # ƏLAVƏ əməkhaqqı (gross) cəmi — gross_total-a daxildir.
+    work_gross = db.Column(db.Numeric(12, 2), default=0)
+
     # --- Törəmə sahələr (LeaveRequest-dən) -------------------------------------
     vacation_pay = db.Column(db.Numeric(12, 2), default=0)  # məzuniyyət pulu
     sick_pay = db.Column(db.Numeric(12, 2), default=0)  # xəstəlik pulu
@@ -269,3 +283,91 @@ class PayrollEntry(db.Model):
 
     payroll_run = db.relationship("PayrollRun", back_populates="entries")
     employee = db.relationship("Employee")
+    payments = db.relationship(
+        "PayrollPayment",
+        back_populates="entry",
+        cascade="all, delete-orphan",
+        order_by="PayrollPayment.pay_date, PayrollPayment.sort_no",
+    )
+
+
+class PayrollPayment(db.Model):
+    """Bir əməkdaşın BİR TARİXDƏ, BİR NÖV üzrə ayrıca hesablanmış (və
+    ödənilən) məbləği. Bir ay ərzində eyni əməkdaşa bir neçə ödəniş ola
+    bilər (məs. 03.09 məzuniyyət, 11.09 yenə məzuniyyət, 15.09 mükafat,
+    30.09 əsas əməkhaqqı) — hər biri AYRI sətirdir, öz gross, vergi/tutulma
+    və NET məbləği ilə. Banka da məhz bu sətirlər (NET) göndərilir.
+
+    Yekun `PayrollEntry.net_total` (və gross/vergi sahələri) bu sətirlərin
+    CƏMİDİR — bax: payroll_service.recalculate_entry. Sətirlər hər
+    "Hesabla"-da mənbələrdən (İş buraxmaları, Əlavələr, Tabel) yenidən
+    qurulur; təsdiqlənmiş dövrün sətirlərinə toxunulmur.
+
+    Vergilər AY ÜZRƏ KÜMÜLATİV bölünür (bax: payroll_service.
+    allocate_payments): hər ödənişin vergisi = (bu ödənişə qədər olan
+    gross-a düsturun nəticəsi) - (əvvəlki ödənişə qədər olan gross-a
+    düsturun nəticəsi). Beləliklə sətirlərin vergi cəmi TAM ayın gross-u
+    üzərindən hesablanan vergiyə (kəsrlərlə) DƏQİQ bərabər olur.
+    """
+
+    __tablename__ = "payroll_payments"
+
+    KIND_SALARY = "salary"
+    KIND_VACATION = "vacation"
+    KIND_SICK = "sick"
+    KIND_ADDITION = "addition"
+    # "Obyektlər üzrə görülən işlər" modulundan: orada daxil edilən məbləğ
+    # NET-dir (avans ayın 15-i, yekun ayın son günü ödənilir) — bax:
+    # payroll_service.allocate_payments (net -> gross tərs hesablama).
+    KIND_WORK_AVANS = "work_avans"
+    KIND_WORK_FINAL = "work_final"
+    WORK_KINDS = (KIND_WORK_AVANS, KIND_WORK_FINAL)
+    KINDS = [
+        (KIND_SALARY, "Əsas əməkhaqqı"),
+        (KIND_VACATION, "Məzuniyyət pulu"),
+        (KIND_SICK, "Xəstəlik pulu"),
+        (KIND_ADDITION, "Əlavə / mükafat"),
+        (KIND_WORK_AVANS, "Obyekt işi — avans"),
+        (KIND_WORK_FINAL, "Obyekt işi — yekun"),
+    ]
+
+    id = db.Column(db.Integer, primary_key=True)
+    payroll_entry_id = db.Column(
+        db.Integer, db.ForeignKey("payroll_entries.id"), nullable=False, index=True
+    )
+    sort_no = db.Column(db.Integer, default=0)  # eyni tarixdə sıra
+
+    kind = db.Column(db.String(15), nullable=False)
+    label = db.Column(db.String(250))  # məs. "Növbəti məzuniyyət (03.09.2026–16.09.2026)"
+    pay_date = db.Column(db.Date, nullable=False, index=True)
+
+    # Mənbə (izləmə üçün): "leave_payment" (LeaveRequestMonthlyPayment.id),
+    # "leave_request" (auto rejimdə LeaveRequest.id), "addition"
+    # (SalaryAddition.id) və ya NULL (əsas əməkhaqqı).
+    source_type = db.Column(db.String(20))
+    source_id = db.Column(db.Integer)
+
+    gross_amount = db.Column(db.Numeric(12, 2), default=0)
+    income_tax = db.Column(db.Numeric(12, 2), default=0)
+    dsmf_amount = db.Column(db.Numeric(12, 2), default=0)
+    unemployment_amount = db.Column(db.Numeric(12, 2), default=0)
+    medical_amount = db.Column(db.Numeric(12, 2), default=0)
+    # Aliment və s. "tutulma" növlü əlavələr (NET-dən çıxılır) — bu ayın
+    # ƏSAS əməkhaqqı ödənişinə (kind=salary) aid edilir.
+    deductions_amount = db.Column(db.Numeric(12, 2), default=0)
+    net_amount = db.Column(db.Numeric(12, 2), default=0)  # BANKA gedən məbləğ
+    # Yalnız obyekt işi ödənişləri üçün: modulda DAXİL EDİLMİŞ (təsdiqlənmiş)
+    # net məbləğ. gross_amount ondan tərs hesablanır, net_amount isə bu
+    # məbləğə bərabər çıxmalıdır (fərq olarsa — aydın görünsün deyə ayrıca saxlanılır).
+    target_net = db.Column(db.Numeric(12, 2))
+
+    employer_dsmf = db.Column(db.Numeric(12, 2), default=0)
+    employer_unemployment = db.Column(db.Numeric(12, 2), default=0)
+    employer_medical = db.Column(db.Numeric(12, 2), default=0)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    entry = db.relationship("PayrollEntry", back_populates="payments")
+
+    def kind_label(self):
+        return dict(self.KINDS).get(self.kind, self.kind)

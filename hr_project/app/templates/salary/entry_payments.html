@@ -1,0 +1,93 @@
+{% extends "modal_form_base.html" %}
+{% set form_title = t('payroll_payments_menu') ~ ' — ' ~ (entry.full_name_snapshot or '') %}
+{% set form_action = "#" %}
+{% set form_no_wrapper_card = true %}
+
+{% block form_actions %}{% endblock %}
+
+{% block form_fields %}
+<div class="dx-modal-form-single-col entry-payments-body">
+  <p class="entry-payments-hint">{{ t('payroll_payments_hint') }}</p>
+
+  {% if not payments %}
+  <p style="color:#888;">{{ t('payment_no_data') }}</p>
+  {% else %}
+  <div class="entry-payments-scroll">
+    <table class="entry-payments-table">
+      <thead>
+        <tr>
+          <th>{{ t('payment_col_date') }}</th>
+          <th>{{ t('payment_col_kind') }}</th>
+          <th>{{ t('payment_col_label') }}</th>
+          <th class="num">{{ t('payroll_col_gross') }}</th>
+          <th class="num">{{ t('payroll_col_income_tax') }}</th>
+          <th class="num">{{ t('payroll_col_dsmf') }}</th>
+          <th class="num">{{ t('payroll_col_unemployment') }}</th>
+          <th class="num">{{ t('payroll_col_medical') }}</th>
+          <th class="num">{{ t('emp_additions_col_deductions_total') }}</th>
+          <th class="num">{{ t('payment_col_net') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in payments %}
+        <tr>
+          <td>{{ p.pay_date.strftime('%d.%m.%Y') }}</td>
+          <td>{{ p.kind_label() }}</td>
+          <td>{{ p.label or '' }}</td>
+          <td class="num">{{ '%.2f'|format(p.gross_amount or 0) }}</td>
+          <td class="num">{{ '%.2f'|format(p.income_tax or 0) }}</td>
+          <td class="num">{{ '%.2f'|format(p.dsmf_amount or 0) }}</td>
+          <td class="num">{{ '%.2f'|format(p.unemployment_amount or 0) }}</td>
+          <td class="num">{{ '%.2f'|format(p.medical_amount or 0) }}</td>
+          <td class="num">{{ '%.2f'|format(p.deductions_amount or 0) }}</td>
+          <td class="num net">{{ '%.2f'|format(p.net_amount or 0) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colspan="3">{{ t('payment_total_label') }}</td>
+          <td class="num">{{ '%.2f'|format(payments|sum(attribute='gross_amount')) }}</td>
+          <td class="num">{{ '%.2f'|format(payments|sum(attribute='income_tax')) }}</td>
+          <td class="num">{{ '%.2f'|format(payments|sum(attribute='dsmf_amount')) }}</td>
+          <td class="num">{{ '%.2f'|format(payments|sum(attribute='unemployment_amount')) }}</td>
+          <td class="num">{{ '%.2f'|format(payments|sum(attribute='medical_amount')) }}</td>
+          <td class="num">{{ '%.2f'|format(payments|sum(attribute='deductions_amount')) }}</td>
+          <td class="num net">{{ '%.2f'|format(payments|sum(attribute='net_amount')) }}</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<style>
+  .entry-payments-body { width: 100%; }
+  .entry-payments-hint { color:#888; font-size:0.85em; margin:0 0 10px; }
+  .entry-payments-scroll { overflow-x: auto; }
+  .entry-payments-table { border-collapse: collapse; width: 100%; font-size: 0.9em; }
+  .entry-payments-table th, .entry-payments-table td { padding: 6px 8px; border-bottom: 1px solid #e3e3e3; white-space: nowrap; }
+  .entry-payments-table th { text-align: left; background: rgba(0,0,0,0.04); }
+  .entry-payments-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .entry-payments-table .net { font-weight: 600; }
+  .entry-payments-table tfoot td { font-weight: 600; border-top: 2px solid #bbb; border-bottom: none; }
+</style>
+<script>
+(function () {
+  // Bu pəncərə yalnız MƏLUMAT göstərir — paylaşılan popup-un "Yadda saxla"
+  // düyməsinin mənası yoxdur (bax: employee_additions.html-dəki eyni qayda).
+  const popup = getModalPopup();
+  if (popup) {
+    const toolbarItems = popup.option("toolbarItems");
+    const saveItem = findSaveToolbarItem(toolbarItems);
+    if (saveItem) {
+      saveItem.options.disabled = true;
+      saveItem.options.visible = false;
+    }
+    popup.option("toolbarItems", toolbarItems);
+  }
+})();
+</script>
+{% endblock %}

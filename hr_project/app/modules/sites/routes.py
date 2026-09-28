@@ -483,4 +483,14 @@ def approve_briqada_work_period(period_id):
     period.approved_at = datetime.utcnow() if period.is_approved else None
     period.approved_by_id = current_user.id if period.is_approved else None
     db.session.commit()
-    return jsonify({"success": True, "is_approved": period.is_approved})
+    # Bu ayın əməkhaqqısı artıq hesablanıb, amma hələ təsdiqlənməyibsə —
+    # obyekt işi məbləğləri (net -> gross) dərhal yenilənsin. Təsdiqlənmiş
+    # əməkhaqqıya toxunulmur.
+    from app.services import payroll_service
+    refreshed = payroll_service.refresh_unfinalized_payroll(period.year, period.month)
+    if refreshed:
+        db.session.commit()
+    return jsonify({
+        "success": True, "is_approved": period.is_approved,
+        "payroll_refreshed": bool(refreshed),
+    })

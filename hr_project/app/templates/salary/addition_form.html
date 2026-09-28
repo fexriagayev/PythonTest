@@ -49,6 +49,10 @@
     <input type="number" step="0.01" min="0" max="100" name="percent" value="{{ addition.percent if addition and addition.percent else '' }}">
   </div>
 
+  <label>{{ t('addition_field_pay_date') }}</label>
+  <input type="date" name="pay_date" id="additionPayDate" value="{{ addition.pay_date if addition and addition.pay_date else '' }}">
+  <p style="grid-column:1/-1;color:#888;font-size:0.8em;margin:-4px 0 4px;">{{ t('addition_pay_date_hint') }}</p>
+
   <label>{{ t('addition_field_valid_from') }}</label>
   <input type="date" name="valid_from" value="{{ addition.valid_from if addition else '' }}" required>
   <p style="grid-column:1/-1;color:#888;font-size:0.8em;margin:-4px 0 4px;">{{ t('addition_valid_from_hint') }}</p>
@@ -92,6 +96,31 @@
   }
   amountType.addEventListener("change", refreshAmountRows);
   refreshAmountRows();
+})();
+
+// Ödəniş tarixi seçiləndə qüvvəyə minmə/düşmə tarixləri həmin ayın 1-i/son
+// günü kimi avtomatik doldurulur (server də eyni qaydanı özü tətbiq edir).
+(function () {
+  const payDate = document.getElementById("additionPayDate");
+  const validFrom = document.querySelector('input[name="valid_from"]');
+  const validTo = document.querySelector('input[name="valid_to"]');
+  if (!payDate || !validFrom || !validTo) return;
+
+  function pad(n) { return String(n).padStart(2, "0"); }
+  function sync() {
+    const v = payDate.value;
+    const locked = !!v;
+    validFrom.readOnly = locked;
+    validTo.readOnly = locked;
+    if (!locked) return;
+    const parts = v.split("-");
+    const y = parseInt(parts[0], 10), m = parseInt(parts[1], 10);
+    const lastDay = new Date(y, m, 0).getDate();
+    validFrom.value = y + "-" + pad(m) + "-01";
+    validTo.value = y + "-" + pad(m) + "-" + pad(lastDay);
+  }
+  payDate.addEventListener("change", sync);
+  sync();
 })();
 </script>
 {% endblock %}
