@@ -141,7 +141,13 @@ def seed_data():
         sync_missing_columns,
         migrate_legacy_leave_payments,
         relax_column_nullable,
+        rename_column_if_exists,
     )
+    # Ad dəyişikliyi sync_missing_columns()-DƏN ƏVVƏL olmalıdır (məlumat itməsin):
+    # "Əlavələr" -> "Mükafat", "Obyekt işi (gross)" -> "Əlavə əməkhaqqı".
+    rename_column_if_exists(db, "payroll_entries", "additions_total", "bonus_total")
+    rename_column_if_exists(db, "payroll_entries", "additions_detail", "bonus_detail")
+    rename_column_if_exists(db, "payroll_entries", "work_gross", "additional_salary")
     sync_missing_columns(db)
 
     # BriqadaWorkEntry.briqada_id indi MƏCBURİ deyil (bax: model faylındakı

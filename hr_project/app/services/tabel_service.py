@@ -24,6 +24,7 @@ from datetime import date, datetime, timedelta
 import calendar
 
 from app import db
+from app.utils.contract_sort import contract_sort_key
 from app.models import (
     Employee,
     EmploymentRecord,
@@ -181,7 +182,16 @@ def _build_all_day_marks(year, month):
     bir aktiv günü olan əməkdaşlar üçün) qaytarır. DB-yə heç nə YAZMIR —
     çağıran tərəf (generate_period) TabelEmployeeRow-a çevirib əlavə edir."""
     period_start, period_end, days_in_month = month_bounds(year, month)
-    employees = sorted(_employees_with_current_stint(), key=lambda e: e.full_name or "")
+    # Müqavilə N-ə (ƏDƏD kimi) görə — bax: app/utils/contract_sort.py. Nömrəsizlər
+    # sonda, eyni nömrədə ad-soyad. (Tabelin snapshot-ı da eyni dəyəri saxlayır.)
+    employees = sorted(
+        _employees_with_current_stint(),
+        key=lambda e: (
+            contract_sort_key(_contract_number_at(e, period_end)),
+            (e.full_name or "").casefold(),
+            e.id or 0,
+        ),
+    )
     weekend_days = _weekend_days(period_start, period_end)
     holiday_marks = _holiday_marks(period_start, period_end)
 

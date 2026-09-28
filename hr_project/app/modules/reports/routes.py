@@ -4,6 +4,7 @@ import csv
 import io
 
 from app.models import Employee, TabelEmployeeRow, PayrollEntry
+from app.utils.contract_sort import contract_sort_key, sort_employees_by_contract, contract_numbers_by_employee
 from app.utils.decorators import log_action
 
 reports_bp = Blueprint("reports", __name__)
@@ -20,19 +21,51 @@ def index():
 
 def _rows_for(module_code):
     if module_code == "HR":
-        header = ["ID", "Ad Soyad Ata adı", "Şöbə", "Vəzifə", "İşə qəbul tarixi", "Aktiv"]
-        rows = [[e.id, e.full_name, e.department, e.position,
-                  e.hire_date, e.is_active] for e in Employee.query.all()]
+        header = ["ID", "Müqavilə N", "Ad Soyad Ata adı", "Şöbə", "Vəzifə", "İşə qəbul tarixi", "Aktiv"]
+        employees = sort_employees_by_contract(Employee.query.all())
+        numbers = contract_numbers_by_employee([e.id for e in employees])
+        rows = [[e.id, numbers.get(e.id), e.full_name, e.department, e.position,
+                  e.hire_date, e.is_active] for e in employees]
     elif module_code == "TABEL":
         header = ["ID", "Dövr", "Əməkdaş", "M/n", "Vəzifə", "İş günlərinin sayı"]
+        # Dövr üzrə qruplaşdırılır (yeni -> köhnə), dövr daxilində Müqavilə N-ə (ƏDƏD kimi) görə.
+        tabel_rows = sorted(
+            TabelEmployeeRow.query.all(),
+            key=lambda r: (
+                -(r.period.year * 100 + r.period.month) if r.period else 0,
+                contract_sort_key(r.contract_number_snapshot),
+                (r.full_name_snapshot or "").casefold(),
+            ),
+        )
         rows = [[r.id, r.period.label if r.period else "", r.full_name_snapshot,
                   r.contract_number_snapshot, r.position_snapshot, r.work_days_count()]
-                 for r in TabelEmployeeRow.query.all()]
+                 for r in tabel_rows]
     elif module_code == "SALARY":
-        header = ["ID", "Dövr", "Əməkdaş", "Baza", "Əlavələr", "Tutulmalar", "Gross", "Net"]
+        header = ["ID", "Dövr", "Müqavilə N", "Əməkdaş", "Baza", "Əlavə əməkhaqqı", "Mükafat", "Tutulmalar", "Gross", "Net"]
+        # Dövr üzrə (yeni -> köhnə), dövr daxilində Müqavilə N-ə (ƏDƏD kimi) görə.
+        entries = PayrollEntry.query.all()
+        tabel_contract = {}
+        for e in entries:
+            per = e.payroll_run.period if e.payroll_run else None
+            if per and per.id not in tabel_contract:
+                tabel_contract[per.id] = {
+                    r.employee_id: r.contract_number_snapshot
+                    for r in TabelEmployeeRow.query.filter_by(period_id=per.id).all()
+                }
+
+        def _entry_contract(e):
+            per = e.payroll_run.period if e.payroll_run else None
+            return tabel_contract.get(per.id, {}).get(e.employee_id) if per else None
+
+        entries.sort(key=lambda e: (
+            -(e.payroll_run.period.year * 100 + e.payroll_run.period.month)
+            if e.payroll_run and e.payroll_run.period else 0,
+            contract_sort_key(_entry_contract(e)),
+            (e.full_name_snapshot or "").casefold(),
+        ))
         rows = [[e.id, e.payroll_run.period.label if e.payroll_run and e.payroll_run.period else "",
-                  e.full_name_snapshot, e.base_amount, e.additions_total, e.deductions_total,
-                  e.gross_total, e.net_total] for e in PayrollEntry.query.all()]
+                  _entry_contract(e), e.full_name_snapshot, e.base_amount, e.additional_salary,
+                  e.bonus_total, e.deductions_total, e.gross_total, e.net_total] for e in entries]
     else:
         header, rows = [], []
     return header, rows

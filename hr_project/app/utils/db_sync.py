@@ -73,6 +73,33 @@ def sync_missing_columns(db):
                 print(f"[db_sync] {table.name}.{column.name} əlavə edilmədi: {exc}")
 
 
+def rename_column_if_exists(db, table_name, old_name, new_name):
+    """BİR DƏFƏLİK, idempotent: modeldə sütunun adı dəyişdirilibsə (məs.
+    `payroll_entries.additions_total` -> `bonus_total`), köhnə adlı sütunu
+    MƏLUMATI İTİRMƏDƏN yenisinə çevirir. `sync_missing_columns()` yalnız
+    çatışan sütun əlavə edir — ondan ƏVVƏL çağırılmasa, yeni ad boş sütun
+    kimi yaranar, köhnə sütundakı məlumat isə kənarda qalar. Cədvəl/köhnə
+    sütun yoxdursa (təzə DB) və ya yeni sütun artıq varsa — heç nə etmir."""
+    engine = db.engine
+    inspector = inspect(engine)
+    if table_name not in inspector.get_table_names():
+        return
+    columns = {c["name"] for c in inspector.get_columns(table_name)}
+    if old_name not in columns:
+        return
+    if new_name in columns:
+        print(f"[db_sync] {table_name}: həm '{old_name}', həm '{new_name}' var — əl ilə yoxlayın.")
+        return
+    try:
+        with engine.begin() as conn:
+            conn.execute(text(
+                f'ALTER TABLE "{table_name}" RENAME COLUMN "{old_name}" TO "{new_name}"'
+            ))
+        print(f"[db_sync] Sütun adı dəyişdirildi: {table_name}.{old_name} -> {new_name}")
+    except Exception as exc:  # pragma: no cover — dev-time convenience only
+        print(f"[db_sync] {table_name}.{old_name} adı dəyişdirilmədi: {exc}")
+
+
 def relax_column_nullable(db, table_name, column_name):
     """BİR DƏFƏLİK, idempotent düzəliş: `column_name` DB-də hələ də
     NOT NULL-dursa (amma modeldə artıq `nullable=True`-dursa), onu

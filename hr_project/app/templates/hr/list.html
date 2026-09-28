@@ -38,6 +38,7 @@
     placeholder: "{{ t('no_data_placeholder') }}",
     columns: [
       { title: "{{ t('emp_col_id') }}", field: "id", width: 70, sorter: "number" },
+      { title: "{{ t('emp_col_contract_number') }}", field: "contract_number", width: 110, headerFilter: "input", sortingMethod: contractNumberCompare },
       { title: "{{ t('emp_col_full_name') }}", field: "full_name", headerFilter: "input", sorter: "string", widthGrow: 2 },
       { title: "{{ t('emp_col_gender') }}", field: "gender", headerFilter: "input" },
       { title: "{{ t('emp_col_birth_date') }}", field: "birth_date", sorter: "date" },
@@ -62,7 +63,7 @@
   });
 
   wireGlobalSearch(table, document.getElementById("searchBox"),
-    ["full_name", "gender", "department", "position", "phone", "email"]);
+    ["contract_number", "full_name", "gender", "department", "position", "phone", "email"]);
 
   document.getElementById("showInactiveToggle").addEventListener("change", function (e) {
     ajaxParams.include_inactive = e.target.checked ? "1" : "0";

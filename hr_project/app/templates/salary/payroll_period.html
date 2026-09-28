@@ -35,7 +35,8 @@ document.addEventListener("DOMContentLoaded", function () {
     { title: "{{ t('payroll_col_base_amount') }}", field: "base_amount", width: 120, sorter: "number" },
     { title: "{{ t('payroll_col_vacation_pay') }}", field: "vacation_pay", width: 130, sorter: "number" },
     { title: "{{ t('payroll_col_sick_pay') }}", field: "sick_pay", width: 120, sorter: "number" },
-    { title: "{{ t('payroll_col_additions') }}", field: "additions_total", width: 110, sorter: "number" },
+    { title: "{{ t('payroll_col_additional_salary') }}", field: "additional_salary", width: 140, sorter: "number" },
+    { title: "{{ t('payroll_col_bonus') }}", field: "bonus_total", width: 110, sorter: "number" },
     { title: "{{ t('emp_additions_col_deductions_total') }}", field: "deductions_total", width: 110, sorter: "number" },
     { title: "{{ t('payroll_col_gross') }}", field: "gross_total", width: 120, sorter: "number", bottomCalc: "sum" },
     { title: "{{ t('payroll_col_income_tax') }}", field: "income_tax", width: 120, sorter: "number" },
@@ -73,7 +74,7 @@ document.addEventListener("DOMContentLoaded", function () {
     idField: "id",
     numericFields: [
       "monthly_salary", "norm_days", "worked_days", "base_amount",
-      "vacation_pay", "sick_pay", "additions_total", "deductions_total", "gross_total",
+      "vacation_pay", "sick_pay", "additional_salary", "bonus_total", "deductions_total", "gross_total",
       "income_tax", "dsmf_amount", "unemployment_amount", "medical_amount", "net_total"
     ],
   });

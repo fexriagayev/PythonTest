@@ -3,6 +3,7 @@ from flask_login import login_required, current_user
 from datetime import datetime
 
 from app import db
+from app.utils.contract_sort import sort_employees_by_contract, contract_numbers_by_employee, sort_rows_by_contract
 from app.models import Employee, Obyekt, Briqada, BriqadaWorkPeriod
 from app.models.hr.briqada_work import AZ_MONTH_NAMES, RUN_TYPES
 from app.utils.decorators import permission_required, log_action
@@ -162,7 +163,15 @@ class BriqadaGroup:
         # Boş "yer tutucu" sətir (member_id VƏ member_name hər ikisi boş —
         # hələ heç bir üzv əlavə olunmayan təzə briqada üçün) real üzv
         # SAYILMIR.
-        self.members = [r for r in rows if r.member_id or r.member_name]
+        members = [r for r in rows if r.member_id or r.member_name]
+        # Üzvlər Müqavilə N-ə (ƏDƏD kimi) görə; sistemdə əməkdaşı olmayan
+        # (sərbəst adlı) üzvlərin nömrəsi yoxdur — sonda.
+        numbers = contract_numbers_by_employee([r.member_id for r in members])
+        self.members = sort_rows_by_contract(
+            members,
+            lambda r: numbers.get(r.member_id) if r.member_id else None,
+            lambda r: r.member_display_name(),
+        )
 
 
 def _briqada_groups():
@@ -220,7 +229,8 @@ def api_briqadalar():
 
 
 def _employee_choices():
-    return Employee.query.filter_by(is_active=True).order_by(Employee.full_name).all()
+    # Müqavilə N-ə (ƏDƏD kimi) görə — bax: app/utils/contract_sort.py
+    return sort_employees_by_contract(Employee.query.filter_by(is_active=True).all())
 
 
 def _briqada_shared_fields_from_form(form):

@@ -28,6 +28,7 @@ Xananın "sahibi" iki cür ola bilər (bax: BriqadaWorkEntry):
 """
 
 from app import db
+from app.utils.contract_sort import contract_sort_key
 from app.models import Obyekt, Briqada, BriqadaWorkEntry
 from app.services.tabel_service import (
     month_bounds,
@@ -69,14 +70,11 @@ def leaf_obyekt_ids(columns):
 
 
 def _contract_sort_key(contract_number):
-    """Müqavilə N-ə görə sıralama açarı — RƏQƏMSƏ (məs. "845") ədəd kimi
-    düzgün sıralansın deyə sıfırla soldan doldurulur (yoxsa "9" > "10"
-    kimi mətn-sıralama səhvi olardı); mətn-qarışıq dəyərlər olduğu kimi
-    saxlanılır. Müqavilə N-i olmayanlar (None) siyahının SONUNA düşür."""
-    if not contract_number:
-        return "\uffff"  # ən sona düşsün
-    s = str(contract_number).strip()
-    return s.zfill(12) if s.isdigit() else s
+    """Müqavilə N-ə görə sıralama açarı — RƏQƏM kimi (\"9\" < \"10\"), mətn-qarışıq
+    dəyərlər sonra, müqavilə N-i olmayanlar (None) ən sonda. Bütün siyahılarla
+    EYNİ qayda üçün ortaq funksiyadan istifadə edir (bax:
+    app/utils/contract_sort.py)."""
+    return contract_sort_key(contract_number)
 
 
 def _active_employees_for_period(period):
@@ -92,7 +90,11 @@ def _active_employees_for_period(period):
     ]
     return sorted(
         employees,
-        key=lambda e: _contract_sort_key(_contract_number_at(e, period_end)),
+        key=lambda e: (
+            _contract_sort_key(_contract_number_at(e, period_end)),
+            (e.full_name or "").casefold(),
+            e.id or 0,
+        ),
     )
 
 

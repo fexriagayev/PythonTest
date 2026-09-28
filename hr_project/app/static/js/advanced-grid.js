@@ -188,6 +188,32 @@ function applyFormatterCompatibility(dx, original) {
 
 
 /* ---------------------------------------------------------------------------
+   Müqavilə N-ə görə RƏQƏM kimi sıralama (server tərəfindəki
+   app/utils/contract_sort.py ilə EYNİ qayda): rəqəmlə başlayanlar ədəd kimi
+   (9 < 10 < 845), sonra mətn nömrələri, nömrəsizlər ən sonda. Sütun tərifində
+   `sortingMethod: contractNumberCompare` kimi istifadə olunur.
+   --------------------------------------------------------------------------- */
+
+function contractNumberSortKey(value) {
+  const s = value == null ? "" : String(value).trim();
+  if (!s) return [2, 0, ""];
+  const m = /^(\d+)(.*)$/.exec(s);
+  if (m) return [0, parseInt(m[1], 10), m[2].trim().toLowerCase()];
+  return [1, 0, s.toLowerCase()];
+}
+
+function contractNumberCompare(a, b) {
+  const ka = contractNumberSortKey(a);
+  const kb = contractNumberSortKey(b);
+  if (ka[0] !== kb[0]) return ka[0] - kb[0];
+  if (ka[1] !== kb[1]) return ka[1] - kb[1];
+  return ka[2] < kb[2] ? -1 : ka[2] > kb[2] ? 1 : 0;
+}
+
+window.contractNumberCompare = contractNumberCompare;
+
+
+/* ---------------------------------------------------------------------------
    Tabulator-style column -> DevExtreme column
    --------------------------------------------------------------------------- */
 
@@ -327,6 +353,19 @@ function convertColumnsToDevExtreme(columns) {
     applyFormatterCompatibility(dx, original);
 
     /*
+     * `decimals: 2` — rəqəm sütununu həmişə 0.00 formatında (vergüldən sonra
+     * N rəqəm) göstərir; footer cəmi də eyni formatda çıxır (bax: summary).
+     * `sortingMethod` — xüsusi müqayisə (məs. contractNumberCompare).
+     */
+    if (original.decimals != null) {
+      dx.dataType = "number";
+      dx.format = { type: "fixedPoint", precision: original.decimals };
+    }
+    if (typeof original.sortingMethod === "function") {
+      dx.sortingMethod = original.sortingMethod;
+    }
+
+    /*
      * Old bottomCalc definitions.
      */
     if (original.bottomCalc) {
@@ -457,12 +496,17 @@ function applySummaries(grid, settings) {
         return;
       }
 
-      totalItems.push({
+      const footerItem = {
         name: "footer_" + field,
         column: field,
         summaryType: devExtremeSummaryType(type),
         displayFormat: AGG_LABELS[type] + ": {0}"
-      });
+      };
+      // Sütunun öz formatı varsa (məs. decimals: 2 -> 0.00) cəm də həmin
+      // formatda göstərilsin ("count" istisna — o, tam ədəddir).
+      const colFormat = type !== "count" ? grid.columnOption(field, "format") : null;
+      if (colFormat) footerItem.valueFormat = colFormat;
+      totalItems.push(footerItem);
     });
   }
 

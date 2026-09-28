@@ -24,6 +24,7 @@ TRANSLATIONS = {
     "actions": {"az": "Əməliyyatlar", "en": "Actions"},
     # --- Əməkdaş modulu: siyahı (hr/list.html) ------------------------------
     "emp_list_title": {"az": "Əməkdaşların siyahısı", "en": "Employee List"},
+    "emp_col_contract_number": {"az": "Müqavilə N", "en": "Contract No"},
     "emp_col_full_name": {"az": "S.A.A.", "en": "Full Name"},
     "emp_col_gender": {"az": "Cinsi", "en": "Gender"},
     "emp_col_department": {"az": "Şöbə", "en": "Department"},
@@ -715,8 +716,8 @@ TRANSLATIONS = {
     "payroll_col_base_amount": {"az": "Baza məbləğ", "en": "Base Amount"},
     "payroll_col_vacation_pay": {"az": "Məzuniyyət pulu", "en": "Vacation Pay"},
     "payroll_col_sick_pay": {"az": "Xəstəlik pulu", "en": "Sick Pay"},
-    "payroll_col_work_gross": {"az": "Obyekt işi (gross)", "en": "Object work (gross)"},
-    "payroll_col_additions": {"az": "Əlavələr", "en": "Additions"},
+    "payroll_col_additional_salary": {"az": "Əlavə əməkhaqqı", "en": "Additional Salary"},
+    "payroll_col_bonus": {"az": "Mükafat", "en": "Bonus"},
     "payroll_col_gross": {"az": "Gross", "en": "Gross"},
     "payroll_col_income_tax": {"az": "Gəlir vergisi", "en": "Income Tax"},
     "payroll_col_dsmf": {"az": "DSMF", "en": "DSMF"},
@@ -744,7 +745,7 @@ TRANSLATIONS = {
     "payment_kind_salary": {"az": "Əsas əməkhaqqı", "en": "Base salary"},
     "payment_kind_vacation": {"az": "Məzuniyyət pulu", "en": "Vacation pay"},
     "payment_kind_sick": {"az": "Xəstəlik pulu", "en": "Sick pay"},
-    "payment_kind_addition": {"az": "Əlavə / mükafat", "en": "Addition / bonus"},
+    "payment_kind_addition": {"az": "Mükafat", "en": "Bonus"},
     "payment_filter_all_kinds": {"az": "Bütün növlər", "en": "All types"},
     "payment_no_data": {"az": "Bu əməkdaş üçün hələ ödəniş hesablanmayıb.", "en": "No payments have been calculated for this employee yet."},
     # --- Əməkhaqqı əlavələri/tutulmaları — əməkdaş kontekstində

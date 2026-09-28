@@ -105,16 +105,16 @@ document.addEventListener("DOMContentLoaded", function () {
   const columns = [
     { title: "{{ t('payroll_col_employee') }}", field: "employee", width: 200, headerFilter: "input" },
     { title: "{{ t('payroll_col_position') }}", field: "position", width: 160, headerFilter: "input" },
-    { title: "{{ t('payroll_col_contract_number') }}", field: "contract_number", width: 130, headerFilter: "input" },
+    { title: "{{ t('payroll_col_contract_number') }}", field: "contract_number", width: 130, headerFilter: "input", sortingMethod: contractNumberCompare },
     { title: "{{ t('payroll_col_monthly_salary') }}", field: "monthly_salary", width: 120, sorter: "number" },
     { title: "{{ t('payroll_col_norm_days') }}", field: "norm_days", width: 100, sorter: "number" },
     { title: "{{ t('payroll_col_worked_days') }}", field: "worked_days", width: 110, sorter: "number" },
     { title: "{{ t('payroll_col_base_amount') }}", field: "base_amount", width: 120, sorter: "number" },
     { title: "{{ t('payroll_col_vacation_pay') }}", field: "vacation_pay", width: 130, sorter: "number" },
     { title: "{{ t('payroll_col_sick_pay') }}", field: "sick_pay", width: 120, sorter: "number" },
-    { title: "{{ t('payroll_col_work_gross') }}", field: "work_gross", width: 130, sorter: "number" },
-    // Əlavələr — GROSS-dan ƏVVƏL (ona daxil olur):
-    { title: "{{ t('payroll_col_additions') }}", field: "additions_total", width: 110, sorter: "number" },
+    { title: "{{ t('payroll_col_additional_salary') }}", field: "additional_salary", width: 140, sorter: "number" },
+    // Əlavə əməkhaqqı və Mükafat — GROSS-dan ƏVVƏL (ona daxil olur):
+    { title: "{{ t('payroll_col_bonus') }}", field: "bonus_total", width: 110, sorter: "number" },
     { title: "{{ t('payroll_col_gross') }}", field: "gross_total", width: 120, sorter: "number", bottomCalc: "sum" },
     // Tutulmalar — NET-dən ƏVVƏL (hamısı NET-i azaldır):
     { title: "{{ t('payroll_col_income_tax') }}", field: "income_tax", width: 120, sorter: "number" },
@@ -123,7 +123,7 @@ document.addEventListener("DOMContentLoaded", function () {
     { title: "{{ t('payroll_col_medical') }}", field: "medical_amount", width: 110, sorter: "number" },
     { title: "{{ t('emp_additions_col_deductions_total') }}", field: "deductions_total", width: 110, sorter: "number" },
     // Cəmi tutulma — bütün yuxarıdakı tutulmaların cəmi (hesablanır, server-də toplanır):
-    { title: "{{ t('payroll_col_total_deductions') }}", field: "total_deductions", width: 130, sorter: "number", bottomCalc: "sum" },
+    { title: "{{ t('payroll_col_total_deductions') }}", field: "total_deductions", width: 130, sorter: "number", bottomCalc: "sum", decimals: 2 },
     { title: "{{ t('payroll_col_net') }}", field: "net_total", width: 120, sorter: "number", bottomCalc: "sum" },
     // Şirkətin ƏLAVƏ ödədiyi haqlar — əməkdaşın NET-inə TƏSİR ETMİR,
     // gross_total-ın üzərinə şirkətin əlavə xərci kimi gəlir:
@@ -155,7 +155,7 @@ document.addEventListener("DOMContentLoaded", function () {
       idField: "entry_id",
       numericFields: [
         "monthly_salary", "norm_days", "worked_days", "base_amount",
-        "vacation_pay", "sick_pay", "work_gross", "additions_total", "gross_total",
+        "vacation_pay", "sick_pay", "additional_salary", "bonus_total", "gross_total",
         "income_tax", "dsmf_amount", "unemployment_amount", "medical_amount",
         "deductions_total", "total_deductions", "net_total",
         "employer_dsmf", "employer_unemployment", "employer_medical", "employer_cost_total"

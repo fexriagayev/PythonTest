@@ -15,7 +15,8 @@
     </div>
     <p id="additionsSummary" style="color:#888;font-size:0.85em;margin:0;">
       {{ t('payroll_col_gross') }}: {{ entry.gross_total }} ·
-      {{ t('payroll_col_additions') }}: +{{ entry.additions_total }} ·
+      {{ t('payroll_col_additional_salary') }}: {{ entry.additional_salary }} ·
+      {{ t('payroll_col_bonus') }}: +{{ entry.bonus_total }} ·
       {{ t('emp_additions_col_deductions_total') }}: -{{ entry.deductions_total }} ·
       {{ t('payroll_col_net') }}: {{ entry.net_total }}
     </p>

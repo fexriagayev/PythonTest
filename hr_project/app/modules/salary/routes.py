@@ -21,6 +21,7 @@ from app.models.payroll.tax_formula import CODES, CODE_NAMES, TEMPLATE_SCRIPTS, 
 from app.services import payroll_service
 from app.services.formula_engine import evaluate_formula, validate_formula, FormulaError
 from app.utils.parsing import _parse_decimal, _parse_date
+from app.utils.contract_sort import contract_sort_key, sort_rows_by_contract
 
 
 @salary_bp.route("/payroll")
@@ -91,6 +92,19 @@ def generate_payroll(period_id):
             + "; ".join(f"{n} — {labels.get(rt, rt)} {a:.2f} AZN" for n, rt, a in skipped),
             "warning",
         )
+    # Daxil edilən net-dən tapılan gross baza məbləğdən (aylıq maaş x işlədiyi
+    # gün) AZDIRSA, "əlavə əməkhaqqı" mənfi çıxır — bu, çox güman ki, hələ
+    # yalnız avans təsdiqlənib, ya da net məbləğ səhv daxil edilib.
+    negative = [
+        e for e in run.entries
+        if e.additional_salary is not None and float(e.additional_salary) < 0
+    ]
+    if negative:
+        flash(
+            "Obyekt işləri üzrə net-dən tapılan gross baza məbləğdən azdır (əlavə əməkhaqqı mənfidir): "
+            + "; ".join(f"{e.full_name_snapshot} ({float(e.additional_salary):.2f})" for e in negative),
+            "warning",
+        )
     return redirect_target
 
 
@@ -154,6 +168,10 @@ def api_payroll_entries(period_id):
         .order_by(TabelEmployeeRow.row_no)
         .all()
     )
+    # Müqavilə N-ə (ƏDƏD kimi) görə — bax: app/utils/contract_sort.py
+    rows = sort_rows_by_contract(
+        rows, lambda r: r.contract_number_snapshot, lambda r: r.full_name_snapshot
+    )
     data = []
     for r in rows:
         e = entries_by_employee.get(r.employee_id)
@@ -168,20 +186,23 @@ def api_payroll_entries(period_id):
             "worked_days": e.worked_days if e else 0,
             "base_amount": float(e.base_amount or 0) if e else 0,
             "vacation_pay": float(e.vacation_pay or 0) if e else 0,
-            "work_gross": float(e.work_gross or 0) if e else 0,
+            "additional_salary": float(e.additional_salary or 0) if e else 0,
             "sick_pay": float(e.sick_pay or 0) if e else 0,
-            "additions_total": float(e.additions_total or 0) if e else 0,
+            "bonus_total": float(e.bonus_total or 0) if e else 0,
             "deductions_total": float(e.deductions_total or 0) if e else 0,
             "gross_total": float(e.gross_total or 0) if e else 0,
             "income_tax": float(e.income_tax or 0) if e else 0,
             "dsmf_amount": float(e.dsmf_amount or 0) if e else 0,
             "unemployment_amount": float(e.unemployment_amount or 0) if e else 0,
             "medical_amount": float(e.medical_amount or 0) if e else 0,
-            "total_deductions": (
+            # Cəmi tutulma — vergüldən sonra 2 rəqəmə (0.00) yuvarlaqlaşdırılır
+            # (float toplamasından yaranan 12.340000000000002 kimi dəyərlər olmasın).
+            "total_deductions": round(
                 float(e.income_tax or 0) + float(e.dsmf_amount or 0)
                 + float(e.unemployment_amount or 0) + float(e.medical_amount or 0)
-                + float(e.deductions_total or 0)
-            ) if e else 0,
+                + float(e.deductions_total or 0),
+                2,
+            ) if e else 0.0,
             "net_total": float(e.net_total or 0) if e else 0,
             "employer_dsmf": float(e.employer_dsmf or 0) if e else 0,
             "employer_unemployment": float(e.employer_unemployment or 0) if e else 0,
@@ -245,6 +266,20 @@ def api_payroll_payments(period_id):
     payments = query.order_by(
         PayrollPayment.pay_date, PayrollEntry.row_no, PayrollPayment.sort_no
     ).all()
+    # Eyni tarixdə əməkdaşlar Müqavilə N-ə (ƏDƏD kimi) görə — bax: app/utils/contract_sort.py
+    contract_by_emp = {
+        r.employee_id: r.contract_number_snapshot
+        for r in TabelEmployeeRow.query.filter_by(period_id=period.id).all()
+    }
+    payments = sorted(
+        payments,
+        key=lambda p: (
+            p.pay_date,
+            contract_sort_key(contract_by_emp.get(p.entry.employee_id)),
+            (p.entry.full_name_snapshot or "").casefold(),
+            p.sort_no or 0,
+        ),
+    )
     return jsonify([_payment_to_dict(p) for p in payments])
 
 

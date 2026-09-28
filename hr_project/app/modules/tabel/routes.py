@@ -4,6 +4,7 @@ from flask import Blueprint, request, jsonify, render_template, abort
 from flask_login import login_required
 
 from app import db
+from app.utils.contract_sort import sort_rows_by_contract
 from app.models import TabelPeriod, TabelEmployeeRow
 from app.utils.decorators import permission_required, log_action
 from app.utils.modal import render_form
@@ -173,6 +174,10 @@ def api_matrix(period_id):
         TabelEmployeeRow.query.filter_by(period_id=period.id)
         .order_by(TabelEmployeeRow.row_no)
         .all()
+    )
+    # Müqavilə N-ə (ƏDƏD kimi) görə — bax: app/utils/contract_sort.py
+    rows = sort_rows_by_contract(
+        rows, lambda r: r.contract_number_snapshot, lambda r: r.full_name_snapshot
     )
     data = {
         "days_in_month": days_in_month,

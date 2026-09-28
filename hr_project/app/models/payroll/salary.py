@@ -209,7 +209,7 @@ class PayrollRun(db.Model):
 class PayrollEntry(db.Model):
     """Bir əməkdaşın bir PayrollRun (= bir təsdiqlənmiş Tabel dövrü)
     üzrə əməkhaqqı sətri. Manual sahə YOXDUR — `vacation_pay`/`sick_pay`
-    (LeaveRequest-dən) və `additions_total`/`deductions_total`
+    (LeaveRequest-dən) və `bonus_total`/`deductions_total`
     (SalaryAddition-dan, "Əməkhaqqı əlavələri" pəncərəsi vasitəsilə)
     daxil olmaqla bütün sahələr `payroll_service.recalculate_entry()`
     tərəfindən öz mənbələrindən hesablanır.
@@ -239,23 +239,26 @@ class PayrollEntry(db.Model):
     worked_days = db.Column(db.Integer, default=0)  # faktiki işlənmiş gün ("+")
     base_amount = db.Column(db.Numeric(12, 2), default=0)  # monthly_salary * worked/norm
 
-    # --- Obyektlər üzrə görülən işlər (bax: BriqadaWorkEntry) --------------------
-    # Modulda daxil edilən NET (avans + yekun) məbləğlərdən tərs hesablanmış
-    # ƏLAVƏ əməkhaqqı (gross) cəmi — gross_total-a daxildir.
-    work_gross = db.Column(db.Numeric(12, 2), default=0)
+    # --- Əlavə əməkhaqqı (Obyektlər üzrə görülən işlər — BriqadaWorkEntry) --------
+    # Modulda NET kimi daxil edilən (təsdiqlənmiş) avans + yekun məbləğlərdən
+    # NET -> GROSS tərs hesablama ilə tapılan ÜMUMİ gross MİNUS baza məbləğ
+    # (base_amount = aylıq maaş x işlənmiş gün / norma). Hesablama zamanı
+    # yadda saxlanılır (bax: payroll_service.recalculate_entry); ödəniş-ödəniş
+    # bölgüsü PayrollPayment.gross_amount / target_net-dədir.
+    additional_salary = db.Column(db.Numeric(12, 2), default=0)
 
     # --- Törəmə sahələr (LeaveRequest-dən) -------------------------------------
     vacation_pay = db.Column(db.Numeric(12, 2), default=0)  # məzuniyyət pulu
     sick_pay = db.Column(db.Numeric(12, 2), default=0)  # xəstəlik pulu
 
-    # --- Əlavələr / Tutulmalar (SalaryAddition) ------------------------------
-    # additions_total: GROSS-a daxil edilən "əlavə" növlü sətirlərin cəmi.
+    # --- Mükafat / Tutulmalar (SalaryAddition) --------------------------------
+    # bonus_total (MÜKAFAT): GROSS-a daxil edilən "əlavə" növlü sətirlərin cəmi.
     # deductions_total: vergi hesablanmış NET-dən çıxılan "tutulma" növlü
     # sətirlərin cəmi (bax: payroll_service.py — tutulmalar VERGİYƏ CƏLB
     # OLUNAN gross-u azaltmır, yalnız əldə olunan NET-i azaldır, ki gəlir
     # vergisi/DSMF və s. düzgün — tam gross üzərindən hesablansın).
-    additions_total = db.Column(db.Numeric(12, 2), default=0)
-    additions_detail = db.Column(db.JSON, default=list)  # [{"name":..,"amount":..}]
+    bonus_total = db.Column(db.Numeric(12, 2), default=0)
+    bonus_detail = db.Column(db.JSON, default=list)  # [{"name":..,"amount":..}]
     deductions_total = db.Column(db.Numeric(12, 2), default=0)
     deductions_detail = db.Column(db.JSON, default=list)  # [{"name":..,"amount":..}]
 
@@ -316,7 +319,7 @@ class PayrollPayment(db.Model):
     KIND_VACATION = "vacation"
     KIND_SICK = "sick"
     KIND_ADDITION = "addition"
-    # "Obyektlər üzrə görülən işlər" modulundan: orada daxil edilən məbləğ
+    # ƏLAVƏ ƏMƏKHAQQI — "Obyektlər üzrə görülən işlər" modulundan: orada daxil edilən məbləğ
     # NET-dir (avans ayın 15-i, yekun ayın son günü ödənilir) — bax:
     # payroll_service.allocate_payments (net -> gross tərs hesablama).
     KIND_WORK_AVANS = "work_avans"
@@ -326,9 +329,9 @@ class PayrollPayment(db.Model):
         (KIND_SALARY, "Əsas əməkhaqqı"),
         (KIND_VACATION, "Məzuniyyət pulu"),
         (KIND_SICK, "Xəstəlik pulu"),
-        (KIND_ADDITION, "Əlavə / mükafat"),
-        (KIND_WORK_AVANS, "Obyekt işi — avans"),
-        (KIND_WORK_FINAL, "Obyekt işi — yekun"),
+        (KIND_ADDITION, "Mükafat"),
+        (KIND_WORK_AVANS, "Əlavə əməkhaqqı — avans"),
+        (KIND_WORK_FINAL, "Əlavə əməkhaqqı — yekun"),
     ]
 
     id = db.Column(db.Integer, primary_key=True)

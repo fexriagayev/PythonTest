@@ -41,6 +41,7 @@ razılaşdırıldığı kimi, əvvəlcə gross→net üzərində dayanılıb.
 """
 
 from app import db
+from app.utils.contract_sort import sort_rows_by_contract
 from app.models import (
     EmploymentContractNotification,
     LeaveRequest,
@@ -489,7 +490,7 @@ def _work_payment_lines(employee_id, period_start, period_end, work_amounts):
         pay_date = period_start.replace(day=avans_day) if run_type == "avans" else period_end
         lines.append({
             "kind": kind,
-            "label": "Obyekt işi — " + ("avans" if run_type == "avans" else "yekun maaş"),
+            "label": "Əlavə əməkhaqqı — " + ("avans" if run_type == "avans" else "yekun maaş"),
             "pay_date": pay_date,
             "net_target": net,
             "source_type": "work_period",
@@ -744,9 +745,9 @@ def recalculate_entry(entry, work_amounts=None):
     vacation_pay = round(sum(float(l["amount"] or 0) for l in vacation_lines), 2)
     sick_pay = round(sum(float(l["amount"] or 0) for l in sick_lines), 2)
 
-    additions_detail = []
+    bonus_detail = []
     deductions_detail = []
-    additions_total = 0.0
+    bonus_total = 0.0
     deductions_total = 0.0
     addition_lines = []
     for a in applicable_additions(employee.id, period_start, period_end):
@@ -759,8 +760,8 @@ def recalculate_entry(entry, work_amounts=None):
             # (başqa aya düşən tarix bu dövrə aid deyil).
             if a.pay_date and not (period_start <= a.pay_date <= period_end):
                 continue
-            additions_detail.append({"name": a.type_name(), "amount": amt})
-            additions_total += amt
+            bonus_detail.append({"name": a.type_name(), "amount": amt})
+            bonus_total += amt
             addition_lines.append({
                 "kind": PayrollPayment.KIND_ADDITION,
                 "label": a.type_name() + (f" — {a.note}" if a.note else ""),
@@ -769,6 +770,16 @@ def recalculate_entry(entry, work_amounts=None):
                 "source_type": "addition",
                 "source_id": a.id,
             })
+
+    # NET -> GROSS (obyekt işi): əməkdaşın bu ay təsdiqlənmiş avans/yekun
+    # məbləğləri NET-dir. Onlardan tərs hesablanan ÜMUMİ gross (aşağıda,
+    # allocate_payments) = BAZA məbləğ + ƏLAVƏ ƏMƏKHAQQI. Baza məbləğ HƏMİŞƏ
+    # eyni qaydada tapılır və yadda saxlanılır: aylıq maaş x işlədiyi gün /
+    # norma günü (yuxarıda). Əlavə əməkhaqqı isə qalıqdır: (net-dən tapılan
+    # gross) - (baza məbləğ).
+    if work_amounts is None:
+        work_amounts = object_work_net_amounts(period.year, period.month)
+    work_lines = _work_payment_lines(employee.id, period_start, period_end, work_amounts)
 
     entry.full_name_snapshot = employee.full_name
     entry.position_snapshot = employee.position
@@ -780,8 +791,8 @@ def recalculate_entry(entry, work_amounts=None):
     entry.vacation_pay = vacation_pay
     entry.sick_pay = sick_pay
 
-    entry.additions_total = round(additions_total, 2)
-    entry.additions_detail = additions_detail
+    entry.bonus_total = round(bonus_total, 2)
+    entry.bonus_detail = bonus_detail
     entry.deductions_total = round(deductions_total, 2)
     entry.deductions_detail = deductions_detail
 
@@ -791,22 +802,18 @@ def recalculate_entry(entry, work_amounts=None):
     # (icra sənədi, məhkəmə qərarı və s. əsasında) çıxılır, ona görə
     # NET-dən çıxılır (əsas əməkhaqqı ödənişinin NET-indən), gross-dan yox.
     # Obyekt işinin gross-u isə NET-dən tərs hesablanır (aşağıda) və
-    # gross_total-a ondan SONRA əlavə olunur.
-    if work_amounts is None:
-        work_amounts = object_work_net_amounts(period.year, period.month)
-    work_lines = _work_payment_lines(employee.id, period_start, period_end, work_amounts)
-
+    # gross_total-a ondan SONRA daxil edilir (aşağıda).
     # HƏR ÖDƏNİŞ AYRICA: əsas əməkhaqqı ayın SON günü, məzuniyyət/xəstəlik
     # iş buraxmasının başlama günü, mükafat/əlavə öz tarixində (tarixi
     # yoxdursa ayın son günü). Bax: allocate_payments.
-    lines = [{
+    lines = ([] if work_lines else [{
         "kind": PayrollPayment.KIND_SALARY,
         "label": "Əsas əməkhaqqı",
         "pay_date": period_end,
         "amount": float(entry.base_amount or 0),
         "source_type": None,
         "source_id": None,
-    }] + vacation_lines + sick_lines + addition_lines + work_lines
+    }]) + vacation_lines + sick_lines + addition_lines + work_lines
 
     # `as_of_date=period_end`: bu dövr üçün YENİDƏN hesablama aparılanda
     # (məs. il sonra bir tabel düzəldilib təsdiqlənəndə) O DÖVRDƏ qüvvədə
@@ -814,14 +821,22 @@ def recalculate_entry(entry, work_amounts=None):
     # formulalar YOX — bax: PayrollTaxFormula.get_script_for_date.
     allocated = allocate_payments(lines, period_end, deductions_total=entry.deductions_total)
 
-    # Obyekt işinin tərs hesablanmış gross-u (net -> gross) + yekun gross.
-    entry.work_gross = round(
+    # NET-dən tərs hesablanmış (net -> gross) ÜMUMİ obyekt işi gross-u:
+    work_gross_total = round(
         sum(r["gross_amount"] for r in allocated if r["kind"] in PayrollPayment.WORK_KINDS), 2
     )
+    # ƏLAVƏ ƏMƏKHAQQI = net-dən tapılan gross - baza məbləğ; entry-də YADDA
+    # SAXLANILIR. Obyekt işi yoxdursa 0. (Mənfi çıxarsa — daxil edilən net
+    # baza məbləğin net-inə çatmır; bu, səhvə işarədir — bax: salary routes
+    # "generate" xəbərdarlığı — və olduğu kimi göstərilir, gizlədilmir.)
+    entry.additional_salary = (
+        round(work_gross_total - float(entry.base_amount or 0), 2) if work_lines else 0.0
+    )
+    # Gross = baza + əlavə əməkhaqqı + məzuniyyət + xəstəlik + mükafat.
     entry.gross_total = round(
-        float(entry.base_amount or 0) + float(entry.vacation_pay or 0)
-        + float(entry.sick_pay or 0) + float(entry.additions_total or 0)
-        + float(entry.work_gross or 0),
+        float(entry.base_amount or 0) + float(entry.additional_salary or 0)
+        + float(entry.vacation_pay or 0) + float(entry.sick_pay or 0)
+        + float(entry.bonus_total or 0),
         2,
     )
 
@@ -882,6 +897,11 @@ def generate_or_refresh_payroll(period):
         TabelEmployeeRow.query.filter_by(period_id=period.id)
         .order_by(TabelEmployeeRow.row_no)
         .all()
+    )
+    # Əməkhaqqı siyahısı Müqavilə N-ə (ƏDƏD kimi) görə sıralanır (köhnə,
+    # ad-ilə generasiya olunmuş tabellərdə də) — bax: app/utils/contract_sort.py.
+    rows = sort_rows_by_contract(
+        rows, lambda r: r.contract_number_snapshot, lambda r: r.full_name_snapshot
     )
 
     row_no = 0

@@ -15,6 +15,7 @@ from flask import (
 from flask_login import login_required
 
 from app import db
+from app.utils.contract_sort import sort_employees_by_contract, contract_numbers_by_employee
 from app.models import (
     Employee,
     DictionaryItem,
@@ -147,10 +148,13 @@ def api_employees():
     # göstərilir (bax: hr/list.html-dəki filter).
     show_inactive = request.args.get("include_inactive") == "1"
     query = Employee.query.filter(Employee.is_active.is_(not show_inactive))
-    employees = query.all()
+    # Müqavilə N-ə (ƏDƏD kimi) görə sıralanır — bax: app/utils/contract_sort.py
+    employees = sort_employees_by_contract(query.all())
+    contract_numbers = contract_numbers_by_employee([e.id for e in employees])
     data = [
         {
             "id": e.id,
+            "contract_number": contract_numbers.get(e.id),
             "full_name": e.full_name,
             "gender": e.gender.name if e.gender else None,
             "birth_date": e.birth_date.isoformat() if e.birth_date else None,

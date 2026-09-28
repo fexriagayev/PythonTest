@@ -1,4 +1,7 @@
 -əgər tabel təsdiqlənibsə, həmin dövr tabelə təsir edəcək dəyişikliklərə icazə verilməsin. (Məsələn həmin dövrə bayram/matəm əlavə etmək, iş buraxmaları əlavə etmək, maaşı dəyişmək, işçinin iş yeri məlumatlarını dəyişmək və s)
 bu barədə alert çıxsın ki, tabel təsdiqlənib 
 
-Obyekt üzrə görülən işlər aşağıdakılar düzəlməlidir:
+-Əməkhaqqına əlavələr pəncərəsində əlavənin növü əlavə əməkhaqqı olduqda o database-də əlavə əməkhaqqı qrafasına düşməlidir (bu zaman  daxil edilən dəyər yalnız gross-net hesablamasinda istfade olunur,
+ net-gross hesablanarkən isə avtomatik əlavə əməkhaqqı dəyəri hesablanır)
+ -əməkhaqqı cədvəlində sağ klikdə olan ödənişlər pəncərəsində grid digər yerlərdə istifadə etdiyimiz devextre gridi olsun və butun funksionallığı işlək olsun (sağ düymə , export, caption vəfooter və s)
+ -briqada üzvündən Afet-i silmek olmur (Server 409 qaytardı (/sites/briqadalar/edit/1))
