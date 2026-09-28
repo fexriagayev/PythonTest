@@ -8,13 +8,14 @@ Struktur (bax: matrix_data()):
   - SÜTUNLAR: hər ƏSAS obyekt (owner_id=None) öz qrupu — daxilində
     prioritet üzrə ALT obyektləri, sonda o qrupun "Cəmi" sütunu. Bütün
     qruplardan sonra ümumi "Yekun" sütunu.
-  - SƏTİRLƏR: dövrün ili/ayında AKTİV olan HƏR ƏMƏKDAŞ öz sətri (bax:
-    matrix_row_structure() — bu, tabel_service-in "aktiv əməkdaş"
-    təyinatı ilə EYNİDİR, ardıcıllıq üçün). Əgər həmin əməkdaş bir
-    briqadanın RƏHBƏRİDİRSƏ (bax: Briqada.header_id), onun sətri bir
-    BLOKA çevrilir: öz adı/müqavilə N-i o blokun bütün sətirləri
-    boyunca (vizual olaraq) yayılır; blokun İLK sətri RƏHBƏRİN ÖZÜNÜN
-    (redaktə oluna bilən) sətridir, sonra komandasının HƏR ÜZVÜ öz
+  - SƏTİRLƏR: dövrün ili/ayında AKTİV olan HƏR ƏMƏKDAŞ öz sətri, Müqavilə
+    N-ə görə sıralanıb (bax: matrix_row_structure() / _contract_sort_key
+    — bu, tabel_service-in "aktiv əməkdaş" təyinatı ilə EYNİDİR).
+    Əgər həmin əməkdaş bir briqadanın RƏHBƏRİDİRSƏ (bax:
+    Briqada.header_id), onun sətri bir BLOKA çevrilir: öz adı/müqavilə
+    N-i o blokun bütün sətirləri boyunca (vizual olaraq) yayılır;
+    blokun İLK sətri RƏHBƏRİN ÖZÜNÜN (redaktə oluna bilən) sətridir,
+    sonra komandasının HƏR ÜZVÜ (yenə Müqavilə N-ə görə sıralanıb) öz
     sətrində, ən sonda "Cəmi" sətri.
   - XANALAR: YALNIZ (adi əməkdaş sətri) VƏ YA (komanda üzvü sətri) x
     (yarpaq obyekt sütunu) xanaları əl ilə redaktə olunur — "Cəmi"/
@@ -67,29 +68,44 @@ def leaf_obyekt_ids(columns):
     return ids
 
 
+def _contract_sort_key(contract_number):
+    """Müqavilə N-ə görə sıralama açarı — RƏQƏMSƏ (məs. "845") ədəd kimi
+    düzgün sıralansın deyə sıfırla soldan doldurulur (yoxsa "9" > "10"
+    kimi mətn-sıralama səhvi olardı); mətn-qarışıq dəyərlər olduğu kimi
+    saxlanılır. Müqavilə N-i olmayanlar (None) siyahının SONUNA düşür."""
+    if not contract_number:
+        return "\uffff"  # ən sona düşsün
+    s = str(contract_number).strip()
+    return s.zfill(12) if s.isdigit() else s
+
+
 def _active_employees_for_period(period):
     """Dövrün ili/ayında ən azı bir aktiv günü olan bütün əməkdaşlar,
-    tam ad üzrə sıralanıb — tabel_service-dəki "aktiv əməkdaş" məntiqi
-    ilə EYNİ (bax: app.services.tabel_service._employees_with_current_stint /
+    Müqavilə N-ə görə sıralanıb (bax: _contract_sort_key) — tabel_service-
+    dəki "aktiv əməkdaş" məntiqi ilə EYNİ (bax:
+    app.services.tabel_service._employees_with_current_stint /
     _active_days), ki, hər iki modulda "aktiv" eyni şey demək olsun."""
     period_start, period_end, _ = month_bounds(period.year, period.month)
-    employees = sorted(_employees_with_current_stint(), key=lambda e: e.full_name or "")
-    return [e for e in employees if _active_days(e, period_start, period_end)]
-
-
-def _leader_groups(active_employee_ids):
-    """{header_id: [Briqada üzv sətri, ...]} — YALNIZ aktiv briqadalar,
-    boş "yer tutucu" sətirlər xaric (bax: Briqada modeli), prioritetə
-    görə sıralanıb. `member_id`-si olan (sistemdəki əməkdaşa bağlı) bir
-    üzv bu dövrdə AKTİV DEYİLSƏ (işdən çıxıb və s. — bax:
-    _active_employees_for_period), SİYAHIDAN ÇIXARILIR ki, təsadüfən
-    işdən çıxmış əməkdaşa iş/maya yazılmasın. Sərbəst (member_name,
-    sistemdə əməkdaş qeydi olmayan) üzvlər bu yoxlamaya tabe deyil."""
-    rows = (
-        Briqada.query.filter_by(is_active=True)
-        .order_by(Briqada.priority.desc(), Briqada.group_no.desc(), Briqada.id)
-        .all()
+    employees = [
+        e for e in _employees_with_current_stint()
+        if _active_days(e, period_start, period_end)
+    ]
+    return sorted(
+        employees,
+        key=lambda e: _contract_sort_key(_contract_number_at(e, period_end)),
     )
+
+
+def _leader_groups(active_employee_ids, period_end):
+    """{header_id: [Briqada üzv sətri, ...]} — YALNIZ aktiv briqadalar,
+    boş "yer tutucu" sətirlər xaric (bax: Briqada modeli), HƏR QRUPUN
+    daxilində Müqavilə N-ə görə sıralanıb (bax: _contract_sort_key —
+    sistemdə qeydiyyatı olmayan sərbəst/mətn üzvlər, müqavilə N-i
+    olmadığı üçün, siyahının sonuna düşür). `member_id`-si olan
+    (sistemdəki əməkdaşa bağlı) bir üzv bu dövrdə AKTİV DEYİLSƏ (işdən
+    çıxıb və s. — bax: _active_employees_for_period), SİYAHIDAN
+    ÇIXARILIR ki, təsadüfən işdən çıxmış əməkdaşa iş/maya yazılmasın."""
+    rows = Briqada.query.filter_by(is_active=True).all()
     groups = {}
     for r in rows:
         if not (r.member_id or r.member_name):
@@ -97,6 +113,12 @@ def _leader_groups(active_employee_ids):
         if r.member_id is not None and r.member_id not in active_employee_ids:
             continue  # işdən çıxmış/bu dövrdə aktiv olmayan əməkdaş — göstərilmir
         groups.setdefault(r.header_id, []).append(r)
+    for header_id, members in groups.items():
+        members.sort(
+            key=lambda r: _contract_sort_key(
+                _contract_number_at(r.member, period_end) if r.member else None
+            )
+        )
     return groups
 
 
@@ -105,9 +127,10 @@ def matrix_row_structure(period):
       {"employee": Employee, "members": None}                — adi sətir
       {"employee": Employee, "members": [Briqada üzv sətri, ...]} — rəhbər bloku
     """
+    _, period_end, _ = month_bounds(period.year, period.month)
     employees = _active_employees_for_period(period)
     active_ids = {e.id for e in employees}
-    leader_groups = _leader_groups(active_ids)
+    leader_groups = _leader_groups(active_ids, period_end)
     return [
         {"employee": emp, "members": leader_groups.get(emp.id) or None}
         for emp in employees

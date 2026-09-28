@@ -2070,7 +2070,16 @@ body.app-theme-sandstone .app-topbar {
 }
 
 .briqada-work-action-btn {
+  /* min-width HƏLƏ kifayət deyildi: mətn eni ("Hamısını sıfırla" vs
+     "Təsdiqlə"/"Təsdiqlənib") fərqli olduğu üçün dar ekranlarda uzun
+     mətn 2 sətrə keçib düyməni hündür edirdi. white-space:nowrap +
+     sabit height bunun qarşısını tam alır. */
   min-width: 150px;
+  height: 38px;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .briqada-work-total-row {
