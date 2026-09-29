@@ -1,0 +1,43 @@
+{
+ "note": "Oracle cədvəl -> {köhnə ID: yeni dictionary_items.id}. employees və orders üçün ID-lər dəyişmir.",
+ "dictionaries": {
+  "MID_GENDERS": {
+   "-1": 67,
+   "-2": 68
+  },
+  "MID_MARITAL_STATUSES": {
+   "-1": 69,
+   "-2": 70
+  },
+  "MID_EDUCATION_TYPES": {
+   "-7": 71,
+   "-8": 72,
+   "-9": 73,
+   "-3": 74,
+   "-10": 75,
+   "-2": 76,
+   "-11": 77,
+   "-4": 78,
+   "-1": 79,
+   "-5": 80,
+   "-6": 81
+  },
+  "MID_DISABILITY_TYPES": {
+   "1": 82,
+   "2": 83,
+   "3": 84
+  },
+  "MID_ORDER_TYPES": {
+   "-1": 85,
+   "-2": 86,
+   "-3": 87,
+   "-4": 88,
+   "-5": 89,
+   "-6": 90,
+   "-7": 91,
+   "-8": 92,
+   "-9": 93,
+   "-10": 94
+  }
+ }
+}
