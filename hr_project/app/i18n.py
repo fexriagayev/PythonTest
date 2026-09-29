@@ -755,6 +755,7 @@ TRANSLATIONS = {
     "emp_additions_add_btn": {"az": "Yeni əlavə/tutulma", "en": "New Addition/Deduction"},
     "emp_additions_col_kind": {"az": "Növ", "en": "Kind"},
     "emp_additions_col_deductions_total": {"az": "Tutulmalar", "en": "Deductions"},
+    "emp_additions_kind_additional_salary": {"az": "Əlavə əməkhaqqı", "en": "Additional Salary"},
     "emp_additions_kind_addition": {"az": "əlavədir", "en": "addition"},
     "emp_additions_kind_deduction": {"az": "tutulmadır", "en": "deduction"},
     "additions_col_amount_type": {"az": "Məbləğ növü", "en": "Amount Type"},

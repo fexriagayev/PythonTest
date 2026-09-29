@@ -6,73 +6,22 @@
 {% block form_actions %}{% endblock %}
 
 {% block form_fields %}
-<div class="dx-modal-form-single-col entry-payments-body">
-  <p class="entry-payments-hint">{{ t('payroll_payments_hint') }}</p>
-
-  {% if not payments %}
-  <p style="color:#888;">{{ t('payment_no_data') }}</p>
-  {% else %}
-  <div class="entry-payments-scroll">
-    <table class="entry-payments-table">
-      <thead>
-        <tr>
-          <th>{{ t('payment_col_date') }}</th>
-          <th>{{ t('payment_col_kind') }}</th>
-          <th>{{ t('payment_col_label') }}</th>
-          <th class="num">{{ t('payroll_col_gross') }}</th>
-          <th class="num">{{ t('payroll_col_income_tax') }}</th>
-          <th class="num">{{ t('payroll_col_dsmf') }}</th>
-          <th class="num">{{ t('payroll_col_unemployment') }}</th>
-          <th class="num">{{ t('payroll_col_medical') }}</th>
-          <th class="num">{{ t('emp_additions_col_deductions_total') }}</th>
-          <th class="num">{{ t('payment_col_net') }}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for p in payments %}
-        <tr>
-          <td>{{ p.pay_date.strftime('%d.%m.%Y') }}</td>
-          <td>{{ p.kind_label() }}</td>
-          <td>{{ p.label or '' }}</td>
-          <td class="num">{{ '%.2f'|format(p.gross_amount or 0) }}</td>
-          <td class="num">{{ '%.2f'|format(p.income_tax or 0) }}</td>
-          <td class="num">{{ '%.2f'|format(p.dsmf_amount or 0) }}</td>
-          <td class="num">{{ '%.2f'|format(p.unemployment_amount or 0) }}</td>
-          <td class="num">{{ '%.2f'|format(p.medical_amount or 0) }}</td>
-          <td class="num">{{ '%.2f'|format(p.deductions_amount or 0) }}</td>
-          <td class="num net">{{ '%.2f'|format(p.net_amount or 0) }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-      <tfoot>
-        <tr>
-          <td colspan="3">{{ t('payment_total_label') }}</td>
-          <td class="num">{{ '%.2f'|format(payments|sum(attribute='gross_amount')) }}</td>
-          <td class="num">{{ '%.2f'|format(payments|sum(attribute='income_tax')) }}</td>
-          <td class="num">{{ '%.2f'|format(payments|sum(attribute='dsmf_amount')) }}</td>
-          <td class="num">{{ '%.2f'|format(payments|sum(attribute='unemployment_amount')) }}</td>
-          <td class="num">{{ '%.2f'|format(payments|sum(attribute='medical_amount')) }}</td>
-          <td class="num">{{ '%.2f'|format(payments|sum(attribute='deductions_amount')) }}</td>
-          <td class="num net">{{ '%.2f'|format(payments|sum(attribute='net_amount')) }}</td>
-        </tr>
-      </tfoot>
-    </table>
+<div class="dx-modal-form-single-col entry-payments-modal-body">
+  <div class="toolbar entry-payments-toolbar">
+    <p style="color:#888;font-size:0.85em;margin:0;">{{ t('payroll_payments_hint') }}</p>
+    <p style="color:#888;font-size:0.85em;margin:0;">
+      {{ t('payroll_col_gross') }}: {{ entry.gross_total }} ·
+      {{ t('payment_col_net') }}: {{ entry.net_total }}
+    </p>
   </div>
-  {% endif %}
+  <div id="entryPaymentsGrid"></div>
 </div>
 {% endblock %}
 
 {% block extra_scripts %}
 <style>
-  .entry-payments-body { width: 100%; }
-  .entry-payments-hint { color:#888; font-size:0.85em; margin:0 0 10px; }
-  .entry-payments-scroll { overflow-x: auto; }
-  .entry-payments-table { border-collapse: collapse; width: 100%; font-size: 0.9em; }
-  .entry-payments-table th, .entry-payments-table td { padding: 6px 8px; border-bottom: 1px solid #e3e3e3; white-space: nowrap; }
-  .entry-payments-table th { text-align: left; background: rgba(0,0,0,0.04); }
-  .entry-payments-table .num { text-align: right; font-variant-numeric: tabular-nums; }
-  .entry-payments-table .net { font-weight: 600; }
-  .entry-payments-table tfoot td { font-weight: 600; border-top: 2px solid #bbb; border-bottom: none; }
+  .entry-payments-modal-body { width: 100%; }
+  .entry-payments-toolbar { justify-content: space-between; flex-wrap: wrap; gap: 10px; }
 </style>
 <script>
 (function () {
@@ -88,6 +37,48 @@
     }
     popup.option("toolbarItems", toolbarItems);
   }
+
+  // Grid-i popup TAM görünənə qədər GÖZLƏYİB yaradırıq (bax:
+  // employee_additions.html-dəki eyni qeyd — əks halda hündürlük səhv
+  // hesablanır, yalnız pəncərə resize olanda düzəlir).
+  runWhenModalShown(function () {
+    const entryPaymentsGrid = createAdvancedGrid("entryPaymentsGrid", "entry_payments", {
+      ajaxURL: "{{ url_for('salary.api_entry_payments', entry_id=entry.id) }}",
+      layout: "fitColumns",
+      pagination: true,
+      paginationSize: 20,
+      placeholder: "{{ t('payment_no_data') }}",
+      columns: [
+        { title: "{{ t('payment_col_date') }}", field: "pay_date", width: 120, sorter: "date" },
+        { title: "{{ t('payment_col_kind') }}", field: "kind", width: 170, headerFilter: "input" },
+        { title: "{{ t('payment_col_label') }}", field: "label", headerFilter: "input" },
+        { title: "{{ t('payroll_col_gross') }}", field: "gross_amount", width: 110, sorter: "number", bottomCalc: "sum", decimals: 2 },
+        { title: "{{ t('payroll_col_income_tax') }}", field: "income_tax", width: 110, sorter: "number", bottomCalc: "sum", decimals: 2 },
+        { title: "{{ t('payroll_col_dsmf') }}", field: "dsmf_amount", width: 100, sorter: "number", bottomCalc: "sum", decimals: 2 },
+        { title: "{{ t('payroll_col_unemployment') }}", field: "unemployment_amount", width: 120, sorter: "number", bottomCalc: "sum", decimals: 2 },
+        { title: "{{ t('payroll_col_medical') }}", field: "medical_amount", width: 110, sorter: "number", bottomCalc: "sum", decimals: 2 },
+        { title: "{{ t('emp_additions_col_deductions_total') }}", field: "deductions_amount", width: 110, sorter: "number", bottomCalc: "sum", decimals: 2 },
+        { title: "{{ t('payment_col_net') }}", field: "net_amount", width: 120, sorter: "number", bottomCalc: "sum", decimals: 2 },
+        { title: "{{ t('payment_col_target_net') }}", field: "target_net", width: 130, sorter: "number", decimals: 2 }
+      ]
+    }, {
+      idField: "id",
+      // Bu grid-in "baseKey"-i ("entry_payments") HƏR əməkdaşın/qeydin
+      // (entry_id) pəncərəsi üçün EYNİDİR (bax: employee_additions.html-
+      // dəki eyni izah — sütun eni kimi tənzimləmələr paylaşılır, filtr/
+      // səhifə YOX, o hər açılışda sıfırlanır).
+      onSettingsLoaded: function () {
+        setTimeout(function () {
+          try {
+            entryPaymentsGrid.pageIndex(0);
+            entryPaymentsGrid.clearFilter();
+          } catch (err) {
+            console.warn("Ödənişlər grid-i filtr/səhifə sıfırlanmadı:", err);
+          }
+        }, 0);
+      }
+    });
+  });
 })();
 </script>
 {% endblock %}

@@ -111,9 +111,12 @@ LEAVE_CATEGORIES = [
 # maaşdan çıxılır) olmalıdır (bax: payroll_service.py).
 SALARY_ADDITION_TYPE_CATEGORY = "salary_addition_type"
 SALARY_ADDITION_TYPES = [
-    # name, kind ("addition" | "deduction")
+    # name, kind ("addition" | "additional_salary" | "deduction") — bax:
+    # SalaryAddition.is_additional_salary / is_deduction. "additional_salary"
+    # PayrollEntry.additional_salary-yə düşür (gross kimi), "addition" isə
+    # "Mükafat"a (bonus_total).
     ("Mükafat", "addition"),
-    ("Əlavə əməkhaqqı", "addition"),
+    ("Əlavə əməkhaqqı", "additional_salary"),
     ("Aliment", "deduction"),
     ("İcra sənədi üzrə tutulma", "deduction"),
 ]
@@ -197,6 +200,14 @@ def seed_data():
                 module_code="SALARY", category=SALARY_ADDITION_TYPE_CATEGORY,
                 name=name, value=kind,
             ))
+        elif name == "Əlavə əməkhaqqı" and exists.value != "additional_salary":
+            # BİR DƏFƏLİK düzəliş: bu növ əvvəllər "addition" (Mükafat ilə
+            # EYNİ, bonus_total-a düşən) idi — indi ayrıca "additional_salary"
+            # kateqoriyasıdır (bax: SALARY_ADDITION_TYPES qeydi yuxarıda).
+            # Mövcud əlavələrin (SalaryAddition) NÖVÜ dəyişmir — yalnız bu
+            # kitabça qeydinin `value`-si düzəlir, bundan sonra "Hesabla"da
+            # onlar artıq additional_salary-yə düşəcək.
+            exists.value = "additional_salary"
 
     for name, counting_method, is_annual, is_sick, tabel_code in LEAVE_REASONS:
         existing = LeaveReason.query.filter_by(name=name).first()

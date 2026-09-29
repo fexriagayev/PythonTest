@@ -24,7 +24,7 @@
     <option value="">{{ t('select_placeholder') }}</option>
     {% for at in addition_types %}
     <option value="{{ at.id }}" {{ 'selected' if addition and addition.addition_type_id==at.id }}>
-      {{ at.name }} ({{ t('emp_additions_kind_addition') if at.value=='addition' else t('emp_additions_kind_deduction') }})
+      {{ at.name }} ({{ t('emp_additions_kind_additional_salary') if at.value=='additional_salary' else (t('emp_additions_kind_addition') if at.value=='addition' else t('emp_additions_kind_deduction')) }})
     </option>
     {% endfor %}
   </select>

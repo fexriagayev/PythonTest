@@ -116,6 +116,16 @@ class SalaryAddition(db.Model):
     def is_deduction(self):
         return bool(self.addition_type and self.addition_type.value == "deduction")
 
+    def is_additional_salary(self):
+        """"salary_addition_type" kitabçasında `value == "additional_salary"`
+        olan növ: bu əlavə GROSS-a "mükafat" kimi yox, birbaşa ƏLAVƏ
+        ƏMƏKHAQQI (PayrollEntry.additional_salary) qrafasına düşür — bax:
+        payroll_service.recalculate_entry. Daxil edilən məbləğ GROSS kimi
+        qəbul olunur (gross -> net hesablamasında istifadə olunur); obyekt
+        işindən (net -> gross) avtomatik hesablanan əlavə əməkhaqqının
+        ÜSTÜNƏ gəlir, onu əvəz ETMİR."""
+        return bool(self.addition_type and self.addition_type.value == "additional_salary")
+
     def amount_type_label(self):
         return dict(self.AMOUNT_TYPES).get(self.amount_type, self.amount_type)
 
@@ -324,12 +334,18 @@ class PayrollPayment(db.Model):
     # payroll_service.allocate_payments (net -> gross tərs hesablama).
     KIND_WORK_AVANS = "work_avans"
     KIND_WORK_FINAL = "work_final"
+    # Əlavə əməkhaqqı — "Əməkhaqqı əlavələri" pəncərəsindən NÖVÜ "əlavə
+    # əməkhaqqı" olan, əl ilə (GROSS kimi) daxil edilən sətir (bax:
+    # SalaryAddition.is_additional_salary). Obyekt işindən (net -> gross)
+    # avtomatik hesablanan work_avans/work_final-ın ÜSTÜNƏ gəlir.
+    KIND_ADDITIONAL_SALARY_MANUAL = "additional_salary_manual"
     WORK_KINDS = (KIND_WORK_AVANS, KIND_WORK_FINAL)
     KINDS = [
         (KIND_SALARY, "Əsas əməkhaqqı"),
         (KIND_VACATION, "Məzuniyyət pulu"),
         (KIND_SICK, "Xəstəlik pulu"),
         (KIND_ADDITION, "Mükafat"),
+        (KIND_ADDITIONAL_SALARY_MANUAL, "Əlavə əməkhaqqı"),
         (KIND_WORK_AVANS, "Əlavə əməkhaqqı — avans"),
         (KIND_WORK_FINAL, "Əlavə əməkhaqqı — yekun"),
     ]

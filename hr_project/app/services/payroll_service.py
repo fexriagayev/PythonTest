@@ -527,6 +527,7 @@ _KIND_ORDER = {
     PayrollPayment.KIND_VACATION: 0,
     PayrollPayment.KIND_SICK: 1,
     PayrollPayment.KIND_ADDITION: 2,
+    PayrollPayment.KIND_ADDITIONAL_SALARY_MANUAL: 2,
     PayrollPayment.KIND_WORK_AVANS: 2,
     PayrollPayment.KIND_WORK_FINAL: 2,
     PayrollPayment.KIND_SALARY: 3,
@@ -749,17 +750,31 @@ def recalculate_entry(entry, work_amounts=None):
     deductions_detail = []
     bonus_total = 0.0
     deductions_total = 0.0
+    additional_salary_manual = 0.0
     addition_lines = []
     for a in applicable_additions(employee.id, period_start, period_end):
         amt = round(a.amount_for(monthly_salary), 2)
         if a.is_deduction():
             deductions_detail.append({"name": a.type_name(), "amount": amt})
             deductions_total += amt
+            continue
+        # Ödəniş tarixi olan əlavə YALNIZ o tarixin ayında ödənilir
+        # (başqa aya düşən tarix bu dövrə aid deyil).
+        if a.pay_date and not (period_start <= a.pay_date <= period_end):
+            continue
+        if a.is_additional_salary():
+            # ƏLAVƏ ƏMƏKHAQQI (əl ilə, GROSS kimi daxil edilir): "Mükafat"a
+            # yox, additional_salary-yə düşür — bax: SalaryAddition.is_additional_salary.
+            additional_salary_manual += amt
+            addition_lines.append({
+                "kind": PayrollPayment.KIND_ADDITIONAL_SALARY_MANUAL,
+                "label": a.type_name() + (f" — {a.note}" if a.note else ""),
+                "pay_date": a.pay_date or period_end,
+                "amount": amt,
+                "source_type": "addition",
+                "source_id": a.id,
+            })
         else:
-            # Ödəniş tarixi olan əlavə YALNIZ o tarixin ayında ödənilir
-            # (başqa aya düşən tarix bu dövrə aid deyil).
-            if a.pay_date and not (period_start <= a.pay_date <= period_end):
-                continue
             bonus_detail.append({"name": a.type_name(), "amount": amt})
             bonus_total += amt
             addition_lines.append({
@@ -825,12 +840,16 @@ def recalculate_entry(entry, work_amounts=None):
     work_gross_total = round(
         sum(r["gross_amount"] for r in allocated if r["kind"] in PayrollPayment.WORK_KINDS), 2
     )
-    # ƏLAVƏ ƏMƏKHAQQI = net-dən tapılan gross - baza məbləğ; entry-də YADDA
-    # SAXLANILIR. Obyekt işi yoxdursa 0. (Mənfi çıxarsa — daxil edilən net
-    # baza məbləğin net-inə çatmır; bu, səhvə işarədir — bax: salary routes
-    # "generate" xəbərdarlığı — və olduğu kimi göstərilir, gizlədilmir.)
-    entry.additional_salary = (
-        round(work_gross_total - float(entry.base_amount or 0), 2) if work_lines else 0.0
+    # ƏLAVƏ ƏMƏKHAQQI = (net-dən tapılan gross - baza məbləğ, obyekt işi
+    # varsa) + (əl ilə, "əlavə əməkhaqqı" növü ilə daxil edilən GROSS cəmi);
+    # entry-də YADDA SAXLANILIR. (Obyekt işi hissəsi mənfi çıxarsa — daxil
+    # edilən net baza məbləğin net-inə çatmır; bu, səhvə işarədir — bax:
+    # salary routes "generate" xəbərdarlığı — və olduğu kimi göstərilir,
+    # gizlədilmir.)
+    entry.additional_salary = round(
+        (work_gross_total - float(entry.base_amount or 0) if work_lines else 0.0)
+        + additional_salary_manual,
+        2,
     )
     # Gross = baza + əlavə əməkhaqqı + məzuniyyət + xəstəlik + mükafat.
     entry.gross_total = round(

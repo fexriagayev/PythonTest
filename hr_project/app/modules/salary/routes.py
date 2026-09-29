@@ -289,7 +289,20 @@ def api_payroll_payments(period_id):
 def entry_payments(entry_id):
     """Bir əməkdaşın bu ayki bütün ödənişləri (tarix, növ, hər birinin NET-i)."""
     entry = PayrollEntry.query.get_or_404(entry_id)
-    return render_form("salary/entry_payments.html", entry=entry, payments=entry.payments)
+    return render_form("salary/entry_payments.html", entry=entry)
+
+
+@salary_bp.route("/payroll/entry/<int:entry_id>/payments/api")
+@login_required
+@permission_required(MODULE, "can_view")
+def api_entry_payments(entry_id):
+    """`entry_payments.html`-in grid-i üçün — YALNIZ bu əməkdaşın bu ayki
+    ödənişləri (bax: _payment_to_dict). Digər siyahılarla EYNİ DevExtreme
+    grid komponentindən (createAdvancedGrid) istifadə edilsin deyə API
+    kimi verilir."""
+    entry = PayrollEntry.query.get_or_404(entry_id)
+    payments = sorted(entry.payments, key=lambda p: (p.pay_date, p.sort_no or 0))
+    return jsonify([_payment_to_dict(p, entry) for p in payments])
 
 
 # =============================================================================

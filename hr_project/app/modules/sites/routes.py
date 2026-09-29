@@ -4,7 +4,7 @@ from datetime import datetime
 
 from app import db
 from app.utils.contract_sort import sort_employees_by_contract, contract_numbers_by_employee, sort_rows_by_contract
-from app.models import Employee, Obyekt, Briqada, BriqadaWorkPeriod
+from app.models import Employee, Obyekt, Briqada, BriqadaWorkPeriod, BriqadaWorkEntry
 from app.models.hr.briqada_work import AZ_MONTH_NAMES, RUN_TYPES
 from app.utils.decorators import permission_required, log_action
 from app.utils.modal import render_form, modal_redirect, is_modal_request
@@ -273,6 +273,95 @@ def _parse_briqada_members_from_form(form):
     return result
 
 
+def _detach_briqada_work_entries(row):
+    """Bir Briqada üzv SƏTRİ silinməzdən ƏVVƏL çağırılır: bu sətrə aid
+    "Obyektlər üzrə görülən işlər" xanaları (BriqadaWorkEntry.briqada_id)
+    varsa, onları İTİRMƏDƏN (tarix üzrə hesablanmış avans/yekun rəqəmləri
+    saxlanılsın deyə) köçürür, ƏKS HALDA silinmə FK məhdudiyyətinə görə
+    (bax: app/__init__.py IntegrityError -> 409) uğursuz olardı.
+
+      - Sistemdəki əməkdaşa bağlı üzv (member_id): xana həmin əməkdaşa
+        BİRBAŞA ("employee_id") bağlanır — bax: BriqadaWorkEntry modelinin
+        iki mümkün sahib sxemi. Həmin dövr/obyektdə onun artıq "employee"
+        xanası varsa (nadir), MƏBLƏĞLƏR CƏMLƏNİR, dublikat sətir silinir.
+      - Sərbəst adla yazılmış (sistemdə əməkdaşı olmayan) üzv: köçürüləcək
+        yer YOXDUR. Belə xananın datası varsa, silinməyə İCAZƏ VERİLMİR —
+        ValueError qaldırılır (route bunu aydın mesajla flash edir);
+        məlumatı olmayan sərbəst üzv problemsiz silinir.
+    """
+    entries = BriqadaWorkEntry.query.filter_by(briqada_id=row.id).all()
+    if not entries:
+        return
+    if row.member_id is None:
+        raise ValueError(
+            f"\"{row.member_display_name()}\" üzvünün Obyektlər üzrə görülən işlər "
+            "matrisində daxil edilmiş məbləği var. Sərbəst adla yazılmış (sistemdə "
+            "əməkdaşı olmayan) üzv üçün bu məbləğ başqa yerə köçürülə bilmədiyindən, "
+            "əvvəlcə həmin matrisdəki rəqəmləri silin, sonra üzvü çıxarın."
+        )
+    for e in entries:
+        existing = BriqadaWorkEntry.query.filter_by(
+            period_id=e.period_id, employee_id=row.member_id, obyekt_id=e.obyekt_id
+        ).first()
+        if existing:
+            existing.amount = float(existing.amount or 0) + float(e.amount or 0)
+            db.session.delete(e)
+        else:
+            e.briqada_id = None
+            e.employee_id = row.member_id
+
+
+def _sync_briqada_members(group, fields, members):
+    """Briqadanı redaktə edərkən üzv sətirlərini (Briqada.id-lər DƏYİŞMƏDƏN
+    qalsın deyə) UYĞUNLAŞDIRIR — köhnə "hamısını sil, yenidən yarat" üsulu
+    ƏVƏZİNƏ: dəyişməyən üzvlərin sətri (və `id`-si) olduğu kimi qalır,
+    yalnız HƏQİQƏTƏN çıxarılan üzvlər silinir (bax: _detach_briqada_work_entries
+    — silinməzdən əvvəl onların "Obyektlər üzrə görülən işlər" datası
+    köçürülür). Bu, İKİ problemi həll edir: (1) bir üzvü silmək istəyəndə,
+    matrisdə HEÇ BİR ƏLAQƏSİ olmayan DİGƏR üzvlərin sətri boş yerə silinib
+    yenidən yaranmır, ona görə onların `briqada_id`-yə bağlı matris datası
+    da pozulmur; (2) HƏQİQƏTƏN silinən üzvün datası varsa, artıq FK xətası
+    (409) yox, aydın mesajla İCAZƏ VERİLMİR."""
+    existing = list(group.rows)
+    existing_by_emp = {r.member_id: r for r in existing if r.member_id is not None}
+    existing_freeform = [r for r in existing if r.member_id is None and r.member_name]
+    existing_placeholder = next(
+        (r for r in existing if r.member_id is None and not r.member_name), None
+    )
+
+    submitted = members or [(None, None)]
+    keep_ids = set()
+
+    for emp_id, name in submitted:
+        row = None
+        if emp_id is not None:
+            row = existing_by_emp.pop(emp_id, None)
+        elif name:
+            for i, r in enumerate(existing_freeform):
+                if r.member_name == name:
+                    row = existing_freeform.pop(i)
+                    break
+        else:
+            row = existing_placeholder
+            existing_placeholder = None
+
+        if row is not None:
+            for k, v in fields.items():
+                setattr(row, k, v)
+            row.member_id = emp_id
+            row.member_name = name
+            keep_ids.add(row.id)
+        else:
+            db.session.add(Briqada(group_no=group.group_no, member_id=emp_id, member_name=name, **fields))
+
+    # Submitted siyahıda uyğunu tapılmayan (əvvəlki placeholder daxil)
+    # sətirlər HƏQİQƏTƏN çıxarılıb — silinməzdən əvvəl datası köçürülür.
+    to_remove = [r for r in existing if r.id not in keep_ids]
+    for row in to_remove:
+        _detach_briqada_work_entries(row)
+        db.session.delete(row)
+
+
 @sites_bp.route("/briqadalar/add", methods=["GET", "POST"])
 @login_required
 @permission_required(MODULE, "can_add")
@@ -314,16 +403,16 @@ def edit_briqada(briqada_id):
             flash(error, "danger")
             return render_form("sites/briqada_form.html", briqada=group, employees=_employee_choices())
         members = _parse_briqada_members_from_form(request.form)
-        rows_to_add = members or [(None, None)]
-        # Validasiya TAM keçəndən SONRA köhnə sətirləri silib yenidən
-        # yaradırıq — bu, "əvvəlcə mövcud sətri dəyiş, sonra validasiya
-        # et" modelinin YARADA biləcəyi autoflush-la bağlı problemlərdən
-        # (bax: edit_obyekt-dəki ətraflı qeyd) tamamilə qaçır, çünki DB-yə
-        # HEÇ NƏ YAZILMIR validasiya bitənə qədər.
-        for row in group.rows:
-            db.session.delete(row)
-        for emp_id, name in rows_to_add:
-            db.session.add(Briqada(group_no=group.group_no, member_id=emp_id, member_name=name, **fields))
+        # Dəyişməyən üzvlərin sətri (id-si) olduğu kimi qalır — bax:
+        # _sync_briqada_members. Yalnız HƏQİQƏTƏN çıxarılan üzv üçün
+        # (və onun "Obyektlər üzrə görülən işlər" datası köçürülə
+        # bilmirsə) aydın xəta veriləcək.
+        try:
+            _sync_briqada_members(group, fields, members)
+        except ValueError as exc:
+            db.session.rollback()
+            flash(str(exc), "danger")
+            return render_form("sites/briqada_form.html", briqada=group, employees=_employee_choices())
         db.session.commit()
         flash("Briqada yeniləndi.", "success")
         return modal_redirect("sites.list_briqadalar")
@@ -339,8 +428,17 @@ def delete_briqada(briqada_id):
     if not group:
         from flask import abort
         abort(404)
-    for row in group.rows:
-        db.session.delete(row)
+    try:
+        for row in group.rows:
+            _detach_briqada_work_entries(row)
+            db.session.delete(row)
+    except ValueError as exc:
+        db.session.rollback()
+        message = str(exc)
+        if is_modal_request():
+            return jsonify({"success": False, "error": message}), 400
+        flash(message, "danger")
+        return modal_redirect("sites.list_briqadalar")
     db.session.commit()
     if is_modal_request():
         return jsonify({"success": True})
