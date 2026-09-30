@@ -1,0 +1,268 @@
+SET DEFINE OFF;
+Insert into MI_MANAGEMENT.MID_CONTRACT_TYPES
+   (ID, VALUE, PRIORITY, STATE)
+ Values
+   (-1, 'Müddətli', 1, 'A');
+Insert into MI_MANAGEMENT.MID_CONTRACT_TYPES
+   (ID, VALUE, PRIORITY, STATE)
+ Values
+   (-2, 'Müddətsiz', 2, 'A');
+COMMIT;
+SET DEFINE OFF;
+Insert into MI_MANAGEMENT.MID_CONTRACT_POSITIONS
+   (ID, CODE, VALUE, PRIORITY, STATE)
+ Values
+   (36, '3112001700', 'Smetaçı, mülki tikinti', 35, 'A');
+Insert into MI_MANAGEMENT.MID_CONTRACT_POSITIONS
+   (ID, CODE, VALUE, PRIORITY, STATE)
+ Values
+   (37, '7413000200', 'Elektrik montyoru', 36, 'A');
+Insert into MI_MANAGEMENT.MID_CONTRACT_POSITIONS
+   (ID, CODE, VALUE, PRIORITY, STATE)
+ Values
+   (38, '2151002100', 'Mühəndis, elektrik sistemləri', 37, 'A');
+Insert into MI_MANAGEMENT.MID_CONTRACT_POSITIONS
+   (ID, CODE, VALUE, PRIORITY, STATE)
+ Values
+   (39, '8332000900', 'Sürücü, ozüboşaldan', 38, 'A');
+Insert into MI_MANAGEMENT.MID_CONTRACT_POSITIONS
+   (ID, CODE, VALUE, PRIORITY, STATE)
+ Values
+   (40, '7122001200', 'Üz çəkmə', 39, 'A');
+Insert into MI_MANAGEMENT.MID_CONTRACT_POSITIONS
+   (ID, CODE, VALUE, PRIORITY, STATE)
+ Values
+   (41, '7124000300', 'İzolyasiyaçı, tikinti', 40, 'A');
+Insert into MI_MANAGEMENT.MID_CONTRACT_POSITIONS
+   (ID, CODE, VALUE, PRIORITY, STATE)
+ Values
+   (47, '2149002400', 'Mühəndis, keyfiyyətə nəzarət', 46, 'A');
+Insert into MI_MANAGEMENT.MID_CONTRACT_POSITIONS
+   (ID, CODE, VALUE, PRIORITY, STATE)
+ Values
+   (48, '2153000500', 'Mühəndis, rabitə sistemləri üzrə', 47, 'A');
+Insert into MI_MANAGEMENT.MID_CONTRACT_POSITIONS
+   (ID, CODE, VALUE, PRIORITY, STATE)
+ Values
+   (49, '2149003400', 'Mühəndis, əməyin mühafizəsi və təhlükəsizlik texnikası üzrə', 48, 'A');
+Insert into MI_MANAGEMENT.MID_CONTRACT_POSITIONS
+   (ID, CODE, VALUE, PRIORITY, STATE)
+ Values
+   (13, '7125000800', 'Şüşəsalan, dam örtüyü vuran usta', 12, 'A');
+Insert into MI_MANAGEMENT.MID_CONTRACT_POSITIONS
+   (ID, CODE, VALUE, PRIORITY, STATE)
+ Values
+   (14, '7211000300', 'Dəmir beton konstruksiyaları', 13, 'A');
+Insert into MI_MANAGEMENT.MID_CONTRACT_POSITIONS
+   (ID, CODE, VALUE, PRIORITY, STATE)
+ Values
+   (15, '4321002500', 'Anbardar', 14, 'A');
+Insert into MI_MANAGEMENT.MID_CONTRACT_POSITIONS
+   (ID, CODE, VALUE, PRIORITY, STATE)
+ Values
+   (16, '7123000500', 'Suvaqçı', 15, 'A');
+Insert into MI_MANAGEMENT.MID_CONTRACT_POSITIONS
+   (ID, CODE, VALUE, PRIORITY, STATE)
+ Values
+   (50, '2151001700', 'Mühəndis energetika', 49, 'A');
+Insert into MI_MANAGEMENT.MID_CONTRACT_POSITIONS
+   (ID, CODE, VALUE, PRIORITY, STATE)
+ Values
+   (51, '2149005300', 'Mühəndis, təhlükəsizlik texnikası', 50, 'A');
+Insert into MI_MANAGEMENT.MID_CONTRACT_POSITIONS
+   (ID, CODE, VALUE, PRIORITY, STATE)
+ Values
+   (1, '1120017100', 'Baş direktor, müəssisə/tikinti', 1, 'A');
+Insert into MI_MANAGEMENT.MID_CONTRACT_POSITIONS
+   (ID, CODE, VALUE, PRIORITY, STATE)
+ Values
+   (2, '2411001400', 'Mühasib, şirkət', 2, 'A');
+Insert into MI_MANAGEMENT.MID_CONTRACT_POSITIONS
+   (ID, CODE, VALUE, PRIORITY, STATE)
+ Values
+   (3, '7123000500', 'Suvaqçı', 3, 'A');
+Insert into MI_MANAGEMENT.MID_CONTRACT_POSITIONS
+   (ID, CODE, VALUE, PRIORITY, STATE)
+ Values
+   (4, '8332001300', 'Sürücü, yükdaşıyan', 4, 'A');
+Insert into MI_MANAGEMENT.MID_CONTRACT_POSITIONS
+   (ID, CODE, VALUE, PRIORITY, STATE)
+ Values
+   (6, '3112001800', 'iş icraçısı tikintidə', 5, 'A');
+Insert into MI_MANAGEMENT.MID_CONTRACT_POSITIONS
+   (ID, CODE, VALUE, PRIORITY, STATE)
+ Values
+   (22, '7126002400', 'Çilingər-santexnik', 21, 'A');
+Insert into MI_MANAGEMENT.MID_CONTRACT_POSITIONS
+   (ID, CODE, VALUE, PRIORITY, STATE)
+ Values
+   (20, '8322001200', 'Sürücü, avtomobil kranı', 19, 'A');
+Insert into MI_MANAGEMENT.MID_CONTRACT_POSITIONS
+   (ID, CODE, VALUE, PRIORITY, STATE)
+ Values
+   (21, '7212000500', 'Elektrik-qaz qaynaqçısı', 20, 'A');
+Insert into MI_MANAGEMENT.MID_CONTRACT_POSITIONS
+   (ID, CODE, VALUE, PRIORITY, STATE)
+ Values
+   (23, '7411000800', 'Elektrik, tikinti', 22, 'A');
+Insert into MI_MANAGEMENT.MID_CONTRACT_POSITIONS
+   (ID, CODE, VALUE, PRIORITY, STATE)
+ Values
+   (46, '3313000500', 'Mühasib, köməkçi heyət', 45, 'A');
+Insert into MI_MANAGEMENT.MID_CONTRACT_POSITIONS
+   (ID, CODE, VALUE, PRIORITY, STATE)
+ Values
+   (52, '2142000200', 'Mühəndis-inşaatçı', 51, 'A');
+Insert into MI_MANAGEMENT.MID_CONTRACT_POSITIONS
+   (ID, CODE, VALUE, PRIORITY, STATE)
+ Values
+   (7, '2142000400', 'Mühəndis, planlaşdırma', 6, 'A');
+Insert into MI_MANAGEMENT.MID_CONTRACT_POSITIONS
+   (ID, CODE, VALUE, PRIORITY, STATE)
+ Values
+   (8, '9111000200', 'Xadimə', 7, 'A');
+Insert into MI_MANAGEMENT.MID_CONTRACT_POSITIONS
+   (ID, CODE, VALUE, PRIORITY, STATE)
+ Values
+   (9, '3323000700', 'Mal təchizatçısı', 8, 'A');
+Insert into MI_MANAGEMENT.MID_CONTRACT_POSITIONS
+   (ID, CODE, VALUE, PRIORITY, STATE)
+ Values
+   (10, '7411001400', 'Elektrik', 9, 'A');
+Insert into MI_MANAGEMENT.MID_CONTRACT_POSITIONS
+   (ID, CODE, VALUE, PRIORITY, STATE)
+ Values
+   (11, '7131001000', 'Rəngsaz', 10, 'A');
+Insert into MI_MANAGEMENT.MID_CONTRACT_POSITIONS
+   (ID, CODE, VALUE, PRIORITY, STATE)
+ Values
+   (12, '2142000200', 'Mühəndis-inşaatçı', 11, 'A');
+Insert into MI_MANAGEMENT.MID_CONTRACT_POSITIONS
+   (ID, CODE, VALUE, PRIORITY, STATE)
+ Values
+   (42, '2423000700', 'Mütəxəssis, kadrlar üzrə', 41, 'A');
+Insert into MI_MANAGEMENT.MID_CONTRACT_POSITIONS
+   (ID, CODE, VALUE, PRIORITY, STATE)
+ Values
+   (43, '7112001400', 'Bənna, tikinti', 42, 'A');
+Insert into MI_MANAGEMENT.MID_CONTRACT_POSITIONS
+   (ID, CODE, VALUE, PRIORITY, STATE)
+ Values
+   (44, '7122000700', 'Kəsən-düzən, mozaika', 43, 'A');
+Insert into MI_MANAGEMENT.MID_CONTRACT_POSITIONS
+   (ID, CODE, VALUE, PRIORITY, STATE)
+ Values
+   (17, '2142000400', 'Mühəndis, tikinti üzrə', 16, 'A');
+Insert into MI_MANAGEMENT.MID_CONTRACT_POSITIONS
+   (ID, CODE, VALUE, PRIORITY, STATE)
+ Values
+   (18, '7111000100', 'İnşaat fəhləsi, ənənəvi materiallar', 17, 'A');
+Insert into MI_MANAGEMENT.MID_CONTRACT_POSITIONS
+   (ID, CODE, VALUE, PRIORITY, STATE)
+ Values
+   (19, '123456', 'Hüquqşünas', 18, 'A');
+Insert into MI_MANAGEMENT.MID_CONTRACT_POSITIONS
+   (ID, CODE, VALUE, PRIORITY, STATE)
+ Values
+   (24, '3313000500', 'Mühasib, köməkçi heyət', 23, 'A');
+Insert into MI_MANAGEMENT.MID_CONTRACT_POSITIONS
+   (ID, CODE, VALUE, PRIORITY, STATE)
+ Values
+   (25, '8219001100', 'Yığıcı, qapı', 24, 'A');
+Insert into MI_MANAGEMENT.MID_CONTRACT_POSITIONS
+   (ID, CODE, VALUE, PRIORITY, STATE)
+ Values
+   (26, '8342000700', 'Operator, ekskavator', 25, 'A');
+Insert into MI_MANAGEMENT.MID_CONTRACT_POSITIONS
+   (ID, CODE, VALUE, PRIORITY, STATE)
+ Values
+   (27, '7111000100', 'İnşaat fəhləsi, ənənəvi materiallar', 26, 'A');
+Insert into MI_MANAGEMENT.MID_CONTRACT_POSITIONS
+   (ID, CODE, VALUE, PRIORITY, STATE)
+ Values
+   (28, '2165000600', 'Topoqraf, geodeziya', 27, 'A');
+Insert into MI_MANAGEMENT.MID_CONTRACT_POSITIONS
+   (ID, CODE, VALUE, PRIORITY, STATE)
+ Values
+   (29, '5153000600', 'Ərazi gözətçisi', 28, 'A');
+Insert into MI_MANAGEMENT.MID_CONTRACT_POSITIONS
+   (ID, CODE, VALUE, PRIORITY, STATE)
+ Values
+   (30, '7114001300', 'Armaturçu-betonçu', 29, 'A');
+Insert into MI_MANAGEMENT.MID_CONTRACT_POSITIONS
+   (ID, CODE, VALUE, PRIORITY, STATE)
+ Values
+   (31, '7114001200', 'Armaturçu, dəmir beton dayaqları', 30, 'A');
+Insert into MI_MANAGEMENT.MID_CONTRACT_POSITIONS
+   (ID, CODE, VALUE, PRIORITY, STATE)
+ Values
+   (32, '7114000800', 'Taxta qəlib hazırlayan, beton formalar', 31, 'A');
+Insert into MI_MANAGEMENT.MID_CONTRACT_POSITIONS
+   (ID, CODE, VALUE, PRIORITY, STATE)
+ Values
+   (33, '7125000800', 'Şüşəsalan, dam örtüyü', 32, 'A');
+Insert into MI_MANAGEMENT.MID_CONTRACT_POSITIONS
+   (ID, CODE, VALUE, PRIORITY, STATE)
+ Values
+   (34, '7123000400', 'Suvaqçı-üzlükçü', 33, 'A');
+Insert into MI_MANAGEMENT.MID_CONTRACT_POSITIONS
+   (ID, CODE, VALUE, PRIORITY, STATE)
+ Values
+   (35, '8322001000', 'Sürücü, minik avtomobili', 34, 'A');
+Insert into MI_MANAGEMENT.MID_CONTRACT_POSITIONS
+   (ID, CODE, VALUE, PRIORITY, STATE)
+ Values
+   (45, '2149000900', 'Mühəndis-iqtisadçı', 44, 'A');
+Insert into MI_MANAGEMENT.MID_CONTRACT_POSITIONS
+   (ID, CODE, VALUE, PRIORITY, STATE)
+ Values
+   (53, '7131000200', 'Bəzək daşı vuran usta', 52, 'A');
+Insert into MI_MANAGEMENT.MID_CONTRACT_POSITIONS
+   (ID, CODE, VALUE, PRIORITY, STATE)
+ Values
+   (54, '22231848', 'Səki daşları düzən usta', 53, 'A');
+COMMIT;
+
+
+SET DEFINE OFF;
+Insert into MI_MANAGEMENT.MID_WORK_KINDS
+   (ID, VALUE, PRIORITY, STATE)
+ Values
+   (-1, 'Əsas', 1, 'A');
+Insert into MI_MANAGEMENT.MID_WORK_KINDS
+   (ID, VALUE, PRIORITY, STATE)
+ Values
+   (-2, 'Əlavə', 2, 'A');
+COMMIT;
+
+
+SET DEFINE OFF;
+Insert into MI_MANAGEMENT.MID_WORK_TYPES
+   (ID, VALUE, PRIORITY, STATE)
+ Values
+   (-1, 'Fiks', 1, 'A');
+Insert into MI_MANAGEMENT.MID_WORK_TYPES
+   (ID, VALUE, PRIORITY, STATE)
+ Values
+   (-2, 'Saat hesabı', 2, 'A');
+Insert into MI_MANAGEMENT.MID_WORK_TYPES
+   (ID, VALUE, PRIORITY, STATE)
+ Values
+   (-3, 'KV/M', 3, 'A');
+COMMIT;
+
+
+SET DEFINE OFF;
+Insert into MI_MANAGEMENT.MID_CATEGORIES
+   (ID, VALUE, PRIORITY, STATE)
+ Values
+   (1, 'Qulluqçu', 1, 'A');
+Insert into MI_MANAGEMENT.MID_CATEGORIES
+   (ID, VALUE, PRIORITY, STATE)
+ Values
+   (2, 'Fəhlə', 2, 'A');
+Insert into MI_MANAGEMENT.MID_CATEGORIES
+   (ID, VALUE, PRIORITY, STATE)
+ Values
+   (3, 'Veteran', 3, 'A');
+COMMIT;

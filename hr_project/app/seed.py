@@ -8,6 +8,13 @@ MODULES = [
     ("SITES", "Obyektlər və Briqadalar", "Sites and Brigades"),
 ]
 
+# Oracle-dan köçürülmüş soraqçı kateqoriyaları — seed bunları yenidən demo qiymətlərlə doldurmasın.
+ORACLE_IMPORTED_CATEGORIES = {
+    "gender", "family_status", "education_type", "benefits", "order_type",
+    "department", "position", "contract_type", "employment_position",
+    "work_type", "labor_type",
+}
+
 # Initial HR dictionary values — these power every combobox on the
 # "Yeni əməkdaş" (add employee) form. Admin can add/edit/delete more of
 # these later from Məlumat kitabçaları → HR.
@@ -174,6 +181,8 @@ def seed_data():
         modules[code] = m
 
     for category, names in HR_DICTIONARIES.items():
+        if category in ORACLE_IMPORTED_CATEGORIES:
+            continue
         for name in names:
             exists = DictionaryItem.query.filter_by(
                 module_code="HR", category=category, name=name
