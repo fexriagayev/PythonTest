@@ -3,6 +3,7 @@
 MID_CATEGORIES import EDİLMİR (app-də Kateqoriya = leave_categories cədvəlidir); yalnız xəritə yazılır.
 
 İstifadə:
+    python scripts/migrate_drop_work_type.py app.db      # bir dəfə (sxem)
     python scripts/import_oracle_dicts3.py --sql scripts1.txt --db app.db --dry-run
     python scripts/import_oracle_dicts3.py --sql scripts1.txt --db app.db
 
@@ -17,11 +18,14 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from oracle_parse import parse_inserts
 from import_oracle_hr2 import dedupe_dictionary
 
+# Ləğv olunmuş kateqoriyalar (silinir, yenidən yüklənmir): work_type -> employment_classification ilə birləşdirilib
+DROP_CATEGORIES = ["work_type"]
+
 # Oracle cədvəli -> (kateqoriya, CODE-u value-ya yaz?)
 DICT_MAP = {
     "MID_CONTRACT_TYPES":     ("contract_type", False),
     "MID_CONTRACT_POSITIONS": ("employment_position", True),
-    "MID_WORK_KINDS":         ("work_type", False),     # Əsas / Əlavə
+    "MID_WORK_KINDS":         ("employment_classification", False),  # Əsas / Əlavə
     "MID_WORK_TYPES":         ("labor_type", False),    # Fiks / Saat hesabı / KV/M
 }
 
@@ -40,6 +44,9 @@ def run(sql_path, db_path, map_out, report):
     idmap, report["deleted"], report["inserted"], report["merged_duplicates"] = {}, {}, {}, {}
     try:
         cur.execute("BEGIN")
+        for cat in DROP_CATEGORIES:
+            report["deleted"][cat] = cur.execute(
+                "DELETE FROM dictionary_items WHERE module_code='HR' AND category=?", (cat,)).rowcount
         for tb, (cat, use_code) in DICT_MAP.items():
             report["deleted"][cat] = cur.execute(
                 "DELETE FROM dictionary_items WHERE module_code='HR' AND category=?", (cat,)).rowcount
@@ -91,7 +98,7 @@ def run(sql_path, db_path, map_out, report):
     jm["leave_categories"] = {"note": "MID_CATEGORIES Oracle ID -> leave_categories.id: 1 Qulluqçu->1 Dövlət qulluqçusu, 2 Fəhlə->3 Ümumi qayda, 3 Veteran->2 Veteran",
                               "MID_CATEGORIES": {"1": 1, "2": 3, "3": 2}}
     jm["note_dicts3"] = ("MID_CONTRACT_TYPES->contract_type, MID_CONTRACT_POSITIONS->employment_position (CODE=value), "
-                         "MID_WORK_KINDS->work_type, MID_WORK_TYPES->labor_type. MID_CATEGORIES -> leave_categories (bax: leave_categories).")
+                         "MID_WORK_KINDS->employment_classification (work_type ləğv olunub), MID_WORK_TYPES->labor_type. MID_CATEGORIES -> leave_categories (bax: leave_categories).")
     return jm
 
 
